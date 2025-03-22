@@ -2,4 +2,4 @@
 A framework for running multiplayer games concurrently.
 
 # System Architecture
-!()[./topology/HalligameTopology.drawio.svg]
+![](./topology/HalligameTopology.drawio.svg)
