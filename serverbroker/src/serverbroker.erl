@@ -10,7 +10,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([start_link/0, stop/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -18,9 +18,9 @@
 
 -define(SERVER, ?MODULE).
 
--record(game, {name}).
--record(client, {node :: string(), playing :: [#game{}]}).
--record(state, {clients :: [#client{}], games :: [#game{}]}).
+-record(game, {name :: string()}).
+-record(user, {login :: string(), pids = [] :: [pid()], playing = [] :: [#game{}]}).
+-record(state, {users = [] :: [#user{}], games = [] :: [#game{}]}).
 
 %%%===================================================================
 %%% API
@@ -38,6 +38,10 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+
+% TODO doc
+stop() ->
+	gen_server:stop({local, ?SERVER}).
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -74,17 +78,58 @@ init([]) ->
 	  {stop, Reason :: term(), NewState :: term()}.
 handle_call(Request, {Pid, _FromTag}, State) ->
 	case Request of
-		{add_self} ->
+		{add_self, Login} ->
+			% io:format("Got request ~p~n", [Request]),
+			{ThisUser, Rest} = lists:partition(equals(Login),
+											   State#state.users),
+			case ThisUser of
+				[] ->
+					User = #user{login = Login, pids = [Pid]};
+				#user{login = Login, pids = Pids, playing = Playing} ->
+					User = #user{login   = Login,
+									 pids    = [Pid | Pids],
+									 playing = Playing}
+			end,
+			NewState = State#state{users = [User | Rest]},
+			Reply   = ok;
+		{del_self, Login} ->
+			% io:format("Got request ~p~n", [Request]),
+			{ThisUser, Rest} = lists:partition(equals(Login),
+											  State#state.users),
+			case ThisUser of
+				[] ->
+					% User not found.
+					Users = Rest;
+				#user{login = Login, pids = []} ->
+					% User has no pids, delete.
+					Users = Rest;
+				#user{login = Login, pids = [Pid]} ->
+					% The user has only this pid, so delete them.
+					Users = Rest;
+				#user{login = Login, pids = [_Other]} ->
+					% This pid wasn't found, so ignore.
+					Users = State#state.users;
+				#user{login = Login, pids = Pids, playing = Playing} ->
+					% User has 2+ pids, delete only this pid, keep the user.
+					User  = #user{login   = Login,
+								  pids    = lists:filter(equals(Pid), Pids),
+								  playing = Playing},
+					Users = [User | Rest]
+			end,
 			Reply    = ok,
-			NewState = State#state{clients = [Pid | State#state.clients]};
-		{del_self} ->
-			Reply    = ok,
-			NewState = State#state{clients = [X || X <- State#state.clients,
-												   X == Pid]};
+			NewState = State#state{users = Users};
+			% NewState = State#state{clients = [X || X <- State#state.clients,
+												%    X == Pid]};
 		{list_users} ->
-			Reply = State#state.clients,
-			NewState = State
+			% io:format("Got request ~p~n", [Request]),
+			Reply = State#state.users,
+			NewState = State;
+		_ -> 
+			io:format("Got request ~p, ignoring~n", [Request]),
+			Reply = error,
+			NewState = state
 	end,
+	io:format("Reply = ~p, NewState = ~p~n", [Reply, NewState]),
 	{reply, Reply, NewState}.
 
 
@@ -162,3 +207,8 @@ format_status(Status) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+% equals/1, a utility higher-order function, takes a term A and returns a fun.
+% That fun takes one argument, B, and returns whether A == B.
+equals(A) ->
+	fun (B) -> A == B end.
