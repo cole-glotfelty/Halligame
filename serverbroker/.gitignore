@@ -1,6 +1,3 @@
-.DS_Store
-*.bkp
-*.dtmp
 .rebar3
 _build
 _checkouts
