@@ -18,9 +18,15 @@
 
 -define(SERVER, ?MODULE).
 
--record(game, {name :: string()}).
--record(user, {login :: string(), pids = [] :: [pid()], playing = [] :: [#game{}]}).
--record(state, {users = [] :: [#user{}], games = [] :: [#game{}]}).
+-record(game, {name :: string(), min_players :: pos_integer(),
+			   max_players :: pos_integer() | inf}).
+-record(user, {login :: string(),
+			   pids = [] :: [pid()],
+			   playing = [] :: [#game{}]}).
+-record(gameserver, {game :: #game{}, pid :: pid(), players :: [#user{}]}).
+-record(state, {users = [] :: [#user{}],
+				games = [] :: [#game{}],
+				gameservers = [#gameserver{}]}).
 
 %%%===================================================================
 %%% API
