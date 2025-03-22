@@ -3,8 +3,9 @@
 -export([join/0]).
 
 -define(SERVER, {serverbroker, 'serverbroker@vm-projectweb3'}).
-
+-define(ME, string:trim(os:cmd("whoami"))).
 % TODO: doc
 join() ->
-    Reply = gen_server:call(?SERVER, {add_self}),
+    % erlang:display(?ME).
+    Reply = gen_server:call(?SERVER, {add_self, ?ME}),
     io:format("Got reply ~p~n", [Reply]).

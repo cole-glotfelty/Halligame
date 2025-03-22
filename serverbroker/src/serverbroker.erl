@@ -10,7 +10,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, stop/0]).
+-export([start_link/0, start/0, stop/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -38,6 +38,17 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Starts the server
+%% @end
+%%--------------------------------------------------------------------
+-spec start() -> {ok, Pid :: pid()} |
+	{error, Error :: {already_started, pid()}} |
+	{error, Error :: term()} |
+	ignore.
+start() ->
+	gen_server:start({local, ?SERVER}, ?MODULE, [], []).
 
 % TODO doc
 stop() ->
@@ -118,8 +129,6 @@ handle_call(Request, {Pid, _FromTag}, State) ->
 			end,
 			Reply    = ok,
 			NewState = State#state{users = Users};
-			% NewState = State#state{clients = [X || X <- State#state.clients,
-												%    X == Pid]};
 		{list_users} ->
 			% io:format("Got request ~p~n", [Request]),
 			Reply = State#state.users,
