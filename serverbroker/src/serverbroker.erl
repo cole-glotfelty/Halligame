@@ -6,6 +6,7 @@
 %%% Created : 22 Mar 2025
 %%%-------------------------------------------------------------------
 -module(serverbroker).
+-include_lib("eunit/include/eunit.hrl").
 
 -behaviour(gen_server).
 
@@ -30,7 +31,7 @@
                      players = [] :: [#gameclient{}]}).
                     
 -record(state, {users = [] :: [#user{}], games = [] :: [#game{}],
-                gameservers = [#gameserver{}]}).
+                gameservers = [] :: [#gameserver{}]}).
 
 %%%===================================================================
 %%% API
@@ -39,6 +40,7 @@
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the server
+%% TODO: doc other start too.
 %% @end
 %%--------------------------------------------------------------------
 -spec start_link() -> {ok, Pid :: pid()} |
@@ -98,6 +100,7 @@ init([]) ->
       {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
       {stop, Reason :: term(), NewState :: term()}.
 handle_call(Request, {Pid, _FromTag}, State) ->
+    % io:format("Orig. State: ~p~n", [State]),
     case Request of
         {add_user, Login} ->
             {ThisUser, Rest} = lists:partition(eq(Login), State#state.users),
@@ -112,21 +115,22 @@ handle_call(Request, {Pid, _FromTag}, State) ->
             NewState = State#state{users = [User | Rest]},
             Reply   = ok;
         {del_user, Login} ->
-            {ThisUser, Rest} = lists:partition(eq(Login), State#state.users),
+            Fun      = fun (X) -> Login == X#user.login end,
+            {ThisUser, Rest} = lists:partition(Fun, State#state.users),
             case ThisUser of
                 [] ->
                     % User not found.
                     Users = Rest;
-                #user{login = Login, pids = []} ->
+                [#user{login = Login, pids = []}] ->
                     % User has no pids, delete.
                     Users = Rest;
-                #user{login = Login, pids = [Pid]} ->
+                [#user{login = Login, pids = [Pid]}] ->
                     % The user has only this pid, so delete them.
                     Users = Rest;
-                #user{login = Login, pids = [_Other]} ->
+                [#user{login = Login, pids = [_Other]}] ->
                     % This pid wasn't found, so ignore.
                     Users = State#state.users;
-                #user{login = Login, pids = Pids, playing = Playing} ->
+                [#user{login = Login, pids = Pids, playing = Playing}] ->
                     % User has 2+ pids, delete only this pid, keep the user.
                     User  = #user{login   = Login,
                                   pids    = lists:filter(neq(Pid), Pids),
@@ -177,12 +181,18 @@ handle_call(Request, {Pid, _FromTag}, State) ->
         {list_users} ->
             Reply = State#state.users,
             NewState = State;
+        {list_gameservers} ->
+            Reply = State#state.gameservers,
+            NewState = State;
+        {list_games} ->
+            Reply = State#state.games,
+            NewState = State;
         _ -> 
             io:format("Got request ~p, ignoring~n", [Request]),
             Reply = error,
-            NewState = state
+            NewState = State
     end,
-    io:format("Reply = ~p, NewState = ~p~n", [Reply, NewState]),
+    % io:format("Reply = ~p, NewState = ~p~n", [Reply, NewState]),
     {reply, Reply, NewState}.
 
 
@@ -270,3 +280,57 @@ eq(A) ->
 % That fun takes one argument, B, and returns whether A =/= B.
 neq(A) ->
     fun (B) -> A =/= B end.
+
+
+% Tests
+
+% https://lookonmyworks.co.uk/2015/01/25/testing-a-gen_server-with-eunit/
+server_broker_test_() ->
+    {foreach, fun setup/0, fun cleanup/1, [
+        fun server_is_alive/1,
+        fun add_list_user_1/1,
+        fun add_list_user_2/1,
+        fun add_list_del_list/1
+    ]}.
+
+setup() ->
+    {ok, Pid} = serverbroker:start(),
+    Pid.
+
+cleanup(Pid) ->
+    gen_server:stop(Pid).
+
+server_is_alive(Pid) ->
+    fun () ->
+        ?assert(is_process_alive(Pid))
+    end.
+
+add_list_user_1(Pid) ->
+    fun () ->
+        ?assertEqual(ok, gen_server:call(Pid, {add_user, "mdanie09"})),
+        ?assertMatch([#user{login = "mdanie09"}],
+                     gen_server:call(Pid, {list_users}))
+    end.
+
+add_list_user_2(Pid) ->
+    fun () ->
+        ?assertEqual(ok, gen_server:call(Pid, {add_user, "wcordr01"})),
+        ?assertEqual(ok, gen_server:call(Pid, {add_user, "mdanie09"})),
+        ?assertEqual(ok, gen_server:call(Pid, {add_user, "cglotf01"})),
+        ?assertMatch([#user{login = "cglotf01"}, #user{login = "mdanie09"},
+                      #user{login = "wcordr01"}],
+                     lists:sort(gen_server:call(Pid, {list_users})))
+    end.
+
+add_list_del_list(Pid) ->
+    fun () ->
+        ?assertEqual(ok, gen_server:call(Pid, {add_user, "wcordr01"})),
+        ?assertEqual(ok, gen_server:call(Pid, {add_user, "mdanie09"})),
+        ?assertEqual(ok, gen_server:call(Pid, {add_user, "cglotf01"})),
+        ?assertMatch([#user{login = "cglotf01"}, #user{login = "mdanie09"},
+                      #user{login = "wcordr01"}],
+                     lists:sort(gen_server:call(Pid, {list_users}))),
+        ?assertEqual(ok, gen_server:call(Pid, {del_user, "mdanie09"})),
+        ?assertMatch([#user{login = "cglotf01"}, #user{login = "wcordr01"}],
+                     lists:sort(gen_server:call(Pid, {list_users})))
+    end.

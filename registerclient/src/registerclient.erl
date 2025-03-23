@@ -2,7 +2,7 @@
 
 -export([join/0]).
 
--define(SERVER, {serverbroker, 'serverbroker@vm-projectweb3'}).
+-define(SERVER, {serverbroker, 'serverbroker@vm-projectweb3.eecs.tufts.edu'}).
 -define(ME, string:trim(os:cmd("whoami"))).
 % TODO: doc
 join() ->
