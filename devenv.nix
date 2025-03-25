@@ -5,12 +5,17 @@
   # env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  packages = [ pkgs.git ];
+  packages = with pkgs; [
+    git
+    (python39.withPackages (ps: with ps; [ prompt-toolkit ]))
+  ];
 
   # https://devenv.sh/languages/
+  # Same version as halligan
   languages.python = {
     enable = true;
     version = "3.9.2";
+    venv.enable = true; # This creates a virtual environment
   };
 
   # https://devenv.sh/processes/
