@@ -14,9 +14,14 @@
 -module(handleCLIRequest).
 -export([help/0, newGame/1, joinGame/1, listGames/0]).
 
--define(GameDir, "games/").
--define(ClientServer, client).
--define(ClientNode, 'server@vm-hw06').
+-define(GameDir, "games/"). % the directory of games. TODO: change
+-define(ME, string:trim(os:cmd("whoami"))).
+-define(VM, os:getenv("HOST")).
+
+% TODO: if the same user has multiple sessions signed in on the same VM, this won't be unique 
+%       --> solution: when registering the registerClient process, instead of registering it under 'regclient', instead register it under the UTLN and the outgoing port of the client (second part of SSH_CONNECTION in the env). This still doesn't handle same user from multiple machines happening to use the same port, but that's definitely an edge case. To fix, maybe also include IP address?
+-define(ClientRegisteredName, regclient).
+-define(ClientNode, list_to_atom(?ME ++ "@" ++ ?VM)).
 
 % TODO: finish writing usage
 help() ->
@@ -27,7 +32,8 @@ newGame(GameName) ->
     {ok, Games} = file:list_dir(?GameDir),
     GameNameString = atom_to_list(GameName),
     case lists:member(GameNameString, Games) of
-        true -> {?ClientServer, ?ClientNode} ! filename:join(?GameDir, GameName),
+        true -> {?ClientRegisteredName, ?ClientNode} ! 
+                                            filename:join(?GameDir, GameName),
                 ok;
         false -> io:format("Game ~p not found.~n", [GameName]),
                  error
