@@ -2,6 +2,7 @@
 
 # Import subpackages to make them available when importing halligame
 from . import games
+from . import utils
 
 # Define what symbols are exported when using "from halligame import *"
-__all__ = ['games']
+__all__ = ['games', 'utils']
