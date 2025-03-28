@@ -4,6 +4,25 @@ import curses
 import time
 import threading
 
+# INTERFACE:
+#   __init__():               initializes the class
+#   shutdown():               closes the curses window and restores the normal 
+#                             settings of the terminal. Don't forget to call!
+#   height():                 Gives the height of the terminal window
+#   width():                  gives the width of the terminal window
+#   clearScreen():            Removes everything from the screen
+#   write(row, col, toPrint): Adds the contents of toPrint starting at 
+#                             (row, col) on the screen. toPrint must be 
+#                             convertible to string.
+#   print(toPrint, end="\n"): Prints the contents of toPrint as if it were a 
+#                             normal terminal. end is appended to the end of 
+#                             toPrint before printing. toPrint must be 
+#                             convertible to string.
+#   refresh():                Refreshes the screen, making all pending changes 
+#                             visible to the user (changes like write, print,  
+#                             and clearScreen are not visible until refreshing)
+
+
 # TODO: resizing a window from smaller to bigger means that .print() continues 
 # to print in the middle of the newly enlarged screen (so long as there is no 
 # endline to reset it), which seems weird
@@ -18,6 +37,9 @@ import threading
     # of the line, and then split the printedd string across those multiple 
     # lines manually
 
+# TODO: update write so that it has more of the features and protections of 
+#       print (e.g. internal newlines)
+
 # TODO: Add color support
 
 class Screen():
@@ -27,12 +49,12 @@ class Screen():
 
         self.__lock = threading.Lock()
 
-        self.initCurses()
+        self.__initCurses()
 
         self.__stdscr.clear()
 
         # starting monitoring for user input
-        self.__monitorInputThread = threading.Thread(target = self.monitorInput,
+        self.__monitorInputThread = threading.Thread(target = self.__monitorInput,
                                                    args = [])
         self.__monitorInputThread.daemon = True # kill thread when main done
         self.__monitorInputThread.start()
@@ -43,7 +65,7 @@ class Screen():
         # idk why
         time.sleep(0.1) 
 
-    def initCurses(self):
+    def __initCurses(self):
         self.__stdscr = curses.initscr() # turn the terminal into a curses window
         curses.noecho() # prevent user input from appearing on screen
         curses.cbreak() # get key input before user types [enter]
@@ -65,16 +87,23 @@ class Screen():
         curses.endwin()
 
     # Note that .getch() also refreshes the screen
-    def monitorInput(self):
+    def __monitorInput(self):
         window = curses.newwin(self.__height(), self.__width())
-        # self.__stdscr.touchwin() # send the main window to the front
+        window.keypad(True) # enable support for special keys like up-arrow.
         while True:
-            c = window.getch()
+            c = window.getch() # this blocks until input
 
-            if (c != curses.ERR): # there is user input
-                self.__gotInput(c)
+            if (type(c) == int): # if normal character, convert to char
+                c = chr(c)
+            self.__gotInput(c)
+    
+    def height(self):
+        with self.__lock:
+            return self.__height()
 
-            time.sleep(0.01) # slow down calls a little bit
+    def width(self):
+        with self.__lock:
+            return self.__width()
 
     def __height(self):
         rows, cols = self.__stdscr.getmaxyx()
@@ -83,15 +112,6 @@ class Screen():
     def __width(self):
         rows, cols = self.__stdscr.getmaxyx()
         return cols
-
-    # CLIENT FUNCTIONS:
-    def height(self):
-        with self.__lock:
-            return self.__height()
-
-    def width(self):
-        with self.__lock:
-            return self.__width()
 
     # clears the screen (removes all text)
     def clearScreen(self):
@@ -102,20 +122,26 @@ class Screen():
     # prints a string to the screen, starting at (row, col)
     def write(self, row, col, toPrint):
         with self.__lock:
-            (prevRow, prevCol) = self.__stdscr.getyx()
-            try:
-                self.__stdscr.addstr(row, col, str(toPrint))
-            except curses.error:
-                pass # ignore out of bounds characters # TODO
-            finally:
-                self.__stdscr.move(prevRow, prevCol) # reset cursor position
+            (prevRow, prevCol) = self.__stdscr.getyx() # save cursor position
+
+            printing = str(toPrint)
+
+            lines = printing.split('\n')
+            for i in range(len(lines) - 1):
+                self.__write(row + i, col, lines[i])
+            self.__write(row + len(lines) - 1, col, lines[-1])
+
+            self.__stdscr.move(prevRow, prevCol) # reset cursor position
+
+    def __write(self, row, col, printing):
+        try:
+            self.__stdscr.addstr(row, col, printing)
+        except curses.error:
+            pass # ignore out of bounds characters # TODO
 
     def print(self, toPrint, end="\n"):
         with self.__lock:
-            if (type(toPrint) == int):
-                printing = chr(toPrint)
-            else:
-                printing = str(toPrint)
+            printing = str(toPrint)
             
             printing += end
 
