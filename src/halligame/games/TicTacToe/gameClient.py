@@ -31,19 +31,24 @@ class TicTacToe:
         self.__boardFull = 0
         self.__players = [Player() for x in range(2)]
 
-    # Takes in a message that contains the new state (this message comes 
+    # Takes in a message that contains the new state (this message is sent from 
     # from the server side of the game class) and updates the internal 
     # state, potentially updating/refreshing the display
     def updateState(self, msg):
         with self.__lock:
             pass
 
-    # called when the screen receives user input. For now, I'm just 
+    # called when the screen receives user input (a char). For now, I'm just 
     # forwarding input to the server side for the server side to handle 
     # (but you can obviously do more things like have client side checking 
     # to see if it's a number 1-9 before sending to server as an event)
+    # Input comes from the curses module, which defines some constants for
+    # recognizing things like down arrows, etc.
+    # see https://docs.python.org/3/library/curses.html and search for 
+    # "curses.KEY_"...
     def userInput(self, input):
-        self.__comms(input)
+        with self.__lock:
+            self.__comms(input)
     
     # def run(self) -> None:
     #     while not self.__gameOver:

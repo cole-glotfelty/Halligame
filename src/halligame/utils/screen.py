@@ -18,6 +18,8 @@ import threading
     # of the line, and then split the printedd string across those multiple 
     # lines manually
 
+# TODO: Add color support
+
 class Screen():
     # gotInputFunc = the function to call when receiving input
     def __init__(self, gotInputFunc):
