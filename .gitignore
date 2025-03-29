@@ -1,6 +1,17 @@
 .DS_Store
 *.bkp
 *.dtmp
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+
+# rebar
 .rebar3
 _build
 _checkouts
