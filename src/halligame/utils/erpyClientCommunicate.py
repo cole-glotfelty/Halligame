@@ -15,8 +15,8 @@ class ClientCommunicate():
         # "TicTacToe"
         #    - Import the tictactoe module
         #    - Call the init function of that tictactoe module
-        gameModule = importlib.import_module(gameName)
-        gameModule.Client(self.sendMessage)
+        gameModule = importlib.import_module("halligame.games." + gameName)
+        gameModule.Client(self.sendMessage , 1) # TODO: fix, hard-coded player id to 1
 
         # os.chdir("../games") # TODO: this will change
         # try:
