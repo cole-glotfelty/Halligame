@@ -9,8 +9,8 @@
 # The game class implements the rules and game specific data
 # The Player class stores player specific data (potentially part of the Game constructor)
 
-from ...utils.screen import Screen
-from ...utils.gameState import GameState
+from halligame.utils.screen import Screen
+from halligame.utils.gameState import GameState
 import threading
 
 import time

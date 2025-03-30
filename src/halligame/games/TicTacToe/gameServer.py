@@ -4,7 +4,7 @@
 # Written by Cole Glotfelty and Will Cordray <2025-03-29>
 # Last edited by: Cole Glotfelty 2025-03-29
 
-from ...utils.gameState import GameState
+from halligame.utils.gameState import GameState
 from typing import Any
 
 class Server:
