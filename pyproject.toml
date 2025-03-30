@@ -1,0 +1,9 @@
+[project]
+name = "halligame"
+version = "0.0.0alpha"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "erpy>=0.1.1",
+]

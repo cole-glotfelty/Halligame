@@ -1,5 +1,5 @@
-import importlib # allows us to import a module based on the name
-import os
+# import importlib # allows us to import a module based on the name
+# import os # TODO: rm?
 
 import threading
 
@@ -23,15 +23,36 @@ class ServerCommunicate():
             if msg == Atom("close"):
                 break
             
-            self.__serverGameInstance.eventIsValid(msg) # send them the new state
+            if (msg[0] == "new_client"):
+                self.__serverGameInstance.addUser(msg[1]) # send them the user
+            elif (msg[0] == "remove_client"):
+                self.__serverGameInstance.removeUser(msg[1])
+            elif (msg[0] == "event"):
+                self.__serverGameInstance.eventIsValid(msg[1][0], msg[1][1])
+            elif (msg[0] == "other"):
+                self.__serverGameInstance.otherMessageType(msg[1][0], msg[1][1])
+
+    def play(self):
+        self.__serverGameInstance.play()
 
     def sendMessage(self, Msg):
         self.port.send(Msg)
     
     def startInboxMonitor(self):
         self.monitorThread.start()
+    
+    def shutDownServer(self):
+        self.sendMessage(("terminate", "normal"))
+
+        self.monitorThread.join()
 
 if __name__ == '__main__':
     c = ServerCommunicate("TicTacToe")
 
     c.startInboxMonitor()
+
+    c.play()
+
+    c.shutDownServer()
+
+    c.joinInboxMonitor()

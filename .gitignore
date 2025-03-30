@@ -1,6 +1,7 @@
 .DS_Store
 *.bkp
 *.dtmp
+venv/
 # Devenv
 .devenv*
 devenv.local.nix

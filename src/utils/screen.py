@@ -93,10 +93,13 @@ class Screen():
         while True:
             c = window.getch() # this blocks until input
 
-            if (type(c) == int): # if normal character, convert to char
-                c = chr(c)
+            if (type(c) == int): # if int, try to convert to char
+                try:
+                    c = chr(c)
+                except ValueError: # other code, so ignore
+                    pass
             self.__gotInput(c)
-    
+
     def height(self):
         with self.__lock:
             return self.__height()

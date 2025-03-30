@@ -31,8 +31,6 @@ def main():
     #     screenInstance.refresh()
     #     time.sleep(0.1)
 
-    time.sleep(100)
-
     screenInstance.shutdown()
 
 def gotInput(screenInstance, input):
