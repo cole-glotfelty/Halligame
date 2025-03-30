@@ -5,7 +5,7 @@ import threading
 
 from erpy import stdio_port_connection
 from term import Atom
-from games import *
+from ..games import *
 
 class ClientCommunicate():
     # TODO: there are some serious shenanigans of imports going on here and I hate it
