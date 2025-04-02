@@ -5,6 +5,7 @@ import threading
 
 from erpy import stdio_port_connection
 from term import Atom
+from halligame.games import *
  
  # NOTE: Threads are spawned as Daemons, so they might be killed at any time
 
@@ -12,7 +13,8 @@ class ServerCommunicate():
     def __init__(self, gameName):
         self.inbox, self.port = stdio_port_connection()
 
-        self.__serverGameInstance = None # TODO: figure out the include problem in clientCommunicate first
+        # TODO: make this dependent on game provided
+        self.__serverGameInstance = TicTacToe.Server(self.sendMessage)
 
         self.__monitorInboxThread = threading.Thread(target = self.monitorServerMessages,
                                          args = [])
@@ -39,20 +41,21 @@ class ServerCommunicate():
         self.port.send(Msg)
     
     def startInboxMonitor(self):
-        self.monitorThread.start()
+        self.__monitorInboxThread.start()
     
+    def joinInboxMonitor(self):
+        self.__monitorInboxThread.join()
+
     def shutDownServer(self):
         self.sendMessage(("terminate", "normal"))
 
-        self.monitorThread.join()
+        self.__monitorInboxThread.join()
 
 if __name__ == '__main__':
     c = ServerCommunicate("TicTacToe")
 
     c.startInboxMonitor()
 
-    c.play()
+    c.joinInboxMonitor()
 
     c.shutDownServer()
-
-    c.joinInboxMonitor()

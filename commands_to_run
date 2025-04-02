@@ -1,0 +1,13 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -sname server
+
+-mode(interpret).
+
+main(_) ->
+    % c(communicationServer),
+    {ok, Pid} = communicationServer:start_link("python3 ../halligame/utils/erpyServerCommunicate.py"),
+    ClientPort = open_port({spawn, "python3 ../halligame/utils/erpyClientCommunicate.py"}, [binary, {packet, 4}, nouse_stdio]),
+    timer:sleep(10),
+    gen_server:cast(Pid, {add_client, {self(), ClientPort}}),
+    gen_server:call(Pid, dump_state).

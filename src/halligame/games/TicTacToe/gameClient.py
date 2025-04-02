@@ -18,10 +18,20 @@ import time
 class Client():
     # comms is the function to call when you want to send a message to the server
     def __init__(self, comms: callable, playerID):
+        """
+        Memeber Variables:
+            screen
+            stateLock
+            comms
+            state
+            playerID
+            myTurn
+            done
+        """
         self.__screen = Screen(self.userInput) # create new instance of the ncurses module
         self.__stateLock = threading.Lock()
         self.__comms = comms
-        self.__state : GameState = GameState()
+        self.__state: GameState = GameState()
         self.__playerID = playerID
         self.__myTurn = True
         self.done = False

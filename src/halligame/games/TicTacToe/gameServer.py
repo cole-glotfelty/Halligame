@@ -7,7 +7,7 @@
 from halligame.utils.gameState import GameState
 from typing import Any
 
-class Server:
+class Server():
     # comms is the function to call when you want to send a message to the server
     def __init__(self, comms: callable) -> None:
         self.__comms = comms
@@ -24,21 +24,24 @@ class Server:
         self.__boardFull = 0
 
     def play(self) -> None:
-        """
-        Starts the game server's game loop
-        """
-        while self.__state.objects["gameOver"] == "":
-            # TODO: Draw screen here or tell client to draw
-            # self.drawScreen()
-            event = (
-                self.__state.objects["currentPlayer"],
-                # TODO: we need a way to get the move from the player, that goes here
-                # self.__players[self.__currentPlayer].takeTurn(),
-            )
-            if self.eventIsValid(event):
-                self.eventUpdate(event)
+        pass
 
-            self.__currentPlayer = (self.__currentPlayer + 1) % 2
+    # def play(self) -> None:
+    #     """
+    #     Starts the game server's game loop
+    #     """
+    #     while self.__state.objects["gameOver"] == "":
+    #         # TODO: Draw screen here or tell client to draw
+    #         # self.drawScreen()
+    #         event = (
+    #             self.__state.objects["currentPlayer"],
+    #             # TODO: we need a way to get the move from the player, that goes here
+    #             # self.__players[self.__currentPlayer].takeTurn(),
+    #         )
+    #         if self.eventIsValid(event, self.clientID):
+    #             self.eventUpdate(event)
+
+    #         self.__currentPlayer = (self.__currentPlayer + 1) % 2
 
     # This is the function that is called when the server receives a message 
     # from one of the clients, most likely an event/move. Note that I haven't 

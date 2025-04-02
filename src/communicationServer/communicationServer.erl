@@ -42,14 +42,26 @@ dump_ports() -> gen_server:call(?MODULE, dump_ports).
 
 init(GamePathString) ->
     %% TODO: update the command so that it opens up a port to the server
-    GameServerPort = open_port({spawn, GamePathString}, [binary, {packet, 4}, nouse_stdio]),
-    {ok, {GameServerPort, []}}.
+    GameServerPort = open_port({spawn, GamePathString}, [binary, {packet, 4}, use_stdio]),
+    {ok, #state{game_server_port = GameServerPort, clients = []}}.
 
 %% When we terminate, send the program on the port a message indicating that
 %% it is about to close, then close the port.
 terminate(_Reason, {GameServerPort, _ClientPorts}) ->
     GameServerPort ! {self(), command, term_to_binary(close)},
     GameServerPort ! {self(), close}.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Handling cast messages
+%% @end
+%%--------------------------------------------------------------------
+-spec handle_cast(Request :: term(), State :: term()) ->
+	  {noreply, NewState :: term()} |
+	  {noreply, NewState :: term(), Timeout :: timeout()} |
+	  {noreply, NewState :: term(), hibernate} |
+	  {stop, Reason :: term(), NewState :: term()}.
 
 % port must be opened by caller
 handle_cast({add_client, {Pid, ClientPort}}, State) ->
@@ -58,15 +70,34 @@ handle_cast({add_client, {Pid, ClientPort}}, State) ->
     NewClient = #client{pid = Pid, port = ClientPort},
     CurrClients = State#state.clients,
     {noreply, State#state{clients = [NewClient | CurrClients]}};
+
 handle_cast({remove_client, {Pid, ClientPort}}, State) ->
     sendPortMessage(State#state.game_server_port, {remove_client, Pid}),
     FilterFun = fun(Client) -> Client#client.port =/= ClientPort end,
     FilteredClients = lists:filter(FilterFun, State#state.clients),
     {noreply, State#state{clients = FilteredClients}}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Handling call messages
+%% @end
+%%--------------------------------------------------------------------
+-spec handle_call(Request :: term(), From :: {pid(), term()}, State :: term()) ->
+	  {reply, Reply :: term(), NewState :: term()} |
+	  {reply, Reply :: term(), NewState :: term(), Timeout :: timeout()} |
+	  {reply, Reply :: term(), NewState :: term(), hibernate} |
+	  {noreply, NewState :: term()} |
+	  {noreply, NewState :: term(), Timeout :: timeout()} |
+	  {noreply, NewState :: term(), hibernate} |
+	  {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
+	  {stop, Reason :: term(), NewState :: term()}.
+
 %% for debugging --> should print all of the game server ports?
 handle_call(dump_ports, _From, {GameServerPort, ClientPorts}) -> 
-    {reply, ClientPorts, {GameServerPort, ClientPorts}}.
+    {reply, ClientPorts, {GameServerPort, ClientPorts}};
+handle_call(dump_state, _From, State) -> 
+    {reply, State, State}.
 
 %% If we receive a message from the port, either accept the new state and notify all client ports or deny it
 handle_info({Port, {data, Data}}, State) ->
@@ -93,6 +124,7 @@ handle_info({Port, {data, Data}}, State) ->
                     broadcast(State#state.clients, {ClientPid, Message})
             end,
             {noreply, State};
+
         ClientPort ->
             ClientPid = portToPid(ClientPort, State),
             {MessageType, Message} = binary_to_term(Data),

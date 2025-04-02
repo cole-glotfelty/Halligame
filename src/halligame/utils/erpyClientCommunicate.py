@@ -12,6 +12,7 @@ class ClientCommunicate():
     def __init__(self, gameName):
         self.inbox, self.port = stdio_port_connection()
 
+        # self.__serverGameInstance = TicTacToe.Client(self.sendMessage, self.port)
         # "TicTacToe"
         #    - Import the tictactoe module
         #    - Call the init function of that tictactoe module
