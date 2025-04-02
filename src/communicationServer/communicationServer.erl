@@ -42,7 +42,7 @@ dump_ports() -> gen_server:call(?MODULE, dump_ports).
 
 init(GamePathString) ->
     %% TODO: update the command so that it opens up a port to the server
-    GameServerPort = open_port({spawn, GamePathString}, [binary, {packet, 4}, use_stdio]),
+    GameServerPort = open_port({spawn, GamePathString}, [binary, {packet, 4}, nouse_stdio]),
     {ok, #state{game_server_port = GameServerPort, clients = []}}.
 
 %% When we terminate, send the program on the port a message indicating that
@@ -66,6 +66,7 @@ terminate(_Reason, {GameServerPort, _ClientPorts}) ->
 % port must be opened by caller
 handle_cast({add_client, {Pid, ClientPort}}, State) ->
     ClientPort ! {Pid, {connect, self()}}, % set the owner of the port to this genserver module
+    % port_connect(ClientPort, self()), % set the owner of the port to this genserver module
     sendPortMessage(State#state.game_server_port, {new_client, Pid}),
     NewClient = #client{pid = Pid, port = ClientPort},
     CurrClients = State#state.clients,
@@ -144,7 +145,7 @@ pidToPort(Pid, State) ->
     Client#client.port.
 
 sendPortMessage(Port, Message) ->
-    Port ! {self(), command, term_to_binary(Message)}.
+    Port ! {self(), {command, term_to_binary(Message)}}.
 
 
 broadcast([], _Message) ->

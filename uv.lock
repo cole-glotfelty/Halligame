@@ -4,12 +4,8 @@ requires-python = ">=3.10"
 
 [[package]]
 name = "erpy"
-version = "0.1.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/bd/71/874de434110db7023755fce5d8696c8490687f9a01b4770f12dbf971040e/erpy-0.1.1.tar.gz", hash = "sha256:c5a5a0f5a1fa885b920c03b38273c38a90c7a50ccf2f8194659fd68842a03b40", size = 23615 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2d/83/5b49b54fe6e438ccb4699e14e22137752ecec1c1d47287866720a60c3979/erpy-0.1.1-py3-none-any.whl", hash = "sha256:aa6816770bda65dcc7b032c8223ede36595d4e9e66e1c3e47c1cb7f526ec764d", size = 21818 },
-]
+version = "0.1.2a1"
+source = { directory = "vendor/erpy" }
 
 [[package]]
 name = "halligame"
@@ -20,4 +16,4 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "erpy", specifier = ">=0.1.1" }]
+requires-dist = [{ name = "erpy", directory = "vendor/erpy" }]

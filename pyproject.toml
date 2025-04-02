@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "erpy>=0.1.1",
+    "erpy",
 ]
 
 [build-system]
@@ -14,3 +14,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/halligame"]
+
+[tool.uv.sources]
+erpy = { path = "vendor/erpy" }

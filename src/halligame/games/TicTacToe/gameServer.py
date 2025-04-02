@@ -99,7 +99,7 @@ class Server():
     def addUser(self, clientPID):
         print(type(clientPID))
         self.__usersConnected += 1
-        if (self.__usersConnect >= 2):
+        if (self.__usersConnected >= 2):
             self.__comms(("reply", (clientPID, "Error: Too Many Players")))
 
     def removeUser(self, clientPID):

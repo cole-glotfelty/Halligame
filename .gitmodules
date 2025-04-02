@@ -1,0 +1,3 @@
+[submodule "vendor/erpy"]
+	path = vendor/erpy
+	url = https://github.com/mdaniels5757/erpy.git
