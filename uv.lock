@@ -14,7 +14,7 @@ wheels = [
 [[package]]
 name = "halligame"
 version = "0.0.0a0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "erpy" },
 ]

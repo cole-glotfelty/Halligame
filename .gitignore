@@ -1,7 +1,16 @@
 .DS_Store
 *.bkp
 *.dtmp
+
+# Python
 venv/
+.venv/
+__pycache__
+**/__pycache__
+*.pyc
+*.egg-info
+*.egg
+
 # Devenv
 .devenv*
 devenv.local.nix
