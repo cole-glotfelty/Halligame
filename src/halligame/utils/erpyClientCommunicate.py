@@ -61,8 +61,6 @@ class ClientCommunicate():
 
 
 if __name__ == '__main__':
-    print("Hi")
-    exit(0)
     c = ClientCommunicate("TicTacToe")
 
     c.startInboxMonitor()

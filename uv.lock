@@ -13,7 +13,29 @@ version = "0.0.0a0"
 source = { editable = "." }
 dependencies = [
     { name = "erpy" },
+    { name = "pyrlang" },
+    { name = "pyrlang-term" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "erpy", directory = "vendor/erpy" }]
+requires-dist = [
+    { name = "erpy", directory = "vendor/erpy" },
+    { name = "pyrlang", directory = "vendor/Pyrlang" },
+    { name = "pyrlang-term", directory = "vendor/Term" },
+]
+
+[[package]]
+name = "pyrlang"
+version = "0.12a0"
+source = { directory = "vendor/Pyrlang" }
+dependencies = [
+    { name = "pyrlang-term" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pyrlang-term", specifier = ">=1.2" }]
+
+[[package]]
+name = "pyrlang-term"
+version = "1.5a0"
+source = { directory = "vendor/Term" }

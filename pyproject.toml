@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "erpy",
+    "pyrlang",
+    "pyrlang-term",
 ]
 
 [build-system]
@@ -17,3 +19,5 @@ packages = ["src/halligame"]
 
 [tool.uv.sources]
 erpy = { path = "vendor/erpy" }
+pyrlang-term = { path = "vendor/Term" }
+pyrlang = { path = "vendor/Pyrlang" }
