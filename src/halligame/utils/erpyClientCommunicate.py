@@ -17,7 +17,7 @@ class ClientCommunicate():
         #    - Import the tictactoe module
         #    - Call the init function of that tictactoe module
         gameModule = importlib.import_module("halligame.games." + gameName)
-        gameModule.Client(self.sendMessage , 1) # TODO: fix, hard-coded player id to 1
+        self.__serverGameInstance = gameModule.Client(self.sendMessage , 1) # TODO: fix, hard-coded player id to 1
 
         # os.chdir("../games") # TODO: this will change
         # try:
@@ -61,6 +61,8 @@ class ClientCommunicate():
 
 
 if __name__ == '__main__':
+    print("Hi")
+    exit(0)
     c = ClientCommunicate("TicTacToe")
 
     c.startInboxMonitor()

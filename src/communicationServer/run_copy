@@ -1,0 +1,19 @@
+#!/usr/bin/env escript
+
+main(_) ->
+    Port = open_port({spawn, "cat > output"}, [binary, {packet, 4}, nouse_stdio, exit_status]),
+    receiveFunc(Port).
+
+receiveFunc(Port) ->
+    receive
+        {Port, {exit_status, Status}} ->
+            io:format("Process exited with status ~p~n", [Status]),
+            receive
+                Any ->  io:format("Message received: ~p~n", [Any])
+            after
+                1000 -> io:format("Exiting~n")
+            end;
+        Other ->
+            io:format("Message received: ~p~n", [Other]),
+            receiveFunc(Port)
+    end.

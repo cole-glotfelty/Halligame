@@ -1,0 +1,19 @@
+#!/usr/bin/env escript
+
+main(_) ->
+    ClientPort = open_port({spawn, "cat"}, [binary, {packet, 4}, nouse_stdio, exit_status]),
+    % ClientPort = open_port({spawn, "cat < /comp/40/bin/images/large/mobo.ppm > out"}, [binary, {packet, 4}, nouse_stdio, exit_status, eof]),
+    % ClientPort = open_port({spawn, "cat"}, [binary, stream, nouse_stdio, exit_status, eof]),
+    link(ClientPort),
+    receiveFunc().
+
+receiveFunc() ->
+    % monitor(port, ClientPort),
+    receive
+        {ClientPort, {exit_status, Status}} -> io:format("Process exited with status ~p~n", [Status]);
+        Other -> io:format("Message received: ~p~n", [Other]), receiveFunc()
+    end.
+    % compile:file("./communicationServer.erl"),
+    % {ok, Pid} = communicationServer:start_link("python3 ../halligame/utils/erpyServerCommunicate.py"),
+    % timer:sleep(1000),
+    % ClientPort = open_port({spawn, "python3 ../halligame/utils/erpyClientCommunicate.py"}, [binary, {packet, 4}, nouse_stdio]).
