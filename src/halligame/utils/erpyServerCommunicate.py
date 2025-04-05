@@ -26,6 +26,8 @@ class ServerCommunicate(Process):
 
         sleep(2) # TODO: needed?
 
+        # Horrible hack: pretty sure $gen_cast (and this message format)
+        # is an undocumentented OTP implementation detail. But it works!
         self.sendMessage((Atom('$gen_cast'), (Atom("replace_server"), self.pid_)))
         # TODO: make this dependent on game provided
         self.__serverGameInstance = TicTacToe.Server(self.sendMessage)

@@ -32,6 +32,9 @@ class ClientCommunicate(Process):
         # except Exception as e:
         #     print("Unknown module import error")
         # os.chdir("../utils") # TODO: this will change
+        
+        # Horrible hack: pretty sure $gen_cast (and this message format)
+        # is an undocumentented OTP implementation detail. But it works!
         self.sendMessage((Atom('$gen_cast'), (Atom("add_client"), self.pid_)))
         # # TODO: this may not work
         # initFunc = getattr(self.__module, gameName) # assumes that the module contains a class of the same name (e.g. class TicTacToe)
