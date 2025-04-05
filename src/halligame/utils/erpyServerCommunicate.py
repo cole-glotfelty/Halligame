@@ -6,17 +6,19 @@ from time import sleep
 
 from pyrlang import Node
 from pyrlang.process import Process
-from term import Atom, Reference
+from pyrlang.gen.server import GenServerInterface
+
+from term import Atom
 from halligame.games import *
+from halligame.utils.gameState import GameState
 import os
  
- # NOTE: Threads are spawned as Daemons, so they might be killed at any time
-
 class ServerCommunicate(Process):
     def __init__(self, gameName):
         super().__init__()
         self.__commserver_name = f'{os.environ["USER"]}_{gameName}_communicationserver'
         self.__full_commserver_name = self.__commserver_name + "@" +  os.environ["HOST"]
+        print(f"Communication server node: {self.__full_commserver_name}")
         subprocess.Popen(['bash', '-xc',
                         #   'ls'
                           f'erl -noinput -sname {self.__commserver_name} -setcookie COOKIE -run communicationServer start_link TicTacToe > commserver_output'
@@ -24,17 +26,20 @@ class ServerCommunicate(Process):
                           cwd = '../../communicationServer')
         self.get_node().register_name(self, Atom("pyServer"))
 
-        sleep(2) # TODO: needed?
+        self.__commGenServer = GenServerInterface(self,
+                                                  (self.__full_commserver_name,
+                                                   Atom("communicationServer")))
 
-        # Horrible hack: pretty sure $gen_cast (and this message format)
-        # is an undocumentented OTP implementation detail. But it works!
-        self.sendMessage((Atom('$gen_cast'), (Atom("replace_server"), self.pid_)))
+        sleep(0.1)
+        self.__commGenServer.cast_nowait((Atom("replace_server"), self.pid_))
+
+        sleep(0.1)
         # TODO: make this dependent on game provided
-        self.__serverGameInstance = TicTacToe.Server(self.sendMessage)
+        self.__serverGameInstance = TicTacToe.Server(self)
 
     def handle_one_inbox_message(self, msg):
-        print(f"erpyServerComm got message {msg}")
-        if msg == Atom("close"):
+        print(f"DEBUG: erpyServerComm got message {msg}")
+        if msg == "close":
             self.exit()
             exit(0)
             
@@ -43,7 +48,7 @@ class ServerCommunicate(Process):
         elif (msg[0] == "remove_client"):
             self.__serverGameInstance.removeUser(msg[1])
         elif (msg[0] == "event"):
-            self.__serverGameInstance.eventIsValid(msg[1][0], msg[1][1])
+            self.__serverGameInstance.eventIsValid(msg[1][1], msg[1][0])
         elif (msg[0] == "other"):
             self.__serverGameInstance.otherMessageType(msg[1][0], msg[1][1])
 
@@ -56,18 +61,20 @@ class ServerCommunicate(Process):
                             receiver = (self.__full_commserver_name,
                                         Atom("communicationServer")),
                             message = Msg)
-        # self.port.send(Msg)
 
+    # State should have type halligame.utils.GameState
+    def sendState(self, State : GameState):
+        print(f"Sending serialized state {State.serialize()}")
+        self.sendMessage((self.pid_,
+                          (Atom("data"),
+                           (Atom("broadcastState"), State.serialize()))))
     def shutDownServer(self):
         self.sendMessage(("terminate", "normal"))
 
 if __name__ == '__main__':
     name = f'{os.environ["USER"]}-TicTacToe-gameserver@{os.environ["HOST"]}'
     n = Node(node_name = name, cookie = "COOKIE")
-    # n = Node(node_name = f'{os.environ["USER"]}-TicTacToe-gameserver', cookie = "COOKIE")
     c = ServerCommunicate("TicTacToe")
-    print("name: " + name)
-    # print("HOST: " + os.environ["HOST"])
     n.run()
 
     c.shutDownServer()

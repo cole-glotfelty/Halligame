@@ -34,33 +34,41 @@ class Client():
         self.__state: GameState = GameState()
         self.__playerID = playerID
         self.__myTurn = True
-        self.done = False
 
     # Takes in a message that contains the new state (this message is sent from 
     # from the server side of the game class) and updates the internal 
     # state, potentially updating/refreshing the display
     def updateState(self, msg : list[tuple]):
         with self.__stateLock:
-            self.__state = GameState.deserialize(msg)
+            self.__state.deserialize(msg)
+            # print(f"Client has state {self.__state.objects}")
 
+            # print('DEBUG: Printing board:')
+            # print('{self.__state.objects["board"]}')
+            # print('DEBUG: End board')
+
+            self.__screen.refresh()
             for row in self.__state.objects["board"]:
                 self.__screen.print("-------------")
                 self.__screen.print("|   |   |   |")
                 self.__screen.print(f"| {row[0]} | {row[1]} | {row[2]} |")
                 self.__screen.print("|   |   |   |")
                 self.__screen.print("-------------\n")
-
+            self.__screen.refresh()
             self.__myTurn = (self.__state.objects["currentPlayer"] == self.__playerID)
 
 
             if self.__state.objects["gameOver"] != "":
                 self.__screen.print(self.__state.objects["gameOver"])
                 self.__screen.print("Type 'q' to quit")
+                self.__screen.refresh()
             elif (self.__myTurn):
                 self.__screen.print("Select a square [1..9]: ")
+                self.__screen.refresh()
 
     def gotReply(self, msg):
         self.__screen.print("That Square is Occupied!")
+        self.__screen.refresh()
 
     # called when the screen receives user input (a char). For now, I'm just 
     # forwarding input to the server side for the server side to handle 
@@ -73,13 +81,15 @@ class Client():
     def userInput(self, input):
         with self.__stateLock:
             if (input == "q"):
-                self.done = True
-
-            if self.__myTurn:
-                playerInput = -1
-                while not (1 <= playerInput and playerInput <= 9):
-                    try:
-                        playerInput = int(input)
-                        self.__comms(playerInput - 1)
-                    except: # 
-                        self.__screen.print("Please enter a number between 1 and 9!")
+                self.shutdown()
+            elif self.__myTurn:
+                playerInput = int(input)
+                if 1 <= playerInput and playerInput <= 9:
+                    self.__comms((self.__playerID, playerInput - 1))
+                else:
+                    self.__screen.print("Please enter a number between 1 and 9!")
+                    self.__screen.refresh()
+    
+    def shutdown(self):
+        self.__screen.shutdown()
+        self.__comms("close")

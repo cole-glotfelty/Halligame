@@ -1,10 +1,12 @@
 import importlib # allows us to import a module based on the name
 import os
+import sys
 
 import threading
 
 from pyrlang import Node
 from pyrlang.process import Process
+from pyrlang.gen.server import GenServerInterface
 from term import Atom
 from halligame.games import *
 
@@ -20,8 +22,10 @@ class ClientCommunicate(Process):
         #    - Import the tictactoe module
         #    - Call the init function of that tictactoe module
         gameModule = importlib.import_module("halligame.games." + gameName)
-        self.__serverGameInstance = gameModule.Client(self.sendMessage , 1) # TODO: fix, hard-coded player id to 1
-
+        self.__serverGameInstance = gameModule.Client(self.sendMessage , playerID)
+        self.__commGenServer = GenServerInterface(self,
+                                                  (Atom(commServerName),
+                                                   Atom("communicationServer")))
         # os.chdir("../games") # TODO: this will change
         # try:
         #     self.__module = importlib.import_module('game')
@@ -33,15 +37,14 @@ class ClientCommunicate(Process):
         #     print("Unknown module import error")
         # os.chdir("../utils") # TODO: this will change
         
-        # Horrible hack: pretty sure $gen_cast (and this message format)
-        # is an undocumentented OTP implementation detail. But it works!
-        self.sendMessage((Atom('$gen_cast'), (Atom("add_client"), self.pid_)))
+        self.__commGenServer.cast_nowait((Atom("add_client"), self.pid_))
+
         # # TODO: this may not work
         # initFunc = getattr(self.__module, gameName) # assumes that the module contains a class of the same name (e.g. class TicTacToe)
         # self.__serverGameInstance = initFunc(self.sendMessage) # set up comms function
 
     def handle_one_inbox_message(self, msg):
-        print(f"erpyClientComm got message {msg}")
+        # print(f"erpyClientComm got message {msg}")
         if msg == Atom("close"):
             exit(0)
 
@@ -50,15 +53,26 @@ class ClientCommunicate(Process):
         elif (msg[0] == "reply"):
             self.__serverGameInstance.gotReply(msg[1])
 
-    def sendMessage(self, Msg):
-        self.get_node().send_nowait(sender = self.pid_,
-                                    # TODO: hard-coded
-                         receiver = (Atom("mdanie09_TicTacToe_communicationserver@vm-hw02"),
-                                     Atom("communicationServer")),
-                         message = Msg)
+    def sendMessage(self, msg):
+        if msg == "close":
+            # self.exit()
+            n.destroy()
+            # exit(0)
+        else:
+            self.get_node().send_nowait(sender = self.pid_,
+                            receiver = (Atom(commServerName),
+                                        Atom("communicationServer")),
+                            message = (self.pid_, (Atom("data"), (Atom("event"), msg))))
 
+# This is an entry point!
+# Arguments on command line:
+# Argument 1: player ID (0 or 1)
+# Argument 2: name of communicationServer node ("name@host"), from the
+# erpyServerCommunicate you launched seperately
 if __name__ == '__main__':
-    name = f'{os.environ["USER"]}-TicTacToe-gameclient@{os.environ["HOST"]}'
+    playerID = int(sys.argv[1])
+    name = f'{os.environ["USER"]}-TicTacToe-gameclient-{playerID}@{os.environ["HOST"]}'
+    commServerName = sys.argv[2]
     n = Node(node_name = name, cookie = "COOKIE")
     c = ClientCommunicate("TicTacToe")
     n.run()

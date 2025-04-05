@@ -4,25 +4,31 @@
 # Written by Cole Glotfelty and Will Cordray <2025-03-29>
 # Last edited by: Cole Glotfelty 2025-03-29
 
+from halligame.utils.erpyServerCommunicate import ServerCommunicate
 from halligame.utils.gameState import GameState
 from typing import Any
+from term import Atom
 
 class Server():
-    # comms is the function to call when you want to send a message to the server
-    def __init__(self, comms: callable) -> None:
+    def __init__(self, comms: ServerCommunicate) -> None:
         self.__comms = comms
 
         self.__usersConnected = 0
 
         # "Public/Client Facing Members - For GameClient.py"
-        self.__state = GameState()
+        self.__state : GameState = GameState()
         self.__state.objects["board"] = [[3 * y + x + 1 for x in range(3)] for y in range(3)]
         self.__state.objects["currentPlayer"] = 0
         self.__state.objects["gameOver"] = ""
 
+        self.__playersSymbol = ["X", "O"]
+
+        # print(f"GameState objects: {self.__state.objects}")
         # "Private" Members for internal use only
         self.__boardFull = 0
 
+        self.__comms.sendState(self.__state)
+    
     def play(self) -> None:
         pass
 
@@ -56,18 +62,18 @@ class Server():
         """
         (_, move) = event
 
-        if self.board[move // 3][move % 3] not in ["X", "O"]:
+        if self.__state.objects["board"][move // 3][move % 3] not in ["X", "O"]:
             self.__updateState(event)
-            self.__comms(("broadcastState", self.__state.serialize()))
+            self.__comms.sendState(self.__state)
         else:
-            self.__comms(("reply", (clientPID, "Error: Invalid Move")))
+            self.__comms.sendMessage(("reply", (clientPID, "Error: Invalid Move")))
 
     def __updateState(self, event: tuple[int, Any]) -> None:
         (currentPlayer, move) = event
 
-        playerSymbol = "X" if currentPlayer else "O"
+        playerSymbol = self.__playersSymbol[currentPlayer]
 
-        self.board[move // 3][move % 3] = playerSymbol
+        self.__state.objects["board"][move // 3][move % 3] = playerSymbol
 
         self.__boardFull += 1
 
@@ -75,32 +81,43 @@ class Server():
         if self.__boardFull == 9:
             self.__state.objects["gameOver"] = "Draw"
 
-        for row in self.board:
+        for row in self.__state.objects["board"]:
             if all(elem == self.__playersSymbol[currentPlayer] for elem in row):
                 self.__state.objects["gameOver"] = f"Player {currentPlayer} wins!"
 
         for i in range(3):
-            if all(row[i] == self.__playersSymbol[currentPlayer] for row in self.board):
+            if all(row[i] == self.__playersSymbol[currentPlayer] for row in self.__state.objects["board"]):
                 self.__state.objects["gameOver"] = f"Player {currentPlayer} wins!"
 
-
         wincon = [0, 0]
-        for i in range(3):
-            for j in range(3):
-                if (self.board[i][j] == playerSymbol):
+        for (i, j) in [(0, 0), (1, 1), (2, 2)]:
+                if (self.__state.objects["board"][i][j] == playerSymbol):
                     wincon[0] += 1
-                if (self.board[i][3 - j - 1] == playerSymbol):
+                if (self.__state.objects["board"][i][3 - j - 1] == playerSymbol):
                     wincon[1] += 1
 
         if 3 in wincon:
             self.__state.objects["gameOver"] = f"Player {currentPlayer} wins!"
 
+        wincon = [0, 0]
+        for (i, j) in [(0, 2), (1, 1), (2, 0)]:
+                if (self.__state.objects["board"][i][j] == playerSymbol):
+                    wincon[0] += 1
+                if (self.__state.objects["board"][i][3 - j - 1] == playerSymbol):
+                    wincon[1] += 1
+
+        if 3 in wincon:
+            self.__state.objects["gameOver"] = f"Player {currentPlayer} wins!"
+        
+        self.__state.objects["currentPlayer"] = (currentPlayer + 1) % 2
+
 
     def addUser(self, clientPID):
-        print(type(clientPID))
         self.__usersConnected += 1
-        if (self.__usersConnected >= 2):
-            self.__comms(("reply", (clientPID, "Error: Too Many Players")))
+        if (self.__usersConnected > 2):
+            self.__comms.sendMessage(("reply", (clientPID, "Error: Too Many Players")))
+        else:
+            self.__comms.sendState(self.__state)
 
     def removeUser(self, clientPID):
         pass

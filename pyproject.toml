@@ -20,4 +20,4 @@ packages = ["src/halligame"]
 [tool.uv.sources]
 erpy = { path = "vendor/erpy" }
 pyrlang-term = { path = "vendor/Term" }
-pyrlang = { path = "vendor/Pyrlang" }
+pyrlang = { path = "vendor/Pyrlang", editable = true }

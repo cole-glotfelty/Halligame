@@ -179,3 +179,7 @@ class Screen():
         with self.__lock:
             if (self.__stdscr.is_wintouched()): # only refresh if touched
                 self.__stdscr.refresh()
+
+    def force_refresh(self):
+        with self.__lock:
+            self.__stdscr.refresh()

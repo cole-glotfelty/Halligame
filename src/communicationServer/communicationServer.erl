@@ -112,7 +112,9 @@ handle_info({Pid, {data, Data}}, State) ->
     GameServerPid = State#state.game_server,
     case Pid of
         GameServerPid ->
-            {MessageType, RawMessage} = binary_to_term(Data),
+            % {MessageType, RawMessage} = binary_to_term(Data),
+            {MessageType, RawMessage} = Data,
+            io:format("Got data ~p from server.~n", [Data]),
             case MessageType of
                 broadcastState ->
                     broadcast(State#state.clients, {state, RawMessage});
@@ -134,7 +136,8 @@ handle_info({Pid, {data, Data}}, State) ->
 
         ClientPid ->
             % ClientPid = portToPid(ClientPort, State),
-            {MessageType, Message} = binary_to_term(Data),
+            {MessageType, Message} = Data, %binary_to_term(Data),
+            io:format("Got data ~p from client.~n", [Data]),
             case MessageType of
                 event -> GameServerPid ! {event, {ClientPid, Message}};
                 _ -> GameServerPid ! {other, {ClientPid, Message}}
