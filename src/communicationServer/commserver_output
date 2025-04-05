@@ -1,3 +1,6 @@
 Unrecognized info 0; current state {state,'TicTacToe',<9888.0.2>,[<9889.0.2>]}
 Unrecognized info 1; current state {state,'TicTacToe',<9888.0.2>,[<9889.0.2>]}
 Unrecognized info 2; current state {state,'TicTacToe',<9888.0.2>,[<9889.0.2>]}
+
+BREAK: (a)bort (A)bort with dump (c)ontinue (p)roc info (i)nfo
+       (l)oaded (v)ersion (k)ill (D)b-tables (d)istribution
