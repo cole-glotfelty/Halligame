@@ -10,12 +10,12 @@
 -behaviour(gen_server).
 
 -export([start_link/1, stop/0]).
--export([send/1, dump_ports/0]).
+% -export([send/1, dump_ports/0]).
 -export([init/1, terminate/2, handle_call/3, handle_cast/2, handle_info/2]).
 
 
--record(client, {pid :: pid(), port :: port()}).
--record(state, {game_server_port :: port(), clients = [] :: [#client{}]}).
+% -record(client, {pid :: pid(), port :: port()}).
+-record(state, {game_name :: atom(), game_server :: pid(), clients = [] :: [pid()]}).
 %% Message structure:
 %%      Server (from port):
 %%            {broadcastState, NewState} --> Send {state, NewState} to All Clients
@@ -31,19 +31,19 @@
 %%            Remove Client --> Send {remove_client, Pid} to Server
 
 
-start_link(GamePathString) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [GamePathString], []).
+start_link([GameName]) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, GameName, []).
 
 stop() ->
     gen_server:stop(?MODULE).
 
-send(Data) -> gen_server:cast(?MODULE, {send, Data}).
-dump_ports() -> gen_server:call(?MODULE, dump_ports).
+% send(Data) -> gen_server:cast(?MODULE, {send, Data}).
+% dump_ports() -> gen_server:call(?MODULE, dump_ports). % TODO: rm?
 
-init(GamePathString) ->
+init(GameName) ->
     %% TODO: update the command so that it opens up a port to the server
-    GameServerPort = open_port({spawn, GamePathString}, [binary, {packet, 4}, nouse_stdio]),
-    {ok, #state{game_server_port = GameServerPort, clients = []}}.
+    % GameServerPort = open_port({spawn, GamePathString}, [binary, {packet, 4}, nouse_stdio]),
+    {ok, #state{game_name = list_to_atom(GameName), clients = []}}.
 
 %% When we terminate, send the program on the port a message indicating that
 %% it is about to close, then close the port.
@@ -63,20 +63,24 @@ terminate(_Reason, {GameServerPort, _ClientPorts}) ->
 	  {noreply, NewState :: term(), hibernate} |
 	  {stop, Reason :: term(), NewState :: term()}.
 
-% port must be opened by caller
-handle_cast({add_client, {Pid, ClientPort}}, State) ->
-    ClientPort ! {Pid, {connect, self()}}, % set the owner of the port to this genserver module
+handle_cast({replace_server, Pid}, State) ->
+    {noreply, State#state{game_server = Pid}};
+handle_cast({add_client, Pid}, State) ->
+    % ClientPort ! {Pid, {connect, self()}}, % set the owner of the port to this genserver module
     % port_connect(ClientPort, self()), % set the owner of the port to this genserver module
-    sendPortMessage(State#state.game_server_port, {new_client, Pid}),
-    NewClient = #client{pid = Pid, port = ClientPort},
+    State#state.game_server ! {new_client, Pid},
+    % sendPortMessage(State#state.game_server_port, {new_client, Pid}),
     CurrClients = State#state.clients,
-    {noreply, State#state{clients = [NewClient | CurrClients]}};
-
-handle_cast({remove_client, {Pid, ClientPort}}, State) ->
-    sendPortMessage(State#state.game_server_port, {remove_client, Pid}),
-    FilterFun = fun(Client) -> Client#client.port =/= ClientPort end,
+    {noreply, State#state{clients = [Pid | CurrClients]}};
+handle_cast({remove_client, Pid}, State) ->
+    State#state.game_server ! {remove_client, Pid},
+    State#state.game_server ! {remove_client, Pid},
+    FilterFun = fun(X) -> X =/= Pid end,
     FilteredClients = lists:filter(FilterFun, State#state.clients),
-    {noreply, State#state{clients = FilteredClients}}.
+    {noreply, State#state{clients = FilteredClients}};
+handle_cast(Any, State) ->
+    io:format("Unrecognized cast ~p; current state ~p~n", [Any, State]),
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -98,26 +102,28 @@ handle_cast({remove_client, {Pid, ClientPort}}, State) ->
 handle_call(dump_ports, _From, {GameServerPort, ClientPorts}) -> 
     {reply, ClientPorts, {GameServerPort, ClientPorts}};
 handle_call(dump_state, _From, State) -> 
-    {reply, State, State}.
+    {reply, State, State};
+handle_call(Any, From, State) ->
+    io:format("Unrecognized call ~p from ~p; current state ~p~n", [Any, From, State]),
+    {reply, error, State}.
 
 %% If we receive a message from the port, either accept the new state and notify all client ports or deny it
-handle_info({Port, {data, Data}}, State) ->
-    GameServerPort = State#state.game_server_port,
-    case Port of
-        GameServerPort ->
+handle_info({Pid, {data, Data}}, State) ->
+    GameServerPid = State#state.game_server,
+    case Pid of
+        GameServerPid ->
             {MessageType, RawMessage} = binary_to_term(Data),
             case MessageType of
                 broadcastState ->
                     broadcast(State#state.clients, {state, RawMessage});
                 reply -> 
                     {ClientPid, Message} = RawMessage,
-                    ClientPort = pidToPort(ClientPid, State),
-                    sendPortMessage(ClientPort, {reply, Message});
+                    ClientPid ! {reply, Message};
                 % reply ->
                 %         {ClientPid, Message} = Message,
                 %         sendPortMessage(ClientPort, {invalid, ErrorMessage});
                 terminate ->
-                    sendPortMessage(GameServerPort, stop),
+                    GameServerPid ! stop,
                     broadcast(State#state.clients, stop),
                     stop();
                 _ ->
@@ -126,30 +132,34 @@ handle_info({Port, {data, Data}}, State) ->
             end,
             {noreply, State};
 
-        ClientPort ->
-            ClientPid = portToPid(ClientPort, State),
+        ClientPid ->
+            % ClientPid = portToPid(ClientPort, State),
             {MessageType, Message} = binary_to_term(Data),
             case MessageType of
-                event -> sendPortMessage(GameServerPort, {event, {ClientPid, Message}});
-                _ -> sendPortMessage(GameServerPort, {other, {ClientPid, Message}})
+                event -> GameServerPid ! {event, {ClientPid, Message}};
+                _ -> GameServerPid ! {other, {ClientPid, Message}}
             end,
             {noreply, State}
-    end.
+    end;
+handle_info(Any, State) ->
+    io:format("Unrecognized info ~p; current state ~p~n", [Any, State]),
+    {noreply, State}.
 
-portToPid(Port, State) -> 
-    {value, Client} = lists:search(fun (X) -> X#client.port == Port end, State#state.clients),
-    Client#client.pid.
+% portToPid(Port, State) -> 
+%     {value, Client} = lists:search(fun (X) -> X#client.port == Port end, State#state.clients),
+%     Client#client.pid.
 
-pidToPort(Pid, State) -> 
-    {value, Client} = lists:search(fun (X) -> X#client.pid == Pid end, State#state.clients),
-    Client#client.port.
+% pidToPort(Pid, State) -> 
+%     {value, Client} = lists:search(fun (X) -> X#client.pid == Pid end, State#state.clients),
+%     Client#client.port.
 
-sendPortMessage(Port, Message) ->
-    Port ! {self(), {command, term_to_binary(Message)}}.
+% sendPortMessage(Port, Message) ->
+%     Port ! {self(), {command, term_to_binary(Message)}}.
 
 
 broadcast([], _Message) ->
     ok;
 broadcast([Client | Rest], Message) ->
-    sendPortMessage(Client#client.port, Message),
+    % sendPortMessage(Client#client.port, Message),
+    Client ! Message,
     broadcast(Rest, Message).

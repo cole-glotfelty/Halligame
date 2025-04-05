@@ -1,7 +1,7 @@
 #!/usr/bin/env escript
 
 main(_) ->
-    Port = open_port({spawn, "cat > output"}, [binary, {packet, 4}, nouse_stdio, exit_status]),
+    Port = open_port({spawn, "cat"}, [binary, {packet, 4}, nouse_stdio, exit_status]),
     receiveFunc(Port).
 
 receiveFunc(Port) ->

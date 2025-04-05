@@ -20,14 +20,14 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "erpy", directory = "vendor/erpy" },
-    { name = "pyrlang", directory = "vendor/Pyrlang" },
+    { name = "pyrlang", editable = "vendor/Pyrlang" },
     { name = "pyrlang-term", directory = "vendor/Term" },
 ]
 
 [[package]]
 name = "pyrlang"
 version = "0.12a0"
-source = { directory = "vendor/Pyrlang" }
+source = { editable = "vendor/Pyrlang" }
 dependencies = [
     { name = "pyrlang-term" },
 ]
