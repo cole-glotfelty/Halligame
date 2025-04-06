@@ -21,7 +21,7 @@ class ServerCommunicate(Process):
         print(f"Communication server node: {self.__full_commserver_name}")
         subprocess.Popen(['bash', '-xc',
                         #   'ls'
-                          f'erl -noinput -sname {self.__commserver_name} -setcookie COOKIE -run communicationServer start_link TicTacToe > commserver_output'
+                          f'erl -detached -sname {self.__commserver_name} -setcookie COOKIE -run communicationServer start_link TicTacToe'
                           ],
                           cwd = '../../communicationServer')
         self.get_node().register_name(self, Atom("pyServer"))
