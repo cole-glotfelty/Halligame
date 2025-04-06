@@ -2,7 +2,7 @@
 
 # Tic-Tac-Toe Game Module for Halligame Testing
 # Written on 2025-03-22 by Cole Glotfelty
-# Last edited by: Cole Glotfelty 2025-03-29
+# Last edited by: Michael Daniels 2025-04-06
 
 # Potential Framework structure for python
 # each game has a Game class and a Player class
@@ -19,14 +19,13 @@ class Client():
     # comms is the function to call when you want to send a message to the server
     def __init__(self, comms: callable, playerID):
         """
-        Memeber Variables:
+        Member Variables:
             screen
             stateLock
             comms
             state
             playerID
             myTurn
-            done
         """
         self.__screen = Screen(self.userInput) # create new instance of the ncurses module
         self.__stateLock = threading.Lock()
@@ -35,10 +34,12 @@ class Client():
         self.__playerID = playerID
         self.__myTurn = True
 
-    # Takes in a message that contains the new state (this message is sent from 
-    # from the server side of the game class) and updates the internal 
-    # state, potentially updating/refreshing the display
-    def updateState(self, msg : list[tuple]):
+    def updateState(self, msg : list[tuple]) -> None:
+        """
+        Takes in a message that contains the new state (this message is sent
+        from the server side of the game class) and updates the internal
+        state, potentially updating/refreshing the display)
+        """
         with self.__stateLock:
             self.__state.deserialize(msg)
             # print(f"Client has state {self.__state.objects}")
@@ -66,19 +67,25 @@ class Client():
                 self.__screen.print("Select a square [1..9]: ")
                 self.__screen.refresh()
 
-    def gotReply(self, msg):
+    def gotReply(self, msg) -> None:
+        """
+        TODO: support messages other than occupied.
+        """
         self.__screen.print("That Square is Occupied!")
         self.__screen.refresh()
 
-    # called when the screen receives user input (a char). For now, I'm just 
-    # forwarding input to the server side for the server side to handle 
-    # (but you can obviously do more things like have client side checking 
-    # to see if it's a number 1-9 before sending to server as an event)
-    # Input comes from the curses module, which defines some constants for
-    # recognizing things like down arrows, etc.
-    # see https://docs.python.org/3/library/curses.html and search for 
-    # "curses.KEY_"...
-    def userInput(self, input):
+    
+    def userInput(self, input) -> None:
+        """
+        called when the screen receives user input (a char). For now, I'm just 
+        forwarding input to the server side for the server side to handle 
+        (but you can obviously do more things like have client side checking 
+        to see if it's a number 1-9 before sending to server as an event)
+        Input comes from the curses module, which defines some constants for
+        recognizing things like down arrows, etc.
+        see https://docs.python.org/3/library/curses.html and search for 
+        "curses.KEY_"...
+        """
         with self.__stateLock:
             if (input == "q"):
                 self.shutdown()
@@ -90,6 +97,9 @@ class Client():
                     self.__screen.print("Please enter a number between 1 and 9!")
                     self.__screen.refresh()
     
-    def shutdown(self):
+    def shutdown(self) -> None:
+        """
+        Shut down this client.
+        """
         self.__screen.shutdown()
         self.__comms("close")

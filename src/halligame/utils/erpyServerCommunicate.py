@@ -1,5 +1,4 @@
 # import importlib # allows us to import a module based on the name
-# import os # TODO: rm?
 
 import subprocess
 from time import sleep
