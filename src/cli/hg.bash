@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # this command is the prefix to run the erlang script that handles requests
-script="erl -noshell -sname cli -eval \"handleCLIRequest:"
+script="erl -noshell -sname cli -setcookie COOKIE -eval \"handleCLIRequest:"
+
+src="/h/wcordr01/cs21/final_project/Halligame/src"
 
 # no arguments supplied, or asking for help
 if [ "$#" == 0 ] || [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
@@ -15,16 +17,23 @@ if [ "$1" == "join" ]; then
         echo "Expected a gameID to join"
         exit 1
     fi
-    eval "${script}joinGame($2)\""
+    # eval "${script}joinGame($2)\""
+    eval "uv run ${src}/halligame/utils/erpyClientCommunicate.py $2"
 elif [ "$1" == "new" ]; then
     if [ "$#" != 2 ]; then
         echo "Expected a game name to be supplied"
         eval "${script}listGames()\""
         exit 1
     fi
-    eval "${script}newGame($2)\""
+    node_name="$(shuf -i 0-999999 -n 1)@$HOST"
+    eval "${script}newGame('$2', '${node_name}')\""
+    if [ "$?" == 0 ]; then
+        eval "uv run ${src}/halligame/utils/erpyServerCommunicate.py -g $2 -n ${node_name} &"
+    fi
 elif [ "$1" == "games" ]; then
     eval "${script}listGames()\""
+elif [ "$1" == "availableGames" ]; then
+    eval "${script}listActiveGames()\""
 else # no invalid second argument
     echo "Argument \"$1\" not recognized"
     eval "${script}help()\""

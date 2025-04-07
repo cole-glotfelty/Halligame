@@ -2,6 +2,9 @@
 
 import subprocess
 from time import sleep
+import argparse
+import sys
+import importlib
 
 from pyrlang import Node
 from pyrlang.process import Process
@@ -11,30 +14,31 @@ from term import Atom
 from halligame.games import *
 from halligame.utils.gameState import GameState
 import os
+from random import randint
  
 class ServerCommunicate(Process):
-    def __init__(self, gameName):
+    def __init__(self, gameName, NodeName):
         super().__init__()
-        self.__commserver_name = f'{os.environ["USER"]}_{gameName}_communicationserver'
+        self.__commserver_name = f"{randint(0, 999999) : 6d}"
         self.__full_commserver_name = self.__commserver_name + "@" +  os.environ["HOST"]
         print(f"Communication server node: {self.__full_commserver_name}")
         subprocess.Popen(['bash', '-xc',
                         #   'ls'
-                          f'erl -detached -sname {self.__commserver_name} -setcookie COOKIE -run communicationServer start_link TicTacToe'
+                          f'erl -noinput -sname {self.__commserver_name} -setcookie COOKIE -eval "communicationServer:start_link([\'TicTacToe\', \'{NodeName}\'])"'
                           ],
-                          cwd = '../../communicationServer')
-        self.get_node().register_name(self, Atom("pyServer"))
+                          cwd = '../communicationServer')
+        node.register_name(self, Atom("pyServer"))
 
         self.__commGenServer = GenServerInterface(self,
                                                   (self.__full_commserver_name,
                                                    Atom("communicationServer")))
 
-        sleep(0.1)
+        sleep(0.5)
         self.__commGenServer.cast_nowait((Atom("replace_server"), self.pid_))
 
-        sleep(0.1)
-        # TODO: make this dependent on game provided
-        self.__serverGameInstance = TicTacToe.Server(self)
+        sleep(0.5)
+        gameModule = importlib.import_module("halligame.games." + gameName)
+        self.__serverGameInstance = gameModule.Server(self)
 
     def handle_one_inbox_message(self, msg):
         print(f"DEBUG: erpyServerComm got message {msg}")
@@ -55,7 +59,7 @@ class ServerCommunicate(Process):
         self.__serverGameInstance.play()
 
     def sendMessage(self, Msg):
-        self.get_node().send_nowait(
+        node.send_nowait(
                             sender = self.pid_,
                             receiver = (self.__full_commserver_name,
                                         Atom("communicationServer")),
@@ -69,11 +73,26 @@ class ServerCommunicate(Process):
                            (Atom("broadcastState"), State.serialize()))))
     def shutDownServer(self):
         self.sendMessage(("terminate", "normal"))
+    
+    def sendClientMessage(self, pid, msg):
+        node.send_nowait(
+                            sender = self.pid_,
+                            receiver = pid,
+                            message = msg)
 
 if __name__ == '__main__':
-    name = f'{os.environ["USER"]}-TicTacToe-gameserver@{os.environ["HOST"]}'
-    n = Node(node_name = name, cookie = "COOKIE")
-    c = ServerCommunicate("TicTacToe")
-    n.run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-g", "--game", type=str, default="")
+    parser.add_argument("-n", "--node_name", type=str, default="")
+    args = parser.parse_args()
 
-    c.shutDownServer()
+    if (args.game == ""):
+        print("ERROR: No Game Supplied to ServerCommunicate", file=sys.stderr)
+    elif (args.node_name == ""):
+        print("ERROR: No Node Name Supplied", file=sys.stderr)
+    else:
+        node = Node(node_name = args.node_name, cookie = "COOKIE")
+        serverComms = ServerCommunicate(args.game, args.node_name)
+        node.run()
+
+        serverComms.shutDownServer()

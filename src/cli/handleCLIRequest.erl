@@ -12,9 +12,10 @@
 
 
 -module(handleCLIRequest).
--export([help/0, newGame/1, joinGame/1, listGames/0]).
+-export([help/0, newGame/2, joinGame/1, listGames/0, listActiveGames/0]).
 
--define(GameDir, "games/"). % the directory of games. TODO: change
+-define(GameDir, "/h/wcordr01/cs21/final_project/Halligame/src/halligame/games/"). % the directory of games. TODO: change
+-define(AvailableGames, "availableGames"). % the directory of games. TODO: change
 -define(ME, string:trim(os:cmd("whoami"))).
 -define(VM, os:getenv("HOST")).
 
@@ -23,32 +24,42 @@
 -define(ClientRegisteredName, regclient).
 -define(ClientNode, list_to_atom(?ME ++ "@" ++ ?VM)).
 
+-define(SERVERBROKER, {serverbroker, 'serverbroker@vm-projectweb3'}).
+
 % TODO: finish writing usage
 help() ->
     io:format("Usage:...\n"),
     init:stop().
 
-newGame(GameName) ->
-    {ok, Games} = file:list_dir(?GameDir),
+newGame(GameName, NodeName) ->
+    Games = gen_server:call(?SERVERBROKER, {list_games}),
     GameNameString = atom_to_list(GameName),
     case lists:member(GameNameString, Games) of
-        true -> {?ClientRegisteredName, ?ClientNode} ! 
-                                            filename:join(?GameDir, GameName),
-                ok;
-        false -> io:format("Game ~p not found.~n", [GameName]),
-                 error
-    end,
+        true ->
+            io:format("Room Name: ~p~n", [NodeName]),
+            halt(0);
+        false ->
+            io:format("Game ~p not found.~n", [GameName]),
+            halt(1)
+    end.
+
+%% Join an active gameserver
+joinGame(Game) ->
+    gen_server:call(?SERVERBROKER, {start_gameserver, Game}),
     init:stop().
 
-%% TODO
-joinGame(GameID) ->
-    io:format("~p\n", [GameID]),
-    init:stop().
-
-%% TODO
+%% List all of the potential games that the user could start a room for and play
 listGames() ->
-    io:format("(TODO) List games\n"),
-    init:stop().
+    Games = gen_server:call(?SERVERBROKER, {list_games}),
+    io:format("Available Games:~n"),
+    lists:map(fun (Game) -> io:format("\t~p~n", [Game]) end, Games),
+    halt().
+
+%% List the active rooms
+listActiveGames() ->
+    Reply = gen_server:call(?SERVERBROKER, {list_gameservers}),
+    io:format("~p~n", [Reply]),
+    halt().
 
 % % optional
 % addFriend(FriendID) ->

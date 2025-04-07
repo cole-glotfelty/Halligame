@@ -82,7 +82,7 @@ stop() ->
       ignore.
 init([]) ->
     process_flag(trap_exit, true),
-    {ok, #state{}}.
+    {ok, #state{games = ["TicTacToe"]}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -139,14 +139,14 @@ handle_call(Request, {Pid, _FromTag}, State) ->
             end,
             Reply    = ok,
             NewState = State#state{users = Users};
-        {start_gameserver, Game} ->
+        {register_gameserver, Game} ->
             % Must be called by the game server, not a client.
             % TODO: monitor?
             CurrGS   = State#state.gameservers,
             NewGS    = #gameserver{game = Game, pid = Pid},
             Reply    = ok,
             NewState = State#state{gameservers = [NewGS | CurrGS]};
-        {stop_gameserver} ->
+        {unregister_gameserver} ->
             % Must be called by the game server, not a client.
             CurrGS   = State#state.gameservers,
             Fun      = fun (X) -> Pid == X#gameserver.pid end,

@@ -13,6 +13,8 @@
 % -export([send/1, dump_ports/0]).
 -export([init/1, terminate/2, handle_call/3, handle_cast/2, handle_info/2]).
 
+-define(SERVERBROKER, {serverbroker, 'serverbroker@vm-projectweb3'}).
+-define(ME, string:trim(os:cmd("whoami"))).
 
 % -record(client, {pid :: pid(), port :: port()}).
 -record(state, {game_name :: atom(), game_server :: pid(), clients = [] :: [pid()]}).
@@ -31,8 +33,8 @@
 %%            Remove Client --> Send {remove_client, Pid} to Server
 
 
-start_link([GameName]) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, GameName, []).
+start_link([GameName, NodeName]) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [GameName, NodeName], []).
 
 stop() ->
     gen_server:stop(?MODULE).
@@ -40,10 +42,13 @@ stop() ->
 % send(Data) -> gen_server:cast(?MODULE, {send, Data}).
 % dump_ports() -> gen_server:call(?MODULE, dump_ports). % TODO: rm?
 
-init(GameName) ->
+init([GameName, NodeName]) ->
     %% TODO: update the command so that it opens up a port to the server
     % GameServerPort = open_port({spawn, GamePathString}, [binary, {packet, 4}, nouse_stdio]),
-    {ok, #state{game_name = list_to_atom(GameName), clients = []}}.
+    % register gameserver with the serverbroker
+    gen_server:call(?SERVERBROKER, {register_gameserver, {?ME ++ ":" ++ GameName, NodeName}}),
+
+    {ok, #state{game_name = GameName, clients = []}}.
 
 %% When we terminate, send the program on the port a message indicating that
 %% it is about to close, then close the port.
@@ -64,10 +69,12 @@ terminate(_Reason, {GameServerPort, _ClientPorts}) ->
 	  {stop, Reason :: term(), NewState :: term()}.
 
 handle_cast({replace_server, Pid}, State) ->
+    io:format("Replace server with ~p~n", [Pid]),
     {noreply, State#state{game_server = Pid}};
 handle_cast({add_client, Pid}, State) ->
     % ClientPort ! {Pid, {connect, self()}}, % set the owner of the port to this genserver module
     % port_connect(ClientPort, self()), % set the owner of the port to this genserver module
+    io:format("~p~n", [State#state.game_server]),
     State#state.game_server ! {new_client, Pid},
     % sendPortMessage(State#state.game_server_port, {new_client, Pid}),
     CurrClients = State#state.clients,

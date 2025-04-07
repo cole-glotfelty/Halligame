@@ -17,7 +17,7 @@ import time
 
 class Client():
     # comms is the function to call when you want to send a message to the server
-    def __init__(self, comms: callable, playerID):
+    def __init__(self, comms: callable):
         """
         Member Variables:
             screen
@@ -31,9 +31,12 @@ class Client():
         self.__stateLock = threading.Lock()
         self.__comms = comms
         self.__state: GameState = GameState()
-        self.__playerID = playerID
+        self.__playerID = None
         self.__myTurn = True
 
+    def setPlayerId(self, playerId) -> None:
+        self.__playerID = playerId
+        
     def updateState(self, msg : list[tuple]) -> None:
         """
         Takes in a message that contains the new state (this message is sent

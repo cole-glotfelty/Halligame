@@ -117,6 +117,8 @@ class Server():
         if (self.__usersConnected > 2):
             self.__comms.sendMessage(("reply", (clientPID, "Error: Too Many Players")))
         else:
+            playerId = 0 if self.__usersConnected == 1 else 1
+            self.__comms.sendClientMessage(clientPID, playerId)
             self.__comms.sendState(self.__state)
 
     def removeUser(self, clientPID):
