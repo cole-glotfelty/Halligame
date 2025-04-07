@@ -31,6 +31,8 @@ help() ->
     io:format("Usage:...\n"),
     init:stop().
 
+-spec newGame(GameName :: atom(), NodeName :: node()) -> no_return().
+
 newGame(GameName, NodeName) ->
     Games = gen_server:call(?SERVERBROKER, {list_games}),
     GameNameString = atom_to_list(GameName),
