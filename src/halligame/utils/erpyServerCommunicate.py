@@ -33,7 +33,7 @@ class ServerCommunicate(Process):
                                                   (self.__full_commserver_name,
                                                    Atom("communicationServer")))
 
-        sleep(1)
+        sleep(0.5)
         self.__commGenServer.cast_nowait((Atom("replace_server"), self.pid_))
 
         sleep(0.5)
