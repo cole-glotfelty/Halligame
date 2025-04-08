@@ -49,12 +49,17 @@ class ClientCommunicate(Process):
         if msg == Atom("close"):
             exit(0)
 
-        if (msg[0] == "state"):
-            self.__serverGameInstance.updateState(msg[1])
-        elif (msg[0] == "reply"):
-            self.__serverGameInstance.gotReply(msg[1])
-        elif (msg[0] == "confirmed_join"):
-            self.__serverGameInstance.setPlayerId(msg[1])
+        try:
+            if (msg[0] == "state"):
+                self.__serverGameInstance.updateState(msg[1])
+            elif (msg[0] == "reply"):
+                self.__serverGameInstance.gotReply(msg[1])
+            elif (msg[0] == "confirmed_join"):
+                self.__serverGameInstance.setPlayerId(msg[1])
+            else:
+                raise UserWarning("Unknown message")
+        except:
+            print(f"Could not process message {msg}")
 
     def sendMessage(self, msg):
         if msg == "close":

@@ -1,7 +1,7 @@
 #!/bin/bash -x
 
 # this command is the prefix to run the erlang script that handles requests
-export ERL_LIBS="$HG_ROOT/src/cli/_build/default/lib/cli:$ERL_LIBS"
+export ERL_LIBS="$HG_ROOT/src/cli/_build/default/lib:$HG_ROOT/src/communicationServer/_build/default/lib:$ERL_LIBS"
 script="erl -noshell -sname cli -setcookie COOKIE -eval \"handleCLIRequest:"
 
 src="$HG_ROOT/src"
@@ -18,6 +18,10 @@ if [ "$1" == "join" ]; then
         echo "Expected a gameID to join"
         exit 1
     fi
+    pgrep epmd
+    if [ $? -ne 0 ]; then
+        epmd -daemon
+    fi
     # eval "${script}joinGame($2)\""
     eval "uv --project ${src}/.. --directory ${src}/halligame run ${src}/halligame/utils/erpyClientCommunicate.py $2"
 elif [ "$1" == "new" ]; then
@@ -25,6 +29,10 @@ elif [ "$1" == "new" ]; then
         echo "Expected a game name to be supplied"
         eval "${script}listGames()\""
         exit 1
+    fi
+    pgrep epmd
+    if [ $? -ne 0 ]; then
+        epmd -daemon
     fi
     node_name="$(shuf -i 0-999999 -n 1)@$HOST"
     eval "${script}newGame('$2', '${node_name}')\""

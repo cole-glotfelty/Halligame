@@ -19,7 +19,7 @@ from random import randint
 class ServerCommunicate(Process):
     def __init__(self, gameName, NodeName):
         super().__init__()
-        self.__commserver_name = f"{randint(0, 999999) : 6d}"
+        self.__commserver_name = f"{randint(0, 999999):06d}"
         self.__full_commserver_name = self.__commserver_name + "@" +  os.environ["HOST"]
         print(f"Communication server node: {self.__full_commserver_name}")
         subprocess.Popen(['bash', '-xc',
@@ -33,7 +33,7 @@ class ServerCommunicate(Process):
                                                   (self.__full_commserver_name,
                                                    Atom("communicationServer")))
 
-        sleep(0.5)
+        sleep(1)
         self.__commGenServer.cast_nowait((Atom("replace_server"), self.pid_))
 
         sleep(0.5)
