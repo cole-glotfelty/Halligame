@@ -3,6 +3,7 @@
 # Written by Will Cordray, Cole Glotfelty, Michael Daniels <2025-03-29>
 
 import threading
+import pickle
 
 class GameState():
     def __init__(self, args = {}):
@@ -11,8 +12,8 @@ class GameState():
 
     def serialize(self):
         with self.__lock:
-            list(self.objects.items())
+            return pickle.dumps(self.objects)
 
     def deserialize(self, state):
         with self.__lock:
-            self.objects = dict(state)
+            self.objects = pickle.loads(state)

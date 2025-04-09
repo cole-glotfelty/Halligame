@@ -7,12 +7,17 @@
 
 -behaviour(application).
 
--export([start/2, stop/1]).
+-export([start/2, start/0, stop/1, stop/0]).
 
-start(_StartType, _StartArgs) ->
+start() ->
     serverbroker_sup:start_link().
 
-stop(_State) ->
-    ok.
+start(_StartType, _StartArgs) ->
+    start().
 
+stop() ->
+    serverbroker_sup:stop().
+
+stop(_State) ->
+    stop().
 %% internal functions

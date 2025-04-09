@@ -7,7 +7,7 @@
 
 -behaviour(supervisor).
 
--export([start_link/0]).
+-export([start_link/0, stop/0]).
 
 -export([init/1]).
 
@@ -31,7 +31,12 @@ init([]) ->
         intensity => 0,
         period => 1
     },
-    ChildSpecs = [],
+    ChildSpecs = [#{
+        id => main,
+        start => {serverbroker, start_link, []}
+    }],
     {ok, {SupFlags, ChildSpecs}}.
 
+stop() ->
+    supervisor:terminate_child(?MODULE, main).
 %% internal functions
