@@ -1,10 +1,8 @@
-[submodule "vendor/erpy"]
-	path = vendor/erpy
-	url = https://github.com/mdaniels5757/erpy.git
 [submodule "vendor/Pyrlang"]
-	path = vendor/Pyrlang
-	url = https://github.com/mdaniels5757/Pyrlang.git
-	branch = feature/new-link-protocol
+	url = git@github.com:mdaniels5757/Pyrlang.git
+	active = true
+    ignore = untracked
 [submodule "vendor/Term"]
-	path = vendor/Term
-	url = https://github.com/mdaniels5757/Term
+	url = https://github.com/Pyrlang/Term
+	active = true
+    ignore = untracked

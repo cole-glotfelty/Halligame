@@ -10,7 +10,7 @@ sub-package. The modules are stored in the games directory. Each game module
 should aim to follow the same uniform interface so that the game server and
 validation server setup can be automated. The interface is as follows:
 
-### For Turn Based Games
+### Exported Functions available to Games
 
 **Game**
 - drawScreen(self, ...) : this is what will draw the screen for the clients
@@ -20,9 +20,23 @@ valid.
 - eventUpdate(self, event) : update the game state with the event presuming it's
 valid, but it does not check
 
-**Player**
-- takeTurn() : any input the player needs to give the game is requested here
+**Screen**
+from halligame.utils.screen import Screen
+- 
 
 # Development
+Dependencies: rebar3, uv
+
+You will first have to run the following inorder to install the submodules.
+
+```bash
+$ git submodule update --init
+```
+From here, you should be able to use `uv run {file}.py` to activate the venv for
+that run of the python file.
+
+## For Nix/Devenv Users
 There is a provided `devenv.nix` file which should enforce that all dependencies
 are installed properly provided you have devenv set up.
+
+

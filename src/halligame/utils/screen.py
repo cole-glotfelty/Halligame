@@ -44,8 +44,10 @@ import threading
 
 class Screen():
     # gotInputFunc = the function to call when receiving input
-    def __init__(self, gotInputFunc):
+    def __init__(self, gotInputFunc, width, height):
         self.__gotInput = gotInputFunc
+        self.__width = width
+        self.__height = height
 
         self.__lock = threading.Lock()
 
@@ -55,11 +57,11 @@ class Screen():
 
         # starting monitoring for user input
         self.__monitorInputThread = threading.Thread(target = self.__monitorInput,
-                                                   args = [])
+                                                     args = [])
         self.__monitorInputThread.daemon = True # kill thread when main done
         self.__monitorInputThread.start()
 
-        self.__stdscr.move(self.__height() - 1, 0) # set starting printing loc
+        self.__stdscr.move(self.__height - 1, 0) # set starting printing loc
 
         # give screen time to set up (instantaneous printing causes weird bugs)
         # idk why
@@ -88,7 +90,7 @@ class Screen():
 
     # Note that .getch() also refreshes the screen
     def __monitorInput(self):
-        window = curses.newwin(self.__height(), self.__width())
+        window = curses.newwin(self.__height, self.__width)
         window.keypad(True) # enable support for special keys like up-arrow.
         while True:
             c = window.getch() # this blocks until input
@@ -102,25 +104,17 @@ class Screen():
 
     def height(self):
         with self.__lock:
-            return self.__height()
+            return self.__height
 
     def width(self):
         with self.__lock:
-            return self.__width()
-
-    def __height(self):
-        rows, cols = self.__stdscr.getmaxyx()
-        return rows
-
-    def __width(self):
-        rows, cols = self.__stdscr.getmaxyx()
-        return cols
+            return self.__width
 
     # clears the screen (removes all text)
     def clearScreen(self):
         with self.__lock:
             self.__stdscr.clear()
-            self.__stdscr.move(self.__height() - 1, 0) # move cursor to bottom left
+            self.__stdscr.move(self.__height - 1, 0) # move cursor to bottom left
 
     # prints a string to the screen, starting at (row, col)
     def write(self, row, col, toPrint):
@@ -169,10 +163,10 @@ class Screen():
                 # move up one line, and reset cursor to bottom left
                 self.__stdscr.move(0, 0) # so deleteln deletes the top line
                 self.__stdscr.deleteln()
-                self.__stdscr.move(self.__height() - 1, 0)
+                self.__stdscr.move(self.__height - 1, 0)
         except curses.error:
             # reset cursor position to correct loc
-            self.__stdscr.move(self.__height() - 1, 0)
+            self.__stdscr.move(self.__height - 1, 0)
 
     # refreshes the window (sends updates to screen)
     def refresh(self):
