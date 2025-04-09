@@ -1,4 +1,8 @@
-# draw to the screen
+# screen.py
+
+# draw to the screen using ncurses
+# Written by: Will Cordray
+# TODO: Will pls do todos/add docstrings to functions :)
 
 import curses
 import time
@@ -22,13 +26,6 @@ import threading
 #                             visible to the user (changes like write, print,  
 #                             and clearScreen are not visible until refreshing)
 
-
-# TODO: resizing a window from smaller to bigger means that .print() continues 
-# to print in the middle of the newly enlarged screen (so long as there is no 
-# endline to reset it), which seems weird
-    # FIX: try checking for terminal resizes with getch and 
-    # if (c == curses.KEY_RESIZE): curses.update_lines_cols()
-
 # TODO: when printing without an endline, when the text reaches the end of 
 # the bottom line it starts over at the front of that line and write over 
 # what it had previously written, instead of the desired behavior of starting 
@@ -37,14 +34,11 @@ import threading
     # of the line, and then split the printedd string across those multiple 
     # lines manually
 
-# TODO: update write so that it has more of the features and protections of 
-#       print (e.g. internal newlines)
-
 # TODO: Add color support
 
 class Screen():
     # gotInputFunc = the function to call when receiving input
-    def __init__(self, gotInputFunc, width, height):
+    def __init__(self, gotInputFunc: callable, width: int, height: int):
         self.__gotInput = gotInputFunc
         self.__width = width
         self.__height = height
@@ -67,7 +61,7 @@ class Screen():
         # idk why
         time.sleep(0.1) 
 
-    def __initCurses(self):
+    def __initCurses(self) -> None:
         self.__stdscr = curses.initscr() # turn the terminal into a curses window
         curses.noecho() # prevent user input from appearing on screen
         curses.cbreak() # get key input before user types [enter]
@@ -79,7 +73,7 @@ class Screen():
 
     # does the opposite of initCurses
     # DON'T FORGET TO CALL!!!!!
-    def shutdown(self):
+    def shutdown(self) -> None:
         curses.nocbreak()
         self.__stdscr.keypad(False)
         curses.echo()
@@ -89,7 +83,7 @@ class Screen():
         curses.endwin()
 
     # Note that .getch() also refreshes the screen
-    def __monitorInput(self):
+    def __monitorInput(self) -> None:
         window = curses.newwin(self.__height, self.__width)
         window.keypad(True) # enable support for special keys like up-arrow.
         while True:
@@ -102,22 +96,22 @@ class Screen():
                     pass
             self.__gotInput(c)
 
-    def height(self):
+    def height(self) -> int:
         with self.__lock:
             return self.__height
 
-    def width(self):
+    def width(self) -> int:
         with self.__lock:
             return self.__width
 
     # clears the screen (removes all text)
-    def clearScreen(self):
+    def clearScreen(self) -> None:
         with self.__lock:
             self.__stdscr.clear()
             self.__stdscr.move(self.__height - 1, 0) # move cursor to bottom left
 
     # prints a string to the screen, starting at (row, col)
-    def write(self, row, col, toPrint):
+    def write(self, row: int, col: int, toPrint) -> None:
         with self.__lock:
             (prevRow, prevCol) = self.__stdscr.getyx() # save cursor position
 
@@ -130,13 +124,13 @@ class Screen():
 
             self.__stdscr.move(prevRow, prevCol) # reset cursor position
 
-    def __write(self, row, col, printing):
+    def __write(self, row: int, col: int, printing: str) -> None:
         try:
             self.__stdscr.addstr(row, col, printing)
         except curses.error:
             pass # ignore out of bounds characters # TODO
 
-    def print(self, toPrint, end="\n"):
+    def print(self, toPrint, end="\n") -> None:
         with self.__lock:
             printing = str(toPrint)
             
@@ -155,7 +149,7 @@ class Screen():
             self.__print(lines[-1], newline=False)
 
     # private helper
-    def __print(self, printing, newline):
+    def __print(self, printing: str, newline: bool) -> None:
         try:
             self.__stdscr.addstr(printing)
 
@@ -169,11 +163,7 @@ class Screen():
             self.__stdscr.move(self.__height - 1, 0)
 
     # refreshes the window (sends updates to screen)
-    def refresh(self):
+    def refresh(self) -> None:
         with self.__lock:
             if (self.__stdscr.is_wintouched()): # only refresh if touched
                 self.__stdscr.refresh()
-
-    def force_refresh(self):
-        with self.__lock:
-            self.__stdscr.refresh()

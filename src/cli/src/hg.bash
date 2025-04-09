@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # this command is the prefix to run the erlang script that handles requests
 export ERL_LIBS="$HG_ROOT/src/cli/_build/default/lib:$HG_ROOT/src/communicationServer/_build/default/lib:$ERL_LIBS"
@@ -23,7 +23,7 @@ if [ "$1" == "join" ]; then
         epmd -daemon
     fi
     # eval "${script}joinGame($2)\""
-    eval "uv --project ${src}/.. --directory ${src}/halligame run ${src}/halligame/utils/erpyClientCommunicate.py $2"
+    eval "uv --project ${src}/.. --directory ${src}/halligame run ${src}/halligame/utils/ClientComms.py $2"
 elif [ "$1" == "new" ]; then
     if [ "$#" != 2 ]; then
         echo "Expected a game name to be supplied"
@@ -37,7 +37,7 @@ elif [ "$1" == "new" ]; then
     node_name="$(shuf -i 0-999999 -n 1)@$HOST"
     eval "${script}newGame('$2', '${node_name}')\""
     if [ "$?" == 0 ]; then
-        eval "uv --project ${src}/.. --directory ${src}/halligame run ${src}/halligame/utils/erpyServerCommunicate.py -g $2 -n ${node_name} &"
+        eval "uv --project ${src}/.. --directory ${src}/halligame run ${src}/halligame/utils/ServerComms.py -g $2 -n ${node_name} &"
     fi
 elif [ "$1" == "games" ]; then
     eval "${script}listGames()\""

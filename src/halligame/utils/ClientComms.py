@@ -1,8 +1,16 @@
+# ClientComms.py
+
+# Communication Module for clients to communicate with the game/communication
+# server.
+# Writen by: Will Cordray & Michael Daniels
+# Last Edited by: Cole Glotfelty <2025-04-09>
+
+# Changelog:
+# Cole Glotfelty <2025-04-09> - Added documentation to functions
+
 import importlib # allows us to import a module based on the name
 import os
 import sys
-
-import threading
 
 from pyrlang import Node
 from pyrlang.process import Process
@@ -14,11 +22,9 @@ from random import randint
 class ClientCommunicate(Process):
     # TODO: there are some serious shenanigans of imports going on here and I hate it
     def __init__(self, gameName):
-        # self.inbox, self.port = stdio_port_connection()
         super().__init__()
         node.register_name(self, f'pyClient')
 
-        # self.__serverGameInstance = TicTacToe.Client(self.sendMessage, self.port)
         # "TicTacToe"
         #    - Import the tictactoe module
         #    - Call the init function of that tictactoe module
@@ -27,25 +33,17 @@ class ClientCommunicate(Process):
         self.__commGenServer = GenServerInterface(self,
                                                   (Atom(commServerName),
                                                    Atom("communicationServer")))
-        # os.chdir("../games") # TODO: this will change
-        # try:
-        #     self.__module = importlib.import_module('game')
-        #     print("Success!")
-        # except ModuleNotFoundError as e:
-        #     print("Module not found")
-        #     print(e)
-        # except Exception as e:
-        #     print("Unknown module import error")
-        # os.chdir("../utils") # TODO: this will change
         
         self.__commGenServer.cast_nowait((Atom("add_client"), self.pid_))
 
-        # # TODO: this may not work
-        # initFunc = getattr(self.__module, gameName) # assumes that the module contains a class of the same name (e.g. class TicTacToe)
-        # self.__serverGameInstance = initFunc(self.sendMessage) # set up comms function
+    def handle_one_inbox_message(self, msg: tuple):
+        """
+        Await messages/check inbox of erlang/pyrlang node and call callback
+        function when it receives a known message, other wise, informs the user
+        there has been some sort of error and we've received an unknown message
 
-    def handle_one_inbox_message(self, msg):
-        # print(f"erpyClientComm got message {msg}")
+        msg : message received
+        """
         if msg == Atom("close"):
             exit(0)
 
@@ -62,10 +60,13 @@ class ClientCommunicate(Process):
             print(f"Could not process message {msg}")
 
     def sendMessage(self, msg):
+        """
+        Given a message (msg) send it to the server
+
+        msg : message to send
+        """
         if msg == "close":
-            # self.exit()
             node.destroy()
-            # exit(0)
         else:
             node.send_nowait(sender = self.pid_,
                             receiver = (Atom(commServerName),

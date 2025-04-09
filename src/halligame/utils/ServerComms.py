@@ -1,3 +1,9 @@
+# ServerComms.py
+
+# Communication from the game server to the communication server/client
+# Written by: Will Cordray & Michael Daniels
+
+
 # import importlib # allows us to import a module based on the name
 
 import subprocess
@@ -17,7 +23,7 @@ import os
 from random import randint
  
 class ServerCommunicate(Process):
-    def __init__(self, gameName, NodeName):
+    def __init__(self, gameName: str, NodeName: str):
         super().__init__()
         self.__commserver_name = f"{randint(0, 999999):06d}"
         self.__full_commserver_name = self.__commserver_name + "@" +  os.environ["HOST"]
@@ -92,5 +98,7 @@ if __name__ == '__main__':
         node = Node(node_name = args.node_name, cookie = "COOKIE")
         serverComms = ServerCommunicate(args.game, args.node_name)
         node.run()
+
+        serverComms.play()
 
         serverComms.shutDownServer()

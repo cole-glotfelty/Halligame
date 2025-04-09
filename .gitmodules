@@ -1,8 +1,10 @@
 [submodule "vendor/Pyrlang"]
-	url = git@github.com:mdaniels5757/Pyrlang.git
+	url = https://github.com/mdaniels5757/Pyrlang.git
 	active = true
-    ignore = untracked
+	path = "vendor/Pyrlang"
+    # ignore = untracked
 [submodule "vendor/Term"]
-	url = https://github.com/Pyrlang/Term
+	url = https://github.com/Pyrlang/Term.git
 	active = true
-    ignore = untracked
+	path = "vendor/Term"
+    # ignore = untracked

@@ -31,23 +31,6 @@ class Server():
     def play(self) -> None:
         pass
 
-    # def play(self) -> None:
-    #     """
-    #     Starts the game server's game loop
-    #     """
-    #     while self.__state.objects["gameOver"] == "":
-    #         # TODO: Draw screen here or tell client to draw
-    #         # self.drawScreen()
-    #         event = (
-    #             self.__state.objects["currentPlayer"],
-    #             # TODO: we need a way to get the move from the player, that goes here
-    #             # self.__players[self.__currentPlayer].takeTurn(),
-    #         )
-    #         if self.eventIsValid(event, self.clientID):
-    #             self.eventUpdate(event)
-
-    #         self.__currentPlayer = (self.__currentPlayer + 1) % 2
-
     # This is the function that is called when the server receives a message 
     # from one of the clients, most likely an event/move. Note that I haven't 
     # quite figured out the erlang side of things to determine which player 
