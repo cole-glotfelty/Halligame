@@ -13,8 +13,6 @@ from halligame.utils.screen import Screen
 from halligame.utils.gameState import GameState
 import threading
 
-import time
-
 class Client():
     # comms is the function to call when you want to send a message to the server
     def __init__(self, comms: callable):
@@ -32,7 +30,7 @@ class Client():
         self.__comms = comms
         self.__state: GameState = GameState()
         self.__playerID = None
-        self.__myTurn = True
+        self.__myTurn = True # TODO: redundant, rm
 
     def setPlayerId(self, playerId) -> None:
         self.__playerID = playerId

@@ -1,2 +1,0 @@
-{'pyServer', 'mdanie09-TicTacToe-gameserver@vm-hw02'} ! close.
-gen_server:call({'communicationServer', 'mdanie09_TicTacToe_communicationserver@vm-hw02'}, dump_state).

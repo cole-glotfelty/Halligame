@@ -4,10 +4,9 @@
 # Written by Cole Glotfelty and Will Cordray <2025-03-29>
 # Last edited by: Cole Glotfelty 2025-03-29
 
-from halligame.utils.erpyServerCommunicate import ServerCommunicate
+from halligame.utils.ServerComms import ServerCommunicate
 from halligame.utils.gameState import GameState
 from typing import Any
-from term import Atom
 
 class Server():
     def __init__(self, comms: ServerCommunicate) -> None:
@@ -121,6 +120,7 @@ class Server():
             self.__comms.sendClientMessage(clientPID, ("confirmed_join", playerId))
             self.__comms.sendState(self.__state)
 
+    # TODO: would be nice to implement
     def removeUser(self, clientPID):
         pass
 

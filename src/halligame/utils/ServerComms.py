@@ -59,11 +59,10 @@ class ServerCommunicate(Process):
         self.__serverGameInstance.play()
 
     def sendMessage(self, Msg):
-        node.send_nowait(
-                            sender = self.pid_,
-                            receiver = (self.__full_commserver_name,
-                                        Atom("communicationServer")),
-                            message = Msg)
+        node.send_nowait(sender = self.pid_,
+                         receiver = (self.__full_commserver_name,
+                                     Atom("communicationServer")),
+                         message = Msg)
 
     # State should have type halligame.utils.GameState
     def sendState(self, State : GameState):
@@ -75,10 +74,9 @@ class ServerCommunicate(Process):
         self.sendMessage(("terminate", "normal"))
     
     def sendClientMessage(self, pid, msg):
-        node.send_nowait(
-                            sender = self.pid_,
-                            receiver = pid,
-                            message = msg)
+        node.send_nowait(sender = self.pid_,
+                         receiver = pid,
+                         message = msg)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
