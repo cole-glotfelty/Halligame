@@ -18,7 +18,7 @@ import time
 
 class Client():
     # comms is the function to call when you want to send a message to the server
-    def __init__(self, comms: callable, playerID):
+    def __init__(self, comms: callable):
         """
         Memeber Variables:
             screen
@@ -29,11 +29,11 @@ class Client():
             myTurn
             done
         """
-        self.__screen = Screen(self.userInput) # create new instance of the ncurses module
+        self.__screen = Screen(self.userInput, width=120, height=30) # create new instance of the ncurses module
         self.__stateLock = threading.Lock()
         self.__comms = comms
         self.__state: GameState = GameState()
-        self.__playerID = playerID
+        self.__playerID = None
         self.__myTurn = True
         self.done = False
 
@@ -64,6 +64,13 @@ class Client():
 
     def gotReply(self, msg):
         self.__screen.print("That Square is Occupied!")
+
+    def confirmedJoin(self, Msg):
+        (playerID, state) = Msg
+        self.__playerID = playerID
+        self.__state = GameState.deserialize(state)
+        self.__screen.write(10, 10, self.__playerID)
+
 
     def userInput(self, input):
         """

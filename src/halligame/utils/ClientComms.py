@@ -21,7 +21,7 @@ from random import randint
 
 class ClientCommunicate(Process):
     # TODO: there are some serious shenanigans of imports going on here and I hate it
-    def __init__(self, gameName):
+    def __init__(self, gameName, commServerName):
         super().__init__()
         node.register_name(self, f'pyClient')
 
@@ -44,20 +44,21 @@ class ClientCommunicate(Process):
 
         msg : message received
         """
+        print(f"DEBUG: ClientComms got message {msg}")
         if msg == Atom("close"):
             exit(0)
 
-        try:
+        # try:
             if (msg[0] == "state"):
                 self.__serverGameInstance.updateState(msg[1])
             elif (msg[0] == "reply"):
                 self.__serverGameInstance.gotReply(msg[1])
             elif (msg[0] == "confirmed_join"):
-                self.__serverGameInstance.setPlayerId(msg[1])
+                self.__serverGameInstance.confirmedJoin(msg[1])
             else:
-                raise UserWarning("Unknown message")
-        except:
-            print(f"Could not process message {msg}")
+                raise UserWarning("Unknown message in ClientComms: " + str(msg))
+        # except:
+        #     print(f"Could not process message {msg}")
 
     def sendMessage(self, msg):
         """
@@ -84,5 +85,5 @@ if __name__ == '__main__':
     commServerName = sys.argv[1]
     print(commServerName)
     node = Node(node_name = name, cookie = "COOKIE")
-    clientComms = ClientCommunicate("TicTacToe")
+    clientComms = ClientCommunicate("TicTacToe", commServerName)
     node.run()

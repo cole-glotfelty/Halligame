@@ -47,7 +47,7 @@ class ServerCommunicate(Process):
         self.__serverGameInstance = gameModule.Server(self)
 
     def handle_one_inbox_message(self, msg):
-        print(f"DEBUG: erpyServerComm got message {msg}")
+        print(f"DEBUG: ServerComms got message {msg}")
         if msg == "close":
             self.exit()
             exit(0)
@@ -60,6 +60,8 @@ class ServerCommunicate(Process):
             self.__serverGameInstance.eventIsValid(msg[1][1], msg[1][0])
         elif (msg[0] == "other"):
             self.__serverGameInstance.otherMessageType(msg[1][0], msg[1][1])
+        else:
+            raise ValueError("Unknown Message ID in ServerComms: " + str(msg))
 
     def play(self):
         self.__serverGameInstance.play()
@@ -72,10 +74,11 @@ class ServerCommunicate(Process):
 
     # State should have type halligame.utils.GameState
     def sendState(self, State : GameState):
-        print(f"Sending serialized state {State.serialize()}")
+        print(f"Sending serialized state {State}")
         self.sendMessage((self.pid_,
                           (Atom("data"),
                            (Atom("broadcastState"), State.serialize()))))
+    
     def shutDownServer(self):
         self.sendMessage(("terminate", "normal"))
     

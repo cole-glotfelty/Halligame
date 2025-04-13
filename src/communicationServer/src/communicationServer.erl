@@ -30,7 +30,7 @@ stop() ->
 init([GameName, NodeName]) ->
     % register gameserver with the serverbroker
     gen_server:call(?SERVERBROKER, {register_gameserver, {?ME ++ ":" ++ GameName, NodeName}}),
-    {ok, #state{game_name = list_to_atom(GameName), clients = []}}.
+    {ok, #state{game_name = GameName, clients = []}}.
 
 -spec terminate(Reason, State :: #state{}) -> any() 
     when Reason :: normal | shutdown | {shutdown,term()} | term().
@@ -128,7 +128,7 @@ handle_info({Pid, {data, {MessageType, RawMessage}}}, State) ->
     end;
 % Catchall
 handle_info(Any, State) ->
-    io:format("Unrecognized info ~p; current state ~p~n", [Any, State]),
+    io:format("Unrecognized info in communicationServer ~p; current state ~p~n", [Any, State]),
     {noreply, State}.
 
 
