@@ -19,20 +19,21 @@ from pyrlang.gen.server import GenServerInterface
 from term import Atom
 from halligame.games import *
 from halligame.utils.gameState import GameState
-import os
+import socket
 from random import randint
+import os
  
 class ServerCommunicate(Process):
     def __init__(self, gameName: str, NodeName: str):
         super().__init__()
         self.__commserver_name = f"{randint(0, 999999):06d}"
-        self.__full_commserver_name = self.__commserver_name + "@" +  os.environ["HOST"]
+        self.__full_commserver_name = self.__commserver_name + "@" + socket.gethostname()
         print(f"Communication server node: {self.__full_commserver_name}")
         subprocess.Popen(['bash', '-xc',
                         #   'ls'
                           f'erl -noinput -sname {self.__commserver_name} -setcookie Sh4rKM3ld0n -eval "communicationServer:start_link([\'TicTacToe\', \'{NodeName}\'])"'
                           ],
-                          cwd = '../communicationServer')
+                          cwd = f'{os.environ["HG_ROOT"]}/src/communicationServer')
         node.register_name(self, Atom("pyServer"))
 
         self.__commGenServer = GenServerInterface(self,
@@ -59,14 +60,11 @@ class ServerCommunicate(Process):
         elif (msg[0] == "event"):
             # msg[1][1] = clientPid
             # msg[1][0] = Message
-            self.__serverGameInstance.eventIsValid(msg[1][1], msg[1][0])
+            self.__serverGameInstance.gotClientMessage(msg[1][1], msg[1][0])
         elif (msg[0] == "other"):
             self.__serverGameInstance.otherMessageType(msg[1][0], msg[1][1])
         else:
             raise ValueError("Unknown Message ID in ServerComms: " + str(msg))
-
-    def play(self):
-        self.__serverGameInstance.play()
 
     # backend for sending a message
     def __backendSendMessage(self, Msg):
@@ -90,7 +88,7 @@ class ServerCommunicate(Process):
                              Msg)))
 
     # State should have type halligame.utils.GameState
-    def sendState(self, State : GameState):
+    def broadcastState(self, State : GameState):
         print(f"Sending serialized state {State}")
         self.__sendMessage((Atom("broadcastState"), State.serialize()))
 
@@ -112,8 +110,6 @@ def start(game : str, node_name : str):
     node = Node(node_name, cookie = "Sh4rKM3ld0n")
     serverComms = ServerCommunicate(game, node_name)
     node.run()
-
-    serverComms.play()
 
 
 if __name__ == '__main__':

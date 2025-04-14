@@ -1,12 +1,14 @@
-# Example Game Client
+# Example Game Client / Game Client Super Class
 # Written by Cole Glotfelty <2025-04-14>
 
 # A barebones game client explaining what needs to be implemented and what's
-# available for use when creating halligame games
+# available for use when creating halligame games. This also includes some 
+# typical patterns 
 
 from halligame.utils.gameState import GameState
+from typing import Any
 
-class Client:
+class ClientSuper:
     def __init__(self, comms: callable) -> None:
         """
         Constructor for the Client (you should initalize stuff here)
@@ -23,24 +25,20 @@ class Client:
         self.__state = GameState()
         pass
 
-    def play(self) -> None:
-        """
-        """
-        pass
-
     def updateState(self, state: bytes) -> None:
         """
+        Callback function triggered by `broadcastState`. This is where you 
+        should modify the TUI screen for the user. The state is is then copied
+        from the message sent by the server and 
         """
+        self.__state.deserialize(state)
         pass
 
-    def gotMessage(self, msg) -> None:
+    def gotServerMessage(self, msg) -> None:
+        (status, message) = msg
+        if status == "error":
+            print(message)
         pass
 
     def confirmedJoin(self, msg) -> None:
-        pass
-
-    def otherMessage(self, msg) -> None:
-        pass
-
-    def userInput(self, input) -> None:
         pass

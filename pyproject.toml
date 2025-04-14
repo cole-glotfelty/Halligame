@@ -19,4 +19,4 @@ packages = ["src/halligame"]
 
 [tool.uv.sources]
 pyrlang-term = { path = "vendor/Term" }
-pyrlang = { path = "vendor/Pyrlang" }
+pyrlang = { path = "vendor/Pyrlang", editable = true }

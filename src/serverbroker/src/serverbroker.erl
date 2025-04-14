@@ -30,7 +30,7 @@
 -record(gameserver, {game :: #game{}, pid :: pid(),
                      players = [] :: [#gameclient{}]}).
                     
--record(state, {users = [] :: [#user{}], games = [] :: [#game{}],
+-record(state, {users = [] :: [#user{}],
                 gameservers = [] :: [#gameserver{}]}).
 
 %%%===================================================================
@@ -84,7 +84,7 @@ stop() ->
       ignore.
 init([]) ->
     process_flag(trap_exit, true),
-    {ok, #state{games = ["TicTacToe"]}}.
+    {ok, #state{}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -184,9 +184,6 @@ handle_call(Request, {Pid, _FromTag}, State) ->
             NewState = State;
         {list_gameservers} ->
             Reply = State#state.gameservers,
-            NewState = State;
-        {list_games} ->
-            Reply = State#state.games,
             NewState = State;
         _ -> 
             io:format("Got request ~p, ignoring~n", [Request]),

@@ -11,6 +11,7 @@
 import importlib # allows us to import a module based on the name
 import os
 import sys
+import asyncio
 
 from pyrlang import Node
 from pyrlang.process import Process
@@ -28,11 +29,14 @@ class ClientCommunicate(Process):
         super().__init__()
         node.register_name(self, f'pyClient')
 
+        self.__commServerName = commServerName
+
         # "TicTacToe"
         #    - Import the tictactoe module
         #    - Call the init function of that tictactoe module
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__clientGameInstance = gameModule.Client(self)
+
         self.__commGenServer = GenServerInterface(self,
                                                   (Atom(commServerName),
                                                    Atom("communicationServer")))
@@ -51,18 +55,15 @@ class ClientCommunicate(Process):
         if msg == Atom("close"):
             exit(0)
 
-        # try:
         if (msg[0] == "state"):
             self.__clientGameInstance.updateState(msg[1])
         elif (msg[0] == "reply"):
-            self.__clientGameInstance.gotMessage(msg[1])
+            self.__clientGameInstance.gotServerMessage(msg[1])
         elif (msg[0] == "confirmed_join"):
             print(f"Calling Confirmed Join")
             self.__clientGameInstance.confirmedJoin(msg[1])
         else:
-            self.__clientGameInstance.otherMessage(msg[1])
-        # except:
-        #     print(f"Could not process message {msg}")
+            raise ValueError("ClientComms Received an invalid message")
 
     def sendMessage(self, msg):
         """
@@ -71,14 +72,19 @@ class ClientCommunicate(Process):
         msg : message to send
         """
         node.send_nowait(sender = self.pid_,
-                        receiver = (Atom(commServerName),
+                        receiver = (Atom(self.__commServerName),
                                     Atom("communicationServer")),
                         message = (self.pid_, (Atom("data"), (Atom("event"), msg))))
 
     def shutdown(self):
-        self.__commGenServer.cast_nowait((Atom("remove_client"), self.pid_))
-        sleep(0.1)
+        print("in shutdown")
+        asyncio.run(self.__commGenServer.cast((Atom("remove_client"), self.pid_)))
+        print("sent cast")
+        sleep(0.2)
+        print("destroying node")
         node.destroy()
+        print("node destroyed, exiting")
+        sys.exit(0)
 
 def start(commServerName, gameName):
     global name, node
@@ -87,8 +93,6 @@ def start(commServerName, gameName):
     node = Node(node_name = name, cookie = "Sh4rKM3ld0n")
     clientComms = ClientCommunicate(gameName, commServerName)
     node.run()
-
-    clientComms.play()
 
 # This is an entry point!
 # Arguments on command line:

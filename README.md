@@ -15,29 +15,27 @@ validation server setup can be automated. The interface is as follows:
 ## Required Implementation for Adding Games
 #### Functions that are required to be implemented in gameServer.py
 - `__init__(comms)` : Called automatically when the server is started. comms is an instance of the ServerCommunicate class and gives the game server access to the public ServerCommunicate functions (documented below)
-- `play()` : Called automatically when the game server is started.
-- `addClient(ClientPid)` : Called automatically by the client when a new client node joins
+- `addClient(ClientPid)` : Called automatically by the client when a new client node joins. Should ideally call `confirmJoin(ClientPid, Message)` to confirm the request.
 - `removeClient(ClientPid)` : Called when the game client calls the function `ClientComms.shutdown()`
-- `eventIsValid(ClientPid, Message)` : Called when the game client calls `sendMessage(Message)`
+- `gotClientMessage(ClientPid, Message)` : Called when the game client calls `sendMessage(Message)`
 - `otherMessageType(ClientPid, Message)` : Called when the server receives a message from a game client that has an unidentified header (none of the above)
 
 #### Functions that are required to be implemented in gameClient.py
 - `__init__(comms)` : Called automatically when the client is started. comms is an instance of the ClientCommunicate class and gives the game client access to the public ClientCommunicate functiosn (documented below)
-- `updateState(newState)` : Called with the provided state when the game server calls `sendState(state)`
-- `gotMessage(Message)` : Called on the particular client node when the game server calls `sendClientMessage(ClientPid, Message)`
+- `updateState(newState)` : Called with the provided state when the game server calls `broadcastState(state)`
+- `gotServerMessage(Message)` : Called on the particular client node when the game server calls `sendClientMessage(ClientPid, Message)`
 - `confirmedJoin(Message)` : Called when the game server responds to addClient by calling `confirmJoin(ClientPid, Message)`
-- `otherMessage(Message)` : Called when the game client receives a message from the game server that has an unidentified header (none of the above)
 
 ### Exported Functions available to Games
 
 #### Functions exported by ServerComms
-- `sendState(State)` : Sends the provided state to all clients connected to the server, with `updateState(newState)` being called when the client receives the message.
+- `broadcastState(State)` : Sends the provided state to all clients connected to the server, with `updateState(newState)` being called when the client receives the message.
 - `confirmJoin(ClientPid, Message)` : When called by the server, confirmedJoin(Message) is called on the client node associated with ClientPid 
-- `sendClientMessage(ClientPid, Message)` : Sends a message to a particular client, with the `gotMessage(Message)` function being called when the client receives it
+- `sendClientMessage(ClientPid, Message)` : Sends a message to a particular client, with the `gotServerMessage(Message)` function being called when the client receives it
 - `shutdown()` : Should be called when the game is over and the server should be shut down
 
 #### Functions exported by ClientComms
-- `sendmessage(Message)` : Sends a message to the server, with `eventIsValid(ClientPid, Message)` being called when the server receives the message
+- `sendMessage(Message)` : Sends a message to the server, with `gotClientMessage(ClientPid, Message)` being called when the server receives the message
 - `shutdown()` : Should be called when the client leaves (or the game is over)
 
 ### Screen (halligame.utils.screen)**

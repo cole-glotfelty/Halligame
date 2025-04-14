@@ -17,7 +17,7 @@ import threading
 import time
 
 class Client():
-    # comms is the function to call when you want to send a message to the server
+    # comms is an instance of halligame.utils.ClientCommunicate 
     def __init__(self, comms):
         """
         Memeber Variables:
@@ -35,9 +35,6 @@ class Client():
         self.__state: GameState = GameState()
         self.__playerID = None
         self.__myTurn = True
-
-    def play(self):
-        pass
 
     def updateState(self, state):
         """
@@ -66,7 +63,7 @@ class Client():
         
             self.__screen.refresh()
 
-    def gotMessage(self, msg):
+    def gotServerMessage(self, msg):
         self.__screen.print("That Square is Occupied!")
 
     def confirmedJoin(self, Msg):
@@ -74,9 +71,6 @@ class Client():
         self.__playerID = playerID
         self.__screen.write(10, 10, "hello!")
         self.updateState(state)
-    
-    def otherMessage(self, Msg):
-        raise ValueError("Client Received Unknown Message" + str(Msg))
 
     def userInput(self, input):
         """
@@ -94,13 +88,16 @@ class Client():
             self.__screen.refresh()
 
             if (input == "q"):
-                self.__comms.shutdown()
                 self.__screen.shutdown()
+                time.sleep(0.5)
+                self.__comms.shutdown()
+                print("alive in gameClient")
+                
             elif self.__myTurn:
                 playerInput = -1
                 while not (1 <= playerInput and playerInput <= 9):
                     try:
                         playerInput = int(input)
                         self.__comms.sendMessage((self.__playerID, playerInput - 1))
-                    except: # 
-                        print("Please enter a number between 1 and 9!")
+                    except Exception as e: # 
+                        print(str(e) + "Please enter a number between 1 and 9!")

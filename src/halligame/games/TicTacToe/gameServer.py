@@ -26,14 +26,11 @@ class Server():
         # "Private" Members for internal use only
         self.__boardFull = 0
 
-    def play(self) -> None:
-        pass
-
     # This is the function that is called when the server receives a message 
     # from one of the clients, most likely an event/move. Note that I haven't 
     # quite figured out the erlang side of things to determine which player 
     # sent the message, but that is obviously coming.
-    def eventIsValid(self, event: tuple[int, Any], clientPID) -> None:
+    def gotClientMessage(self, event: tuple[int, Any], clientPID) -> None:
         """
         Determine if an event is valid
 
@@ -44,7 +41,7 @@ class Server():
 
         if self.__state.getValue("board")[move // 3][move % 3] not in ["X", "O"]:
             self.__updateState(event)
-            self.__comms.sendState(self.__state)
+            self.__comms.broadcastState(self.__state)
         else:
             self.__comms.sendClientMessage(clientPID, "Error: Invalid Move")
 
