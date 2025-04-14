@@ -1,82 +1,71 @@
-#!/usr/bin/env python
+# gameClient.py
 
 # Tic-Tac-Toe Game Module for Halligame Testing
 # Written on 2025-03-22 by Cole Glotfelty
-# Last edited by: Michael Daniels 2025-04-06
+# Last edited by: Cole Glotfelty 2025-03-29
 
 # Potential Framework structure for python
 # each game has a Game class and a Player class
 # The game class implements the rules and game specific data
-# The Player class stores player specific data (potentially part of the Game constructor)
+# The Player class stores player specific data 
+# (potentially part of the Game constructor)
 
 from halligame.utils.screen import Screen
 from halligame.utils.gameState import GameState
 import threading
 
+import time
+
 class Client():
     # comms is the function to call when you want to send a message to the server
-    def __init__(self, comms: callable):
+    def __init__(self, comms: callable, playerID):
         """
-        Member Variables:
+        Memeber Variables:
             screen
             stateLock
             comms
             state
             playerID
             myTurn
+            done
         """
         self.__screen = Screen(self.userInput) # create new instance of the ncurses module
         self.__stateLock = threading.Lock()
         self.__comms = comms
         self.__state: GameState = GameState()
-        self.__playerID = None
-        self.__myTurn = True # TODO: redundant, rm
+        self.__playerID = playerID
+        self.__myTurn = True
+        self.done = False
 
-    def setPlayerId(self, playerId) -> None:
-        self.__playerID = playerId
-        
-    def updateState(self, msg : list[tuple]) -> None:
+    def updateState(self, msg : list[tuple]):
         """
-        Takes in a message that contains the new state (this message is sent
-        from the server side of the game class) and updates the internal
-        state, potentially updating/refreshing the display)
+        Takes in a message that contains the new state (this message is sent 
+        from the server side of the game class) and updates the internal 
+        state, potentially updating/refreshing the display
         """
         with self.__stateLock:
-            self.__state.deserialize(msg)
-            # print(f"Client has state {self.__state.objects}")
+            self.__state = GameState.deserialize(msg)
 
-            # print('DEBUG: Printing board:')
-            # print('{self.__state.objects["board"]}')
-            # print('DEBUG: End board')
-
-            self.__screen.refresh()
             for row in self.__state.objects["board"]:
                 self.__screen.print("-------------")
                 self.__screen.print("|   |   |   |")
                 self.__screen.print(f"| {row[0]} | {row[1]} | {row[2]} |")
                 self.__screen.print("|   |   |   |")
-                self.__screen.print("-------------\n")
-            self.__screen.refresh()
+            self.__screen.print("-------------\n")
+
             self.__myTurn = (self.__state.objects["currentPlayer"] == self.__playerID)
 
 
             if self.__state.objects["gameOver"] != "":
                 self.__screen.print(self.__state.objects["gameOver"])
                 self.__screen.print("Type 'q' to quit")
-                self.__screen.refresh()
             elif (self.__myTurn):
                 self.__screen.print("Select a square [1..9]: ")
-                self.__screen.refresh()
 
-    def gotReply(self, msg) -> None:
-        """
-        TODO: support messages other than occupied.
-        """
+    def gotReply(self, msg):
         self.__screen.print("That Square is Occupied!")
-        self.__screen.refresh()
 
-    
-    def userInput(self, input) -> None:
+    def userInput(self, input):
         """
         called when the screen receives user input (a char). For now, I'm just 
         forwarding input to the server side for the server side to handle 
@@ -89,18 +78,13 @@ class Client():
         """
         with self.__stateLock:
             if (input == "q"):
-                self.shutdown()
-            elif self.__myTurn:
-                playerInput = int(input)
-                if 1 <= playerInput and playerInput <= 9:
-                    self.__comms((self.__playerID, playerInput - 1))
-                else:
-                    self.__screen.print("Please enter a number between 1 and 9!")
-                    self.__screen.refresh()
-    
-    def shutdown(self) -> None:
-        """
-        Shut down this client.
-        """
-        self.__screen.shutdown()
-        self.__comms("close")
+                self.done = True
+
+            if self.__myTurn:
+                playerInput = -1
+                while not (1 <= playerInput and playerInput <= 9):
+                    try:
+                        playerInput = int(input)
+                        self.__comms(playerInput - 1)
+                    except: # 
+                        self.__screen.print("Please enter a number between 1 and 9!")
