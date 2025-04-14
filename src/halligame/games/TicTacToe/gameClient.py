@@ -10,7 +10,6 @@
 # The Player class stores player specific data 
 # (potentially part of the Game constructor)
 
-from halligame.utils.ClientComms import ClientCommunicate
 from halligame.utils.screen import Screen
 from halligame.utils.gameState import GameState
 import threading
@@ -19,7 +18,7 @@ import time
 
 class Client():
     # comms is the function to call when you want to send a message to the server
-    def __init__(self, comms: ClientCommunicate):
+    def __init__(self, comms):
         """
         Memeber Variables:
             screen
@@ -37,6 +36,9 @@ class Client():
         self.__playerID = None
         self.__myTurn = True
 
+    def play(self):
+        pass
+
     def updateState(self, state):
         """
         Takes in a message that contains the new state (this message is sent 
@@ -46,25 +48,25 @@ class Client():
         with self.__stateLock:
             self.__state.deserialize(state)
 
-            for row in self.__state.objects["board"]:
+            for row in self.__state.getValue("board"):
                 self.__screen.print("-------------")
                 self.__screen.print("|   |   |   |")
                 self.__screen.print(f"| {row[0]} | {row[1]} | {row[2]} |")
                 self.__screen.print("|   |   |   |")
             self.__screen.print("-------------\n")
 
-            self.__myTurn = (self.__state.objects["currentPlayer"] == self.__playerID)
+            self.__myTurn = (self.__state.getValue("currentPlayer") == self.__playerID)
 
 
-            if self.__state.objects["gameOver"] != "":
-                self.__screen.print(self.__state.objects["gameOver"])
+            if self.__state.getValue("gameOver") != "":
+                self.__screen.print(self.__state.getValue("gameOver"))
                 self.__screen.print("Type 'q' to quit")
             elif (self.__myTurn):
                 self.__screen.print("Select a square [1..9]: ")
         
             self.__screen.refresh()
 
-    def gotReply(self, msg):
+    def gotMessage(self, msg):
         self.__screen.print("That Square is Occupied!")
 
     def confirmedJoin(self, Msg):
@@ -73,7 +75,7 @@ class Client():
         self.__screen.write(10, 10, "hello!")
         self.updateState(state)
     
-    def otherMessage(Msg):
+    def otherMessage(self, Msg):
         raise ValueError("Client Received Unknown Message" + str(Msg))
 
     def userInput(self, input):

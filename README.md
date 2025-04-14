@@ -12,29 +12,36 @@ validation server setup can be automated. The interface is as follows:
 
 ![](./topology/ClassDiagrams.drawio.svg)
 
-### Required Implementation for Adding Games
+## Required Implementation for Adding Games
 #### Functions that are required to be implemented in gameServer.py
 - `__init__(comms)` : Called automatically when the server is started. comms is an instance of the ServerCommunicate class and gives the game server access to the public ServerCommunicate functions (documented below)
 - `play()` : Called automatically when the game server is started.
-- `addClient(ClientPid)` : Called automatically by the client when the client node is started
+- `addClient(ClientPid)` : Called automatically by the client when a new client node joins
 - `removeClient(ClientPid)` : Called when the game client calls the function `ClientComms.shutdown()`
-- `eventIsValid(ClientPid, RawMessage)` : Called when the game client calls `sendMessage(RawMessage)`
-- `otherMessageType(ClientPid, RawMessage)` : Called when the server receives a message from a game client that has an unidentified header (none of the above)
+- `eventIsValid(ClientPid, Message)` : Called when the game client calls `sendMessage(Message)`
+- `otherMessageType(ClientPid, Message)` : Called when the server receives a message from a game client that has an unidentified header (none of the above)
 
 #### Functions that are required to be implemented in gameClient.py
 - `__init__(comms)` : Called automatically when the client is started. comms is an instance of the ClientCommunicate class and gives the game client access to the public ClientCommunicate functiosn (documented below)
 - `updateState(newState)` : Called with the provided state when the game server calls `sendState(state)`
-- `gotReply(RawMessage)` : Called on the particular client node when the game server calls `sendClientMessage(ClientPid, Message)`
-- `confirmedJoin(Msg)` : Called when the game server responds to addClient by calling `confirmJoin(ClientPid, Message)`
-- `otherMessage(Msg)` : Called when the game client receives a message from the game server that has an unidentified header (none of the above)
-
-#### Message Passing Protocol
-
+- `gotMessage(Message)` : Called on the particular client node when the game server calls `sendClientMessage(ClientPid, Message)`
+- `confirmedJoin(Message)` : Called when the game server responds to addClient by calling `confirmJoin(ClientPid, Message)`
+- `otherMessage(Message)` : Called when the game client receives a message from the game server that has an unidentified header (none of the above)
 
 ### Exported Functions available to Games
 
+#### Functions exported by ServerComms
+- `sendState(State)` : Sends the provided state to all clients connected to the server, with `updateState(newState)` being called when the client receives the message.
+- `confirmJoin(ClientPid, Message)` : When called by the server, confirmedJoin(Message) is called on the client node associated with ClientPid 
+- `sendClientMessage(ClientPid, Message)` : Sends a message to a particular client, with the `gotMessage(Message)` function being called when the client receives it
+- `shutdown()` : Should be called when the game is over and the server should be shut down
+
+#### Functions exported by ClientComms
+- `sendmessage(Message)` : Sends a message to the server, with `eventIsValid(ClientPid, Message)` being called when the server receives the message
+- `shutdown()` : Should be called when the client leaves (or the game is over)
+
 ### Screen (halligame.utils.screen)**
-- `__init__(gotInputFunc, width, height)` : Initializes the screen class. Takes 
+- `Screen(gotInputFunc, width, height)` : Initializes the screen class. Takes 
     a callback function gotInputFunc that has signature gotInputFunc(input) 
     where input is the input from the user. Input is either a normal char or 
     a special character, which is handled by 

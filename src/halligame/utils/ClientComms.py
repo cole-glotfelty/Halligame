@@ -18,6 +18,7 @@ from pyrlang.gen.server import GenServerInterface
 from term import Atom
 from halligame.games import *
 from random import randint
+from time import sleep
 
 from halligame.utils.screen import Screen
 
@@ -54,7 +55,7 @@ class ClientCommunicate(Process):
         if (msg[0] == "state"):
             self.__clientGameInstance.updateState(msg[1])
         elif (msg[0] == "reply"):
-            self.__clientGameInstance.gotReply(msg[1])
+            self.__clientGameInstance.gotMessage(msg[1])
         elif (msg[0] == "confirmed_join"):
             print(f"Calling Confirmed Join")
             self.__clientGameInstance.confirmedJoin(msg[1])
@@ -76,6 +77,7 @@ class ClientCommunicate(Process):
 
     def shutdown(self):
         self.__commGenServer.cast_nowait((Atom("remove_client"), self.pid_))
+        sleep(0.1)
         node.destroy()
 
 def start(commServerName, gameName):
@@ -85,6 +87,8 @@ def start(commServerName, gameName):
     node = Node(node_name = name, cookie = "Sh4rKM3ld0n")
     clientComms = ClientCommunicate(gameName, commServerName)
     node.run()
+
+    clientComms.play()
 
 # This is an entry point!
 # Arguments on command line:

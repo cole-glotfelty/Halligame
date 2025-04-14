@@ -6,7 +6,8 @@
 # Last modified by: Cole Glotfelty <2025-04-14>
 
 # Changelog:
-# Cole Glotfelty <2025-04-14> - 
+# Cole Glotfelty <2025-04-14> - Added Documentation
+# Michael Daniels <2025-04-03> - Switched to pickle for serialization
 
 import threading
 import pickle
@@ -17,14 +18,14 @@ class GameState():
     """
     def __init__(self, args: dict = {}):
         self.__lock = threading.Lock()
-        self.objects = args
+        self.__objects = args
 
     def serialize(self):
         """
         Serlialize the state dictionary into binary using pickle.
         """
         with self.__lock:
-            return pickle.dumps(self.objects)
+            return pickle.dumps(self.__objects)
 
     def deserialize(self, state: bytes):
         """
@@ -32,4 +33,18 @@ class GameState():
         state: pickled binary
         """
         with self.__lock:
-            self.objects = pickle.loads(state)
+            self.__objects = pickle.loads(state)
+
+    def getValue(self, Key):
+        """
+        Getter for Value
+        """
+        with self.__lock:
+            return self.__objects[Key]
+
+    def setValue(self, Key, Value):
+        """
+        Setter for Value
+        """
+        with self.__lock:
+            self.__objects[Key] = Value
