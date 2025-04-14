@@ -28,13 +28,16 @@ class ClientSuper:
     def updateState(self, state: bytes) -> None:
         """
         Callback function triggered by `broadcastState`. This is where you 
-        should modify the TUI screen for the user. The state is is then copied
-        from the message sent by the server and 
+        should modify the TUI screen for the user. The state should then be 
+        copied to the local state from the message sent by the server.
         """
         self.__state.deserialize(state)
         pass
 
     def gotServerMessage(self, msg) -> None:
+        """
+        Callback function 
+        """
         (status, message) = msg
         if status == "error":
             print(message)

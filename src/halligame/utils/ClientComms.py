@@ -77,13 +77,9 @@ class ClientCommunicate(Process):
                         message = (self.pid_, (Atom("data"), (Atom("event"), msg))))
 
     def shutdown(self):
-        print("in shutdown")
         asyncio.run(self.__commGenServer.cast((Atom("remove_client"), self.pid_)))
-        print("sent cast")
         sleep(0.2)
-        print("destroying node")
         node.destroy()
-        print("node destroyed, exiting")
         sys.exit(0)
 
 def start(commServerName, gameName):
