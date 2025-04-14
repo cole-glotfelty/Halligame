@@ -26,7 +26,7 @@ validation server setup can be automated. The interface is as follows:
     a callback function gotInputFunc that has signature gotInputFunc(input) 
     where input is the input from the user. Input is either a normal char or 
     a special character, which is handled by 
-    ![ncurses curses.KEY_* constants](https://docs.python.org/3/library/curses.html#constants). 
+    [ncurses curses.KEY_* constants](https://docs.python.org/3/library/curses.html#constants). 
     Additionally, takes the desired width and height of the virtual screen to 
     print to.
 - `write(row, col, toPrint)` : Prints the contents of toPrint starting at 

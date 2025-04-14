@@ -95,7 +95,7 @@ class Server():
     def addUser(self, clientPID):
         self.__usersConnected += 1
         if (self.__usersConnected > 2):
-            self.__comms.sendMessage(("data", ("reply", (clientPID, "Error: Too Many Players"))))
+            self.__comms.sendMessage(("reply", (clientPID, "Error: Too Many Players")))
         else:
             playerId = 0 if self.__usersConnected == 1 else 1
             self.__comms.sendClientMessage(clientPID, ("confirmed_join", (playerId, self.__state.serialize())))

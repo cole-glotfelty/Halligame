@@ -10,6 +10,7 @@
 # The Player class stores player specific data 
 # (potentially part of the Game constructor)
 
+from halligame.utils.ClientComms import ClientCommunicate
 from halligame.utils.screen import Screen
 from halligame.utils.gameState import GameState
 import threading
@@ -18,7 +19,7 @@ import time
 
 class Client():
     # comms is the function to call when you want to send a message to the server
-    def __init__(self, comms: callable):
+    def __init__(self, comms: ClientCommunicate):
         """
         Memeber Variables:
             screen
@@ -29,22 +30,21 @@ class Client():
             myTurn
             done
         """
-        self.__screen = Screen(self.userInput, width=120, height=30) # create new instance of the ncurses module
+        self.__screen = Screen(self.userInput, width=120, height=30)
         self.__stateLock = threading.Lock()
         self.__comms = comms
         self.__state: GameState = GameState()
         self.__playerID = None
         self.__myTurn = True
-        self.done = False
 
-    def updateState(self, msg : list[tuple]):
+    def updateState(self, state):
         """
         Takes in a message that contains the new state (this message is sent 
         from the server side of the game class) and updates the internal 
         state, potentially updating/refreshing the display
         """
         with self.__stateLock:
-            self.__state = GameState.deserialize(msg)
+            self.__state.deserialize(state)
 
             for row in self.__state.objects["board"]:
                 self.__screen.print("-------------")
@@ -61,6 +61,8 @@ class Client():
                 self.__screen.print("Type 'q' to quit")
             elif (self.__myTurn):
                 self.__screen.print("Select a square [1..9]: ")
+        
+            self.__screen.refresh()
 
     def gotReply(self, msg):
         self.__screen.print("That Square is Occupied!")
@@ -68,9 +70,8 @@ class Client():
     def confirmedJoin(self, Msg):
         (playerID, state) = Msg
         self.__playerID = playerID
-        self.__state = GameState.deserialize(state)
-        self.__screen.write(10, 10, self.__playerID)
-
+        self.__screen.write(10, 10, "hello!")
+        self.updateState(state)
 
     def userInput(self, input):
         """
@@ -84,14 +85,18 @@ class Client():
         "curses.KEY_"...
         """
         with self.__stateLock:
+            self.__screen.print(input)
+            self.__screen.refresh()
+
             if (input == "q"):
-                self.done = True
+                self.__screen.shutdown()
+                self.__comms.sendMessage("close")
 
             if self.__myTurn:
                 playerInput = -1
                 while not (1 <= playerInput and playerInput <= 9):
                     try:
                         playerInput = int(input)
-                        self.__comms(playerInput - 1)
+                        self.__comms.sendMessage((self.__playerID, playerInput - 1))
                     except: # 
-                        self.__screen.print("Please enter a number between 1 and 9!")
+                        print("Please enter a number between 1 and 9!")

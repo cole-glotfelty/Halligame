@@ -57,6 +57,8 @@ class ServerCommunicate(Process):
         elif (msg[0] == "remove_client"):
             self.__serverGameInstance.removeUser(msg[1])
         elif (msg[0] == "event"):
+            # msg[1][1] = clientPid
+            # msg[1][0] = RawMessage
             self.__serverGameInstance.eventIsValid(msg[1][1], msg[1][0])
         elif (msg[0] == "other"):
             self.__serverGameInstance.otherMessageType(msg[1][0], msg[1][1])
@@ -66,21 +68,34 @@ class ServerCommunicate(Process):
     def play(self):
         self.__serverGameInstance.play()
 
-    def sendMessage(self, Msg):
+    # backend for sending a message
+    def __sendMessage(self, Msg):
         node.send_nowait(sender = self.pid_,
                          receiver = (self.__full_commserver_name,
                                      Atom("communicationServer")),
                          message = Msg)
 
+    # front end wrapper for sending a message with correct formatting
+    def sendMessage(self, Msg):
+        print(f"DEBUG: Sending Message from ServerComms to commServer:", Msg)
+        
+        # convert the command to an atom for the server to process
+        if (Msg[0] == "broadcastState" or Msg[0] == "reply" 
+            or Msg[0] == "terminate"):
+            Msg = (Atom(Msg[0]), *Msg[1:])
+            print(Msg)
+
+        self.__sendMessage((self.pid_, 
+                            (Atom("data"), 
+                             Msg)))
+
     # State should have type halligame.utils.GameState
     def sendState(self, State : GameState):
         print(f"Sending serialized state {State}")
-        self.sendMessage((self.pid_,
-                          (Atom("data"),
-                           (Atom("broadcastState"), State.serialize()))))
-    
+        self.sendMessage((Atom("broadcastState"), State.serialize()))
+
     def shutDownServer(self):
-        self.sendMessage(("terminate", "normal"))
+        self.__sendMessage(("terminate", "normal"))
     
     def sendClientMessage(self, pid, msg):
         node.send_nowait(sender = self.pid_,
@@ -103,5 +118,4 @@ if __name__ == '__main__':
         node.run()
 
         serverComms.play()
-
         serverComms.shutDownServer()

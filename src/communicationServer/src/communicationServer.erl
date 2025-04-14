@@ -115,6 +115,7 @@ handle_info({Pid, {data, {MessageType, RawMessage}}}, State) ->
                     broadcast(State#state.clients, stop),
                     stop();
                 _ ->
+                    % TODO: this is broken in client comms --> when it receives a message without one of the expected headers, it raises an exception
                     {ClientPid, Message} = RawMessage,
                     broadcast(State#state.clients, {ClientPid, Message})
             end,

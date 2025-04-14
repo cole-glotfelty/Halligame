@@ -19,6 +19,8 @@ from term import Atom
 from halligame.games import *
 from random import randint
 
+from halligame.utils.screen import Screen
+
 class ClientCommunicate(Process):
     # TODO: there are some serious shenanigans of imports going on here and I hate it
     def __init__(self, gameName, commServerName):
@@ -29,7 +31,7 @@ class ClientCommunicate(Process):
         #    - Import the tictactoe module
         #    - Call the init function of that tictactoe module
         gameModule = importlib.import_module("halligame.games." + gameName)
-        self.__serverGameInstance = gameModule.Client(self.sendMessage)
+        self.__clientGameInstance = gameModule.Client(self)
         self.__commGenServer = GenServerInterface(self,
                                                   (Atom(commServerName),
                                                    Atom("communicationServer")))
@@ -49,14 +51,15 @@ class ClientCommunicate(Process):
             exit(0)
 
         # try:
-            if (msg[0] == "state"):
-                self.__serverGameInstance.updateState(msg[1])
-            elif (msg[0] == "reply"):
-                self.__serverGameInstance.gotReply(msg[1])
-            elif (msg[0] == "confirmed_join"):
-                self.__serverGameInstance.confirmedJoin(msg[1])
-            else:
-                raise UserWarning("Unknown message in ClientComms: " + str(msg))
+        if (msg[0] == "state"):
+            self.__clientGameInstance.updateState(msg[1])
+        elif (msg[0] == "reply"):
+            self.__clientGameInstance.gotReply(msg[1])
+        elif (msg[0] == "confirmed_join"):
+            print(f"Calling Confirmed Join")
+            self.__clientGameInstance.confirmedJoin(msg[1])
+        else:
+            raise UserWarning("Unknown message in ClientComms: " + str(msg))
         # except:
         #     print(f"Could not process message {msg}")
 
@@ -81,9 +84,8 @@ class ClientCommunicate(Process):
 # erpyServerCommunicate you launched seperately
 if __name__ == '__main__':
     name = f'{randint(0, 999999) :06d}@{os.environ["HOST"]}'
-    print(name)
+    print("ClientComms NodeName: ", name)
     commServerName = sys.argv[1]
-    print(commServerName)
     node = Node(node_name = name, cookie = "COOKIE")
     clientComms = ClientCommunicate("TicTacToe", commServerName)
     node.run()
