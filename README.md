@@ -14,9 +14,21 @@ validation server setup can be automated. The interface is as follows:
 
 ### Required Implementation for Adding Games
 #### Functions that are required to be implemented in gameServer.py
-
+- `__init__(comms)` : Called automatically when the server is started. comms is an instance of the ServerCommunicate class and gives the game server access to the public ServerCommunicate functions (documented below)
+- `play()` : Called automatically when the game server is started.
+- `addClient(ClientPid)` : Called automatically by the client when the client node is started
+- `removeClient(ClientPid)` : Called when the game client calls the function `ClientComms.shutdown()`
+- `eventIsValid(ClientPid, RawMessage)` : Called when the game client calls `sendMessage(RawMessage)`
+- `otherMessageType(ClientPid, RawMessage)` : Called when the server receives a message from a game client that has an unidentified header (none of the above)
 
 #### Functions that are required to be implemented in gameClient.py
+- `__init__(comms)` : Called automatically when the client is started. comms is an instance of the ClientCommunicate class and gives the game client access to the public ClientCommunicate functiosn (documented below)
+- `updateState(newState)` : Called with the provided state when the game server calls `sendState(state)`
+- `gotReply(RawMessage)` : Called on the particular client node when the game server calls `sendClientMessage(ClientPid, Message)`
+- `confirmedJoin(Msg)` : Called when the game server responds to addClient by calling `confirmJoin(ClientPid, Message)`
+- `otherMessage(Msg)` : Called when the game client receives a message from the game server that has an unidentified header (none of the above)
+
+#### Message Passing Protocol
 
 
 ### Exported Functions available to Games
@@ -43,7 +55,6 @@ validation server setup can be automated. The interface is as follows:
 - `shutdown()` : Must be called when the client is finished displaying to the 
     terminal. Closes the virtual window and restores the terminal appearance 
     to its normal state
-
 
 # Development
 Dependencies: rebar3, uv

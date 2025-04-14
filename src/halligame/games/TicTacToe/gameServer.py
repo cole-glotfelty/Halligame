@@ -92,16 +92,16 @@ class Server():
         self.__state.objects["currentPlayer"] = (currentPlayer + 1) % 2
 
 
-    def addUser(self, clientPID):
+    def addClient(self, clientPid):
         self.__usersConnected += 1
         if (self.__usersConnected > 2):
-            self.__comms.sendMessage(("reply", (clientPID, "Error: Too Many Players")))
+            self.__comms.sendMessage(("reply", (clientPid, "Error: Too Many Players")))
         else:
             playerId = 0 if self.__usersConnected == 1 else 1
-            self.__comms.sendClientMessage(clientPID, ("confirmed_join", (playerId, self.__state.serialize())))
+            self.__comms.confirmJoin(clientPid, (playerId, self.__state.serialize()))
 
     # TODO: would be nice to implement
-    def removeUser(self, clientPID):
+    def removeClient(self, clientPID):
         pass
 
 

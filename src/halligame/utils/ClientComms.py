@@ -36,7 +36,7 @@ class ClientCommunicate(Process):
                                                   (Atom(commServerName),
                                                    Atom("communicationServer")))
         
-        self.__commGenServer.cast_nowait((Atom("add_client"), self.pid_))
+        self.__commGenServer.cast_nowait((Atom("new_client"), self.pid_))
 
     def handle_one_inbox_message(self, msg: tuple):
         """
@@ -59,7 +59,7 @@ class ClientCommunicate(Process):
             print(f"Calling Confirmed Join")
             self.__clientGameInstance.confirmedJoin(msg[1])
         else:
-            raise UserWarning("Unknown message in ClientComms: " + str(msg))
+            self.__clientGameInstance.otherMessage(msg[1])
         # except:
         #     print(f"Could not process message {msg}")
 
@@ -69,23 +69,27 @@ class ClientCommunicate(Process):
 
         msg : message to send
         """
-        if msg == "close":
-            node.destroy()
-        else:
-            node.send_nowait(sender = self.pid_,
-                            receiver = (Atom(commServerName),
-                                        Atom("communicationServer")),
-                            message = (self.pid_, (Atom("data"), (Atom("event"), msg))))
+        node.send_nowait(sender = self.pid_,
+                        receiver = (Atom(commServerName),
+                                    Atom("communicationServer")),
+                        message = (self.pid_, (Atom("data"), (Atom("event"), msg))))
+
+    def shutdown(self):
+        self.__commGenServer.cast_nowait((Atom("remove_client"), self.pid_))
+        node.destroy()
+
+def start(commServerName, gameName):
+    global name, node
+    name = f'{randint(0, 999999) :06d}@{os.environ["HOST"]}'
+    print("ClientComms NodeName: ", name)
+    node = Node(node_name = name, cookie = "Sh4rKM3ld0n")
+    clientComms = ClientCommunicate(gameName, commServerName)
+    node.run()
 
 # This is an entry point!
 # Arguments on command line:
-# Argument 1: player ID (0 or 1)
-# Argument 2: name of communicationServer node ("name@host"), from the
+# Argument 1: name of communicationServer node ("name@host"), from the
 # erpyServerCommunicate you launched seperately
 if __name__ == '__main__':
-    name = f'{randint(0, 999999) :06d}@{os.environ["HOST"]}'
-    print("ClientComms NodeName: ", name)
     commServerName = sys.argv[1]
-    node = Node(node_name = name, cookie = "COOKIE")
-    clientComms = ClientCommunicate("TicTacToe", commServerName)
-    node.run()
+    start(commServerName, "TicTacToe")

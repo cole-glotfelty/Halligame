@@ -2,7 +2,7 @@
 
 # this command is the prefix to run the erlang script that handles requests
 export ERL_LIBS="$HG_ROOT/src/cli/_build/default/lib:$HG_ROOT/src/communicationServer/_build/default/lib:$ERL_LIBS"
-script="erl -noshell -sname cli -setcookie COOKIE -eval \"handleCLIRequest:"
+script="erl -noshell -sname cli -setcookie Sh4rKM3ld0n -eval \"handleCLIRequest:"
 
 src="$HG_ROOT/src"
 

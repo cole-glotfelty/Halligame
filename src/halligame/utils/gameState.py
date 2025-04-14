@@ -3,6 +3,10 @@
 # GameState Class for serializing and desearlizing game state for server 
 # communication
 # Written by Will Cordray, Cole Glotfelty, Michael Daniels <2025-03-29>
+# Last modified by: Cole Glotfelty <2025-04-14>
+
+# Changelog:
+# Cole Glotfelty <2025-04-14> - 
 
 import threading
 import pickle

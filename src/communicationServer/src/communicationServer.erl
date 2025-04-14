@@ -53,7 +53,7 @@ handle_cast({replace_server, Pid}, State) ->
     % Replaces the current game server, if any, with a new one.
     % Note: this is used to set the game server at first.
     {noreply, State#state{game_server = Pid}};
-handle_cast({add_client, Pid}, State) ->
+handle_cast({new_client, Pid}, State) ->
     % Add a client to this game.
     io:format("~p~n", [State#state.game_server]),
     State#state.game_server ! {new_client, Pid},
@@ -61,7 +61,6 @@ handle_cast({add_client, Pid}, State) ->
     {noreply, State#state{clients = [Pid | CurrClients]}};
 handle_cast({remove_client, Pid}, State) ->
     % Remove a client from this game.
-    State#state.game_server ! {remove_client, Pid},
     State#state.game_server ! {remove_client, Pid},
     FilterFun = fun(X) -> X =/= Pid end,
     FilteredClients = lists:filter(FilterFun, State#state.clients),
@@ -113,7 +112,11 @@ handle_info({Pid, {data, {MessageType, RawMessage}}}, State) ->
                 terminate ->
                     GameServerPid ! stop,
                     broadcast(State#state.clients, stop),
+                
                     stop();
+                confirm_join ->
+                    {ClientPid, Message} = RawMessage,
+                    ClientPid ! {confirm_join, Message};
                 _ ->
                     % TODO: this is broken in client comms --> when it receives a message without one of the expected headers, it raises an exception
                     {ClientPid, Message} = RawMessage,

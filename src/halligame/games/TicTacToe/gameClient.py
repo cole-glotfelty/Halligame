@@ -72,6 +72,9 @@ class Client():
         self.__playerID = playerID
         self.__screen.write(10, 10, "hello!")
         self.updateState(state)
+    
+    def otherMessage(Msg):
+        raise ValueError("Client Received Unknown Message" + str(Msg))
 
     def userInput(self, input):
         """
@@ -89,10 +92,9 @@ class Client():
             self.__screen.refresh()
 
             if (input == "q"):
+                self.__comms.shutdown()
                 self.__screen.shutdown()
-                self.__comms.sendMessage("close")
-
-            if self.__myTurn:
+            elif self.__myTurn:
                 playerInput = -1
                 while not (1 <= playerInput and playerInput <= 9):
                     try:

@@ -30,7 +30,7 @@ class ServerCommunicate(Process):
         print(f"Communication server node: {self.__full_commserver_name}")
         subprocess.Popen(['bash', '-xc',
                         #   'ls'
-                          f'erl -noinput -sname {self.__commserver_name} -setcookie COOKIE -eval "communicationServer:start_link([\'TicTacToe\', \'{NodeName}\'])"'
+                          f'erl -noinput -sname {self.__commserver_name} -setcookie Sh4rKM3ld0n -eval "communicationServer:start_link([\'TicTacToe\', \'{NodeName}\'])"'
                           ],
                           cwd = '../communicationServer')
         node.register_name(self, Atom("pyServer"))
@@ -53,9 +53,9 @@ class ServerCommunicate(Process):
             exit(0)
             
         if (msg[0] == "new_client"):
-            self.__serverGameInstance.addUser(msg[1]) # send them the user
+            self.__serverGameInstance.addClient(msg[1]) # send them the client
         elif (msg[0] == "remove_client"):
-            self.__serverGameInstance.removeUser(msg[1])
+            self.__serverGameInstance.removeClient(msg[1])
         elif (msg[0] == "event"):
             # msg[1][1] = clientPid
             # msg[1][0] = RawMessage
@@ -94,13 +94,26 @@ class ServerCommunicate(Process):
         print(f"Sending serialized state {State}")
         self.sendMessage((Atom("broadcastState"), State.serialize()))
 
+    def confirmJoin(self, ClientPid, Message):
+        self.sendMessage((Atom("confirmed_join"), (ClientPid, Message)))
+
     def shutDownServer(self):
         self.__sendMessage(("terminate", "normal"))
     
-    def sendClientMessage(self, pid, msg):
-        node.send_nowait(sender = self.pid_,
-                         receiver = pid,
-                         message = msg)
+    def sendClientMessage(self, ClientPid, Message):
+        self.sendMessage(("reply", (ClientPid, Message)))
+        # node.send_nowait(sender = self.pid_,
+        #                  receiver = ClientPid,
+        #                  message = Message)
+
+def start(game : str, node_name : str):
+    global node
+    node = Node(node_name, cookie = "Sh4rKM3ld0n")
+    serverComms = ServerCommunicate(game, node_name)
+    node.run()
+
+    serverComms.play()
+    serverComms.shutDownServer()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -113,9 +126,4 @@ if __name__ == '__main__':
     elif (args.node_name == ""):
         print("ERROR: No Node Name Supplied", file=sys.stderr)
     else:
-        node = Node(node_name = args.node_name, cookie = "COOKIE")
-        serverComms = ServerCommunicate(args.game, args.node_name)
-        node.run()
-
-        serverComms.play()
-        serverComms.shutDownServer()
+        start(args.game, args.node_name)

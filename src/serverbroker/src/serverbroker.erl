@@ -39,8 +39,7 @@
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Starts the server
-%% TODO: doc other start too.
+%% Starts the server (will die when paraent proceess dies)
 %% @end
 %%--------------------------------------------------------------------
 -spec start_link() -> {ok, Pid :: pid()} |
@@ -52,7 +51,7 @@ start_link() ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Starts the server
+%% Starts the server (entirely independant of the parent)
 %% @end
 %%--------------------------------------------------------------------
 -spec start() -> {ok, Pid :: pid()} |
@@ -65,6 +64,9 @@ start() ->
 % TODO doc
 stop() ->
     gen_server:stop({local, ?SERVER}).
+
+
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -100,7 +102,6 @@ init([]) ->
       {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
       {stop, Reason :: term(), NewState :: term()}.
 handle_call(Request, {Pid, _FromTag}, State) ->
-    % io:format("Orig. State: ~p~n", [State]),
     case Request of
         {add_user, Login} ->
             {ThisUser, Rest} = lists:partition(eq(Login), State#state.users),
@@ -149,8 +150,8 @@ handle_call(Request, {Pid, _FromTag}, State) ->
         {unregister_gameserver} ->
             % Must be called by the game server, not a client.
             CurrGS   = State#state.gameservers,
-            Fun      = fun (X) -> Pid == X#gameserver.pid end,
-            Filtered = lists:filter(Fun, CurrGS),
+            IsRegistered = fun (X) -> Pid == X#gameserver.pid end,
+            Filtered = lists:filter(IsRegistered, CurrGS),
             Reply = ok,
             NewState = State#state{gameservers = Filtered};
         {joined_gameserver, JoinedLogin, JoinedPid} ->
@@ -158,8 +159,8 @@ handle_call(Request, {Pid, _FromTag}, State) ->
             % TODO: update user's currently playing games too.
             % TODO: monitor?
             CurrGS         = State#state.gameservers,
-            Fun            = fun (X) -> Pid == X#gameserver.pid end,
-            {ThisGS, Rest} = lists:partition(Fun, CurrGS),
+            IsRegistered   = fun (X) -> Pid == X#gameserver.pid end,
+            {ThisGS, Rest} = lists:partition(IsRegistered, CurrGS),
             OldGCs         = ThisGS#gameserver.players,
             NewGC          = #gameclient{login = JoinedLogin, pid = JoinedPid},
             NewGS          = ThisGS#gameserver{players = [NewGC | OldGCs]},
@@ -169,8 +170,8 @@ handle_call(Request, {Pid, _FromTag}, State) ->
             % Must be called by the game server, not a client.
             % TODO: update user's currently playing games too.
             CurrGS         = State#state.gameservers,
-            Fun            = fun (X) -> Pid == X#gameserver.pid end,
-            {ThisGS, Rest} = lists:partition(Fun, CurrGS),
+            IsRegistered   = fun (X) -> Pid == X#gameserver.pid end,
+            {ThisGS, Rest} = lists:partition(IsRegistered, CurrGS),
             OldGCs         = ThisGS#gameserver.players,
             NewGCs         = lists:filter(neq(#gameclient{login = LeftLogin,
                                                           pid = LeftPid}),
