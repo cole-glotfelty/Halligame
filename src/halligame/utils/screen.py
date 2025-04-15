@@ -38,10 +38,9 @@ import threading
 
 class Screen():
     # gotInputFunc = the function to call when receiving input
-    def __init__(self, gotInputFunc: callable, width: int, height: int):
+    def __init__(self, gotInputFunc: callable, gotMouseClickFunc: callable):
         self.__gotInput = gotInputFunc
-        self.__width = width
-        self.__height = height
+        self.__gotMouse = gotMouseClickFunc
 
         self.__lock = threading.Lock()
 
@@ -55,7 +54,7 @@ class Screen():
         self.__monitorInputThread.daemon = True # kill thread when main done
         self.__monitorInputThread.start()
 
-        self.__stdscr.move(self.__height - 1, 0) # set starting printing loc
+        self.__stdscr.move(self.__height() - 1, 0) # set starting printing loc
 
         self.__colors = {"black": curses.COLOR_BLACK,
                          "blue": curses.COLOR_BLUE,
@@ -69,6 +68,8 @@ class Screen():
         self.__nextColorID = 1
         self.__nextColorPairID = 1
 
+        self.__clickableRegions = []
+
         # give screen time to set up (instantaneous printing causes weird bugs)
         # idk why
         time.sleep(0.1)
@@ -79,6 +80,7 @@ class Screen():
         self.__stdscr = curses.initscr() # turn the terminal into a curses window
         curses.start_color() # enable color support
         curses.use_default_colors() # keep the curr colors of the terminal
+        curses.mousemask(curses.ALL_MOUSE_EVENTS) # enable mouse support
         curses.noecho() # prevent user input from appearing on screen
         curses.cbreak() # get key input before user types [enter]
 
@@ -100,31 +102,57 @@ class Screen():
 
     # Note that .getch() also refreshes the screen
     def __monitorInput(self) -> None:
-        window = curses.newwin(self.__height, self.__width)
+        window = curses.newwin(self.__height(), self.__width())
         window.keypad(True) # enable support for special keys like up-arrow.
         while True:
             c = window.getch() # this blocks until input
 
-            if (type(c) == int): # if int, try to convert to char
-                try:
-                    c = chr(c)
-                except ValueError: # other code, so ignore
-                    pass
-            self.__gotInput(c)
+            if (c == curses.KEY_MOUSE):
+                (_, x, y, _, bstate) = curses.getmouse()
+
+                # if left click
+                if (bstate & curses.BUTTON1_PRESSED != 0 or
+                    bstate & curses.BUTTON1_CLICKED != 0):
+                    regionId = self.__findRegion(x, y)
+                    self.__gotMouse(y, x, regionId)
+            else:
+                if (type(c) == int): # if int, try to convert to char
+                    try:
+                        c = chr(c)
+                    except ValueError: # other code, so ignore
+                        pass
+                self.__gotInput(c)
+
+    def __findRegion(self, x, y):
+        with self.__lock:
+            # reverse the list to check more recently defined regions first
+            for (row, col, height, width, id) in reversed(self.__clickableRegions):
+                if (x >= row and x < row + height and 
+                    y >= col and y < col + width):
+                   return id
+        return None
 
     def height(self) -> int:
         with self.__lock:
-            return self.__height
+            return self.__height()
 
     def width(self) -> int:
         with self.__lock:
-            return self.__width
+            return self.__width()
+
+    def __height(self):
+        rows, cols = self.__stdscr.getmaxyx()
+        return rows
+
+    def __width(self):
+        rows, cols = self.__stdscr.getmaxyx()
+        return cols
 
     # clears the screen (removes all text)
     def clearScreen(self) -> None:
         with self.__lock:
             self.__stdscr.clear()
-            self.__stdscr.move(self.__height - 1, 0) # move cursor to bottom left
+            self.__stdscr.move(self.__height() - 1, 0) # move cursor to bottom left
 
     # prints a string to the screen, starting at (row, col)
     def write(self, row: int, col: int, toPrint, colorPairId=None) -> None:
@@ -177,10 +205,10 @@ class Screen():
                 # move up one line, and reset cursor to bottom left
                 self.__stdscr.move(0, 0) # so deleteln deletes the top line
                 self.__stdscr.deleteln()
-                self.__stdscr.move(self.__height - 1, 0)
+                self.__stdscr.move(self.__height() - 1, 0)
         except curses.error:
             # reset cursor position to correct loc
-            self.__stdscr.move(self.__height - 1, 0)
+            self.__stdscr.move(self.__height() - 1, 0)
 
     # refreshes the window (sends updates to screen)
     def refresh(self) -> None:
@@ -208,8 +236,12 @@ class Screen():
 
             self.__nextColorPairID += 1
 
-    def setBackground(self, colorPairId):
+    def setStyle(self, colorPairId):
         with self.__lock:
             colorPairCode = self.__colorPairs[colorPairId]
 
             self.__stdscr.bkgd(' ', curses.color_pair(colorPairCode))
+
+    def addClickableRegion(self, row: int, col: int, height: int, width: int, id):
+        with self.__lock:
+            self.__clickableRegions.append((row, col, height, width, id))

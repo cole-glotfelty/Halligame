@@ -29,7 +29,7 @@ class Client():
             myTurn
             done
         """
-        self.__screen = Screen(self.userInput, width=120, height=30)
+        self.__screen = Screen(self.userInput)
         self.__stateLock = threading.Lock()
         self.__comms = comms
         self.__state: GameState = GameState()

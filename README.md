@@ -39,13 +39,17 @@ validation server setup can be automated. The interface is as follows:
 - `shutdown()` : Should be called when the client leaves (or the game is over)
 
 ### Screen (halligame.utils.screen)**
-- `Screen(gotInputFunc, width, height)` : Initializes the screen class. Takes 
-    a callback function gotInputFunc that has signature gotInputFunc(input) 
-    where input is the input from the user. Input is either a normal char or 
-    a special character, which is handled by 
-    [ncurses curses.KEY_* constants](https://docs.python.org/3/library/curses.html#constants). 
-    Additionally, takes the desired width and height of the virtual screen to 
-    print to.
+- `Screen(gotInputFunc, gotClickFunc, gotMouseClickFunc)` : 
+    Initializes the screen class. Takes a callback function gotInputFunc that 
+    has signature gotInputFunc(input) where input is the input from the user. 
+    Input is either a normal char or a special character, which is handled by 
+    [ncurses curses.KEY_* constants](https://docs.python.org/3/library/curses.html#curses.KEY_MIN). 
+    Additionally, takes another callback function gotMouseClickFunc that is 
+    called when the user left clicks on the screen. gotMouseClickFunct 
+    should have signature `gotMouseClickFunc(row, col, region)` where row and 
+    col are the row and column of the screen respectively, and region is the 
+    region of the mouse click (as created by `addClickableRegion`) or None 
+    if the click was not in a region.
 - `write(row, col, toPrint)` : Prints the contents of toPrint starting at 
     (row, col) to the screen. toPrint must be convertible to string. Updates 
     made when refresh is called.
@@ -57,10 +61,26 @@ validation server setup can be automated. The interface is as follows:
     refresh is called.
 - `refresh()` : Refreshes the screen, making all pending changes visible to the 
     user
+- `addColor(r, g, b, colorId)` : Add a new color to the palette, where 
+    r, g, and b are integers between 0 and 1000 referring to the intensity of 
+    the color
+- `addColorPair(foreground, background, pairId)` : Takes in two color IDs and 
+    defines a new color pair with ID pairId. A color pair is two colors, 
+    where the foreground color is the color of the text on the screen, and the 
+    background is the color of the screen behind the text (the highlight color)
+- `setStyle(colorPairId)` : Takes a color pair ID and sets the style of the 
+    terminal to the color pair defined by that ID, meaning the the background 
+    of the terminal is now the background color of that color pair and all 
+    printing will now default to that color pair.
+- `addClickableRegion(row, col, height, width, id)` : Add a clickable region 
+    to the screen. The region starts in the top left at (row, col) and is 
+    height pixels tall and width pixels wide. When calling the callback 
+    gotMouseClickFunc, if the click is within this region, then the region 
+    argument is set to id. Clicks in overlapping regions are decided based on 
+    which region was defined more recently.
 - `shutdown()` : Must be called when the client is finished displaying to the 
     terminal. Closes the virtual window and restores the terminal appearance 
     to its normal state
-- `addColor(r, g, b, colorId)` : Add a new color to the palette, where r, g, and b are integers between 0 and 1000 
 
 # Development
 Dependencies: rebar3, uv
