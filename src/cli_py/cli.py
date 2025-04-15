@@ -37,7 +37,6 @@ def new(args) -> None:
     server_node_name = f'{randint(0, 999999):06d}@{hostname}'
     cli = SCRIPT.copy()
     cli[-1] += f'newGame(\'{args.game}\', \'{server_node_name}\')'
-    print(cli)
     env = os.environ
     env["ERL_LIBS"] = f"{env['HG_ROOT']}/src/cli/_build/default/lib:{env['HG_ROOT']}/src/communicationServer/_build/default/lib:{env['ERL_LIBS']}"
     subprocess.run(cli, stdout = sys.stdout, stderr = sys.stderr, env = env)

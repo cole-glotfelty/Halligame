@@ -36,8 +36,6 @@ import sys
     # of the line, and then split the printedd string across those multiple 
     # lines manually
 
-# TODO: Add color support
-
 class Screen():
     # gotInputFunc = the function to call when receiving input
     def __init__(self, gotInputFunc: callable, gotMouseClickFunc: callable, width: int, height: int):
@@ -49,6 +47,7 @@ class Screen():
         self.__lock = threading.Lock()
 
         self.__initCurses()
+        self.__colorSupported = (curses.COLORS >= 128)
 
         self.__stdscr.clear()
 
@@ -105,8 +104,9 @@ class Screen():
 
         curses.endwin()
 
-        # Needed to reset colors to the old state.
-        subprocess.run(["reset"], stdout = sys.stdout)
+        if self.__colorSupported:
+            # Needed to reset colors to the old state.
+            subprocess.run(["reset"], stdout = sys.stdout)
         time.sleep(0.5)
 
     # Note that .getch() also refreshes the screen
@@ -165,6 +165,8 @@ class Screen():
 
     # prints a string to the screen, starting at (row, col)
     def write(self, row: int, col: int, toPrint, colorPairId=None) -> None:
+        if not self.__colorSupported:
+            colorPairId = None
         with self.__lock:
             (prevRow, prevCol) = self.__stdscr.getyx() # save cursor position
 
@@ -178,15 +180,13 @@ class Screen():
             self.__stdscr.move(prevRow, prevCol) # reset cursor position
 
     def __write(self, row: int, col: int, printing: str, colorPairId=None) -> None:
+        if not self.__colorSupported:
+            colorPairId = None
         try:
             if (colorPairId == None):
                 self.__stdscr.addstr(row, col, printing)
             else:
                 colorPairCode = self.__colorPairs[colorPairId]
-                with open("test.txt", "a") as outfile:
-                    print(colorPairId, file=outfile)
-                    print(colorPairCode, file=outfile)
-                    print(file=outfile)
                 self.__stdscr.addstr(row, col, printing, curses.color_pair(colorPairCode))
         except curses.error:
             pass # ignore out of bounds characters # TODO
@@ -231,6 +231,8 @@ class Screen():
 
     # rgb between 0 and 1000
     def addColor(self, r: int, g: int, b: int, colorId) -> None:
+        if not self.__colorSupported:
+            return
         with self.__lock:
             self.__colors[colorId] = self.__nextColorID
             r = self.__scaleColor(r)
@@ -246,6 +248,8 @@ class Screen():
         return min(max(int(color * (1000.0 / 256.0)), 0), 1000)
 
     def addColorPair(self, foreground, background, pairId) -> None:
+        if not self.__colorSupported:
+            return
         with self.__lock:
             self.__colorPairs[pairId] = self.__nextColorPairID
 
@@ -257,6 +261,8 @@ class Screen():
             self.__nextColorPairID += 1
 
     def setStyle(self, colorPairId) -> None:
+        if not self.__colorSupported:
+            return
         with self.__lock:
             colorPairCode = self.__colorPairs[colorPairId]
 
