@@ -38,9 +38,11 @@ import threading
 
 class Screen():
     # gotInputFunc = the function to call when receiving input
-    def __init__(self, gotInputFunc: callable, gotMouseClickFunc: callable):
+    def __init__(self, gotInputFunc: callable, gotMouseClickFunc: callable, width: int, height: int):
         self.__gotInput = gotInputFunc
         self.__gotMouse = gotMouseClickFunc
+        self.__width = width
+        self.__height = height
 
         self.__lock = threading.Lock()
 
@@ -54,7 +56,10 @@ class Screen():
         self.__monitorInputThread.daemon = True # kill thread when main done
         self.__monitorInputThread.start()
 
-        self.__stdscr.move(self.__height() - 1, 0) # set starting printing loc
+        try:
+            self.__stdscr.move(self.__height - 1, 0) # set starting printing loc
+        except: # terminal window too small
+            pass
 
         self.__colors = {"black": curses.COLOR_BLACK,
                          "blue": curses.COLOR_BLUE,
@@ -65,16 +70,14 @@ class Screen():
                          "white": curses.COLOR_WHITE,
                          "yellow": curses.COLOR_YELLOW}
         self.__colorPairs = {}
-        self.__nextColorID = 1
-        self.__nextColorPairID = 1
+        self.__nextColorID = 10
+        self.__nextColorPairID = 10
 
         self.__clickableRegions = []
 
         # give screen time to set up (instantaneous printing causes weird bugs)
         # idk why
         time.sleep(0.1)
-
-        self.write(5, 5, curses.COLOR_PAIRS)
 
     def __initCurses(self) -> None:
         self.__stdscr = curses.initscr() # turn the terminal into a curses window
@@ -100,21 +103,23 @@ class Screen():
 
         curses.endwin()
 
+        time.sleep(0.5)
+
     # Note that .getch() also refreshes the screen
     def __monitorInput(self) -> None:
-        window = curses.newwin(self.__height(), self.__width())
+        window = curses.newwin(self.terminalHeight(), self.terminalWidth())
         window.keypad(True) # enable support for special keys like up-arrow.
         while True:
             c = window.getch() # this blocks until input
 
             if (c == curses.KEY_MOUSE):
-                (_, x, y, _, bstate) = curses.getmouse()
+                (_, mcol, mrow, _, bstate) = curses.getmouse()
 
                 # if left click
                 if (bstate & curses.BUTTON1_PRESSED != 0 or
                     bstate & curses.BUTTON1_CLICKED != 0):
-                    regionId = self.__findRegion(x, y)
-                    self.__gotMouse(y, x, regionId)
+                    regionId = self.__findRegion(mrow, mcol)
+                    self.__gotMouse(mrow, mcol, regionId)
             else:
                 if (type(c) == int): # if int, try to convert to char
                     try:
@@ -123,28 +128,28 @@ class Screen():
                         pass
                 self.__gotInput(c)
 
-    def __findRegion(self, x, y):
+    def __findRegion(self, mrow, mcol):
         with self.__lock:
             # reverse the list to check more recently defined regions first
             for (row, col, height, width, id) in reversed(self.__clickableRegions):
-                if (x >= row and x < row + height and 
-                    y >= col and y < col + width):
+                if (mrow >= row and mrow < row + height and 
+                    mcol >= col and mcol < col + width):
                    return id
         return None
 
-    def height(self) -> int:
+    def terminalHeight(self) -> int:
         with self.__lock:
-            return self.__height()
+            return self.__terminalHeight()
 
-    def width(self) -> int:
+    def terminalWidth(self) -> int:
         with self.__lock:
-            return self.__width()
+            return self.__terminalWidth()
 
-    def __height(self):
+    def __terminalHeight(self):
         rows, cols = self.__stdscr.getmaxyx()
         return rows
 
-    def __width(self):
+    def __terminalWidth(self):
         rows, cols = self.__stdscr.getmaxyx()
         return cols
 
@@ -152,7 +157,7 @@ class Screen():
     def clearScreen(self) -> None:
         with self.__lock:
             self.__stdscr.clear()
-            self.__stdscr.move(self.__height() - 1, 0) # move cursor to bottom left
+            self.__stdscr.move(self.__height - 1, 0) # move cursor to bottom left
 
     # prints a string to the screen, starting at (row, col)
     def write(self, row: int, col: int, toPrint, colorPairId=None) -> None:
@@ -163,7 +168,7 @@ class Screen():
 
             lines = printing.split('\n')
             for i in range(len(lines) - 1):
-                self.__write(row + i, col, lines[i])
+                self.__write(row + i, col, lines[i], colorPairId)
             self.__write(row + len(lines) - 1, col, lines[-1], colorPairId)
 
             self.__stdscr.move(prevRow, prevCol) # reset cursor position
@@ -174,6 +179,10 @@ class Screen():
                 self.__stdscr.addstr(row, col, printing)
             else:
                 colorPairCode = self.__colorPairs[colorPairId]
+                with open("test.txt", "a") as outfile:
+                    print(colorPairId, file=outfile)
+                    print(colorPairCode, file=outfile)
+                    print(file=outfile)
                 self.__stdscr.addstr(row, col, printing, curses.color_pair(colorPairCode))
         except curses.error:
             pass # ignore out of bounds characters # TODO
@@ -205,10 +214,10 @@ class Screen():
                 # move up one line, and reset cursor to bottom left
                 self.__stdscr.move(0, 0) # so deleteln deletes the top line
                 self.__stdscr.deleteln()
-                self.__stdscr.move(self.__height() - 1, 0)
+                self.__stdscr.move(self.__height - 1, 0)
         except curses.error:
             # reset cursor position to correct loc
-            self.__stdscr.move(self.__height() - 1, 0)
+            self.__stdscr.move(self.__height - 1, 0)
 
     # refreshes the window (sends updates to screen)
     def refresh(self) -> None:
@@ -217,15 +226,22 @@ class Screen():
                 self.__stdscr.refresh()
 
     # rgb between 0 and 1000
-    def addColor(self, r: int, g: int, b: int, colorId):
+    def addColor(self, r: int, g: int, b: int, colorId) -> None:
         with self.__lock:
             self.__colors[colorId] = self.__nextColorID
+            r = self.__scaleColor(r)
+            g = self.__scaleColor(g)
+            b = self.__scaleColor(b)
             
             curses.init_color(self.__nextColorID, r, g, b)
 
             self.__nextColorID += 1
 
-    def addColorPair(self, foreground, background, pairId):
+    # scales a color from between 0 and 256 to between 0 and 1000
+    def __scaleColor(self, color):
+        return min(max(int(color * (1000.0 / 256.0)), 0), 1000)
+
+    def addColorPair(self, foreground, background, pairId) -> None:
         with self.__lock:
             self.__colorPairs[pairId] = self.__nextColorPairID
 
@@ -236,12 +252,13 @@ class Screen():
 
             self.__nextColorPairID += 1
 
-    def setStyle(self, colorPairId):
+    def setStyle(self, colorPairId) -> None:
         with self.__lock:
             colorPairCode = self.__colorPairs[colorPairId]
 
             self.__stdscr.bkgd(' ', curses.color_pair(colorPairCode))
 
-    def addClickableRegion(self, row: int, col: int, height: int, width: int, id):
+    def addClickableRegion(self, row: int, col: int, 
+                           height: int, width: int, id) -> None:
         with self.__lock:
             self.__clickableRegions.append((row, col, height, width, id))

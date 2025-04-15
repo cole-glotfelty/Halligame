@@ -8,6 +8,7 @@ dependencies = [
     "pyrlang",
     "pyrlang-term",
     "psutil",
+    "pyfiglet",
 ]
 
 [build-system]

@@ -16,7 +16,7 @@ class Server():
 
         # "Public/Client Facing Members - For GameClient.py"
         self.__state : GameState = GameState()
-        self.__state.setValue("board", [[3 * y + x + 1 for x in range(3)] for y in range(3)])
+        self.__state.setValue("board", [[" " for x in range(3)] for y in range(3)])
         self.__state.setValue("currentPlayer", 0)
         self.__state.setValue("gameOver", "")
 
@@ -43,7 +43,7 @@ class Server():
             self.__updateState(event)
             self.__comms.broadcastState(self.__state)
         else:
-            self.__comms.sendClientMessage(clientPID, "Error: Invalid Move")
+            self.__comms.sendClientMessage(clientPID, ("Error: Invalid Move", self.__state.serialize()))
 
     def __updateState(self, event: tuple[int, Any]) -> None:
         (currentPlayer, move) = event
@@ -60,11 +60,11 @@ class Server():
 
         for row in self.__state.getValue("board"):
             if all(elem == self.__playersSymbol[currentPlayer] for elem in row):
-                self.__state.setValue("gameOver", f"Player {currentPlayer} wins!")
+                self.__state.setValue("gameOver", f"Player {playerSymbol} wins!")
 
         for i in range(3):
             if all(row[i] == self.__playersSymbol[currentPlayer] for row in self.__state.getValue("board")):
-                self.__state.setValue("gameOver", f"Player {currentPlayer} wins!")
+                self.__state.setValue("gameOver", f"Player {playerSymbol} wins!")
 
         wincon = [0, 0]
         for (i, j) in [(0, 0), (1, 1), (2, 2)]:
@@ -74,7 +74,7 @@ class Server():
                     wincon[1] += 1
 
         if 3 in wincon:
-            self.__state.setValue("gameOver", f"Player {currentPlayer} wins!")
+            self.__state.setValue("gameOver", f"Player {playerSymbol} wins!")
 
         wincon = [0, 0]
         for (i, j) in [(0, 2), (1, 1), (2, 0)]:
@@ -84,7 +84,7 @@ class Server():
                     wincon[1] += 1
 
         if 3 in wincon:
-            self.__state.setValue("gameOver", f"Player {currentPlayer} wins!")
+            self.__state.setValue("gameOver", f"Player {playerSymbol} wins!")
         
         self.__state.setValue("currentPlayer", (currentPlayer + 1) % 2)
 
@@ -92,7 +92,7 @@ class Server():
     def addClient(self, clientPid):
         self.__usersConnected += 1
         if (self.__usersConnected > 2):
-            self.__comms.sendClientMessage(clientPid, "Error: Too Many Players")
+            self.__comms.sendClientMessage(clientPid, ("Error: Too Many Players", self.__state.serialize()))
         else:
             playerId = 0 if self.__usersConnected == 1 else 1
             self.__comms.confirmJoin(clientPid, (playerId, self.__state.serialize()))

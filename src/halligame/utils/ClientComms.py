@@ -79,7 +79,7 @@ class ClientCommunicate(Process):
 
     def shutdown(self):
         self.__backendSendMessage(("remove_client", self.pid_))
-        sleep(0.2)
+        sleep(0.5)
         node.destroy()
         sys.exit(0)
 

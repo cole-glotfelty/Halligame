@@ -62,8 +62,8 @@ validation server setup can be automated. The interface is as follows:
 - `refresh()` : Refreshes the screen, making all pending changes visible to the 
     user
 - `addColor(r, g, b, colorId)` : Add a new color to the palette, where 
-    r, g, and b are integers between 0 and 1000 referring to the intensity of 
-    the color
+    r, g, and b are integers between 0 and 256 referring to the intensity of 
+    the color. Predefined colors are black, blue, cyan, green, magenta, red, white, yellow
 - `addColorPair(foreground, background, pairId)` : Takes in two color IDs and 
     defines a new color pair with ID pairId. A color pair is two colors, 
     where the foreground color is the color of the text on the screen, and the 
