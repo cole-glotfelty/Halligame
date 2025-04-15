@@ -7,6 +7,8 @@
 import curses
 import time
 import threading
+import subprocess
+import sys
 
 # INTERFACE:
 #   __init__():               initializes the class
@@ -103,6 +105,8 @@ class Screen():
 
         curses.endwin()
 
+        # Needed to reset colors to the old state.
+        subprocess.run(["reset"], stdout = sys.stdout)
         time.sleep(0.5)
 
     # Note that .getch() also refreshes the screen
