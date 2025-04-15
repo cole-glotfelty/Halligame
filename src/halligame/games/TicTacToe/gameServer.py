@@ -30,7 +30,7 @@ class Server():
     # from one of the clients, most likely an event/move. Note that I haven't 
     # quite figured out the erlang side of things to determine which player 
     # sent the message, but that is obviously coming.
-    def gotClientMessage(self, event: tuple[int, Any], clientPID) -> None:
+    def gotClientMessage(self, clientPID, event: tuple[int, Any]) -> None:
         """
         Determine if an event is valid
 

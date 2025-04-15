@@ -25,11 +25,11 @@ from halligame.utils.screen import Screen
 
 class ClientCommunicate(Process):
     # TODO: there are some serious shenanigans of imports going on here and I hate it
-    def __init__(self, gameName, commServerName):
+    def __init__(self, gameName, serverPid):
         super().__init__()
         node.register_name(self, f'pyClient')
 
-        self.__commServerName = commServerName
+        self.__serverPid = serverPid
 
         # "TicTacToe"
         #    - Import the tictactoe module
@@ -37,11 +37,7 @@ class ClientCommunicate(Process):
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__clientGameInstance = gameModule.Client(self)
 
-        self.__commGenServer = GenServerInterface(self,
-                                                  (Atom(commServerName),
-                                                   Atom("communicationServer")))
-        
-        self.__commGenServer.cast_nowait((Atom("new_client"), self.pid_))
+        self.__backendSendMessage(("new_client", self.pid_))
 
     def handle_one_inbox_message(self, msg: tuple):
         """
@@ -51,7 +47,6 @@ class ClientCommunicate(Process):
 
         msg : message received
         """
-        print(f"DEBUG: ClientComms got message {msg}")
         if msg == Atom("close"):
             exit(0)
 
@@ -60,24 +55,27 @@ class ClientCommunicate(Process):
         elif (msg[0] == "reply"):
             self.__clientGameInstance.gotServerMessage(msg[1])
         elif (msg[0] == "confirmed_join"):
-            print(f"Calling Confirmed Join")
             self.__clientGameInstance.confirmedJoin(msg[1])
         else:
             raise ValueError("ClientComms Received an invalid message")
 
-    def sendMessage(self, msg):
+    def sendMessage(self, Msg):
         """
         Given a message (msg) send it to the server
 
         msg : message to send
         """
+
+        self.__backendSendMessage((Atom("message"), (self.pid_, Msg)))
+
+
+    def __backendSendMessage(self, Msg):
         node.send_nowait(sender = self.pid_,
-                        receiver = (Atom(self.__commServerName),
-                                    Atom("communicationServer")),
-                        message = (self.pid_, (Atom("data"), (Atom("event"), msg))))
+                         receiver = (Atom(self.__serverPid), Atom("pyServer")),
+                         message = Msg)
 
     def shutdown(self):
-        asyncio.run(self.__commGenServer.cast((Atom("remove_client"), self.pid_)))
+        self.__backendSendMessage((Atom("remove_client"), self.pid_))
         sleep(0.2)
         node.destroy()
         sys.exit(0)
@@ -95,5 +93,5 @@ def start(commServerName, gameName):
 # Argument 1: name of communicationServer node ("name@host"), from the
 # erpyServerCommunicate you launched seperately
 if __name__ == '__main__':
-    commServerName = sys.argv[1]
-    start(commServerName, "TicTacToe")
+    serverPid = sys.argv[1]
+    start(serverPid, "TicTacToe")

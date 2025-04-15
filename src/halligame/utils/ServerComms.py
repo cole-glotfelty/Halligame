@@ -26,81 +26,53 @@ import os
 class ServerCommunicate(Process):
     def __init__(self, gameName: str, NodeName: str):
         super().__init__()
-        self.__commserver_name = f"{randint(0, 999999):06d}"
-        self.__full_commserver_name = self.__commserver_name + "@" + socket.gethostname()
-        print(f"Communication server node: {self.__full_commserver_name}")
-        subprocess.Popen(['bash', '-xc',
-                        #   'ls'
-                          f'erl -noinput -sname {self.__commserver_name} -setcookie Sh4rKM3ld0n -eval "communicationServer:start_link([\'TicTacToe\', \'{NodeName}\'])"'
-                          ],
-                          cwd = f'{os.environ["HG_ROOT"]}/src/communicationServer')
         node.register_name(self, Atom("pyServer"))
 
-        self.__commGenServer = GenServerInterface(self,
-                                                  (self.__full_commserver_name,
-                                                   Atom("communicationServer")))
+        self.__connectedClients = set()
 
-        sleep(0.5)
-        self.__commGenServer.cast_nowait((Atom("replace_server"), self.pid_))
-
-        sleep(0.5)
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__serverGameInstance = gameModule.Server(self)
 
     def handle_one_inbox_message(self, msg):
-        print(f"DEBUG: ServerComms got message {msg}")
+        print(f"DEBUG: ServerComms got message {msg}\n")
         if msg == "close":
             self.exit()
             exit(0)
-            
+
         if (msg[0] == "new_client"):
             self.__serverGameInstance.addClient(msg[1]) # send them the client
         elif (msg[0] == "remove_client"):
+            self.__connectedClients.remove(msg[1])
             self.__serverGameInstance.removeClient(msg[1])
-        elif (msg[0] == "event"):
-            # msg[1][1] = clientPid
-            # msg[1][0] = Message
-            self.__serverGameInstance.gotClientMessage(msg[1][1], msg[1][0])
-        elif (msg[0] == "other"):
-            self.__serverGameInstance.otherMessageType(msg[1][0], msg[1][1])
+        elif (msg[0] == "message"):
+            # msg[1][0] = clientPid
+            # msg[1][1] = Message
+            self.__serverGameInstance.gotClientMessage(msg[1][0], msg[1][1])
         else:
             raise ValueError("Unknown Message ID in ServerComms: " + str(msg))
 
-    # backend for sending a message
-    def __backendSendMessage(self, Msg):
-        node.send_nowait(sender = self.pid_,
-                         receiver = (self.__full_commserver_name,
-                                     Atom("communicationServer")),
-                         message = Msg)
-
     # front end wrapper for sending a message with correct formatting
-    def __sendMessage(self, Msg):
-        print(f"DEBUG: Sending Message from ServerComms to commServer:", Msg)
-        
-        # convert the command to an atom for the server to process
-        if (Msg[0] == "broadcastState" or Msg[0] == "reply" 
-            or Msg[0] == "terminate"):
-            Msg = (Atom(Msg[0]), *Msg[1:])
-            print(Msg)
+    def __sendMessage(self, ClientPid, Msg):
+        print(f"DEBUG: Sending Message from ServerComms to Client {ClientPid}: {Msg}\n")
 
-        self.__backendSendMessage((self.pid_, 
-                            (Atom("data"), 
-                             Msg)))
+        node.send_nowait(sender = self.pid_,
+                         receiver = ClientPid,
+                         message = Msg)
 
     # State should have type halligame.utils.GameState
     def broadcastState(self, State : GameState):
-        print(f"Sending serialized state {State}")
-        self.__sendMessage((Atom("broadcastState"), State.serialize()))
+        for ClientPid in self.__connectedClients:
+            self.__sendMessage(ClientPid, (Atom("state"), State.serialize()))
 
     def confirmJoin(self, ClientPid, Message):
-        self.__sendMessage((Atom("confirmed_join"), (ClientPid, Message)))
+        self.__connectedClients.add(ClientPid)
+        self.__sendMessage(ClientPid, (Atom("confirmed_join"), Message))
 
     def shutdown(self):
-        self.__backendSendMessage(("terminate", "normal"))
         node.destroy()
 
     def sendClientMessage(self, ClientPid, Message):
-        self.__sendMessage(("reply", (ClientPid, Message)))
+        self.__sendMessage(ClientPid, ("reply", Message))
         # node.send_nowait(sender = self.pid_,
         #                  receiver = ClientPid,
         #                  message = Message)
