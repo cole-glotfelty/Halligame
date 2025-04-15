@@ -40,16 +40,18 @@ class ServerCommunicate(Process):
             exit(0)
 
         if (msg[0] == "new_client"):
-            self.__serverGameInstance.addClient(msg[1]) # send them the client
+            clientPid = msg[1]
+            self.__serverGameInstance.addClient(clientPid) # send them the client
         elif (msg[0] == "remove_client"):
-            self.__connectedClients.remove(msg[1])
-            self.__serverGameInstance.removeClient(msg[1])
+            clientPid = msg[1]
+            self.__connectedClients.remove(clientPid)
+            self.__serverGameInstance.removeClient(clientPid)
         elif (msg[0] == "message"):
-            # msg[1][0] = clientPid
-            # msg[1][1] = Message
-            self.__serverGameInstance.gotClientMessage(msg[1][0], msg[1][1])
+            clientPid = msg[1][0]
+            message = msg[1][1]
+            self.__serverGameInstance.gotClientMessage(clientPid, message)
         else:
-            raise ValueError("Unknown Message ID in ServerComms: " + str(msg))
+            raise ValueError("ServerComms Received an unknown message: " + str(msg))
 
     # front end wrapper for sending a message with correct formatting
     def __sendMessage(self, ClientPid, Msg):
@@ -62,20 +64,18 @@ class ServerCommunicate(Process):
     # State should have type halligame.utils.GameState
     def broadcastState(self, State : GameState):
         for ClientPid in self.__connectedClients:
-            self.__sendMessage(ClientPid, (Atom("state"), State.serialize()))
+            self.__sendMessage(ClientPid, ("state", State.serialize()))
 
     def confirmJoin(self, ClientPid, Message):
         self.__connectedClients.add(ClientPid)
-        self.__sendMessage(ClientPid, (Atom("confirmed_join"), Message))
+        self.__sendMessage(ClientPid, ("confirmed_join", Message))
+
+
+    def sendClientMessage(self, ClientPid, Message):
+        self.__sendMessage(ClientPid, ("message", Message))
 
     def shutdown(self):
         node.destroy()
-
-    def sendClientMessage(self, ClientPid, Message):
-        self.__sendMessage(ClientPid, ("reply", Message))
-        # node.send_nowait(sender = self.pid_,
-        #                  receiver = ClientPid,
-        #                  message = Message)
 
 def start(game : str, node_name : str):
     global node

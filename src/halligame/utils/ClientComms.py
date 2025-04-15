@@ -47,17 +47,20 @@ class ClientCommunicate(Process):
 
         msg : message received
         """
-        if msg == Atom("close"):
+        if msg == "close":
             exit(0)
+        
+        messageContents = msg[1]
 
         if (msg[0] == "state"):
-            self.__clientGameInstance.updateState(msg[1])
-        elif (msg[0] == "reply"):
-            self.__clientGameInstance.gotServerMessage(msg[1])
+            Message = msg[1]
+            self.__clientGameInstance.updateState(messageContents)
+        elif (msg[0] == "message"):
+            self.__clientGameInstance.gotServerMessage(messageContents)
         elif (msg[0] == "confirmed_join"):
-            self.__clientGameInstance.confirmedJoin(msg[1])
+            self.__clientGameInstance.confirmedJoin(messageContents)
         else:
-            raise ValueError("ClientComms Received an invalid message")
+            raise ValueError("ClientComms Received an unknown message"  + str(msg))
 
     def sendMessage(self, Msg):
         """
@@ -66,7 +69,7 @@ class ClientCommunicate(Process):
         msg : message to send
         """
 
-        self.__backendSendMessage((Atom("message"), (self.pid_, Msg)))
+        self.__backendSendMessage(("message", (self.pid_, Msg)))
 
 
     def __backendSendMessage(self, Msg):
@@ -75,7 +78,7 @@ class ClientCommunicate(Process):
                          message = Msg)
 
     def shutdown(self):
-        self.__backendSendMessage((Atom("remove_client"), self.pid_))
+        self.__backendSendMessage(("remove_client", self.pid_))
         sleep(0.2)
         node.destroy()
         sys.exit(0)
