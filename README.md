@@ -60,6 +60,7 @@ validation server setup can be automated. The interface is as follows:
 - `shutdown()` : Must be called when the client is finished displaying to the 
     terminal. Closes the virtual window and restores the terminal appearance 
     to its normal state
+- `addColor(r, g, b, colorId)` : Add a new color to the palette, where r, g, and b are integers between 0 and 1000 
 
 # Development
 Dependencies: rebar3, uv

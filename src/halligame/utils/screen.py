@@ -57,12 +57,28 @@ class Screen():
 
         self.__stdscr.move(self.__height - 1, 0) # set starting printing loc
 
+        self.__colors = {"black": curses.COLOR_BLACK,
+                         "blue": curses.COLOR_BLUE,
+                         "cyan": curses.COLOR_CYAN,
+                         "green": curses.COLOR_GREEN,
+                         "magenta": curses.COLOR_MAGENTA,
+                         "red": curses.COLOR_RED,
+                         "white": curses.COLOR_WHITE,
+                         "yellow": curses.COLOR_YELLOW}
+        self.__colorPairs = {}
+        self.__nextColorID = 1
+        self.__nextColorPairID = 1
+
         # give screen time to set up (instantaneous printing causes weird bugs)
         # idk why
-        time.sleep(0.1) 
+        time.sleep(0.1)
+
+        self.write(5, 5, curses.COLOR_PAIRS)
 
     def __initCurses(self) -> None:
         self.__stdscr = curses.initscr() # turn the terminal into a curses window
+        curses.start_color() # enable color support
+        curses.use_default_colors() # keep the curr colors of the terminal
         curses.noecho() # prevent user input from appearing on screen
         curses.cbreak() # get key input before user types [enter]
 
@@ -111,7 +127,7 @@ class Screen():
             self.__stdscr.move(self.__height - 1, 0) # move cursor to bottom left
 
     # prints a string to the screen, starting at (row, col)
-    def write(self, row: int, col: int, toPrint) -> None:
+    def write(self, row: int, col: int, toPrint, colorPairId=None) -> None:
         with self.__lock:
             (prevRow, prevCol) = self.__stdscr.getyx() # save cursor position
 
@@ -120,13 +136,17 @@ class Screen():
             lines = printing.split('\n')
             for i in range(len(lines) - 1):
                 self.__write(row + i, col, lines[i])
-            self.__write(row + len(lines) - 1, col, lines[-1])
+            self.__write(row + len(lines) - 1, col, lines[-1], colorPairId)
 
             self.__stdscr.move(prevRow, prevCol) # reset cursor position
 
-    def __write(self, row: int, col: int, printing: str) -> None:
+    def __write(self, row: int, col: int, printing: str, colorPairId=None) -> None:
         try:
-            self.__stdscr.addstr(row, col, printing)
+            if (colorPairId == None):
+                self.__stdscr.addstr(row, col, printing)
+            else:
+                colorPairCode = self.__colorPairs[colorPairId]
+                self.__stdscr.addstr(row, col, printing, curses.color_pair(colorPairCode))
         except curses.error:
             pass # ignore out of bounds characters # TODO
 
@@ -167,3 +187,29 @@ class Screen():
         with self.__lock:
             if (self.__stdscr.is_wintouched()): # only refresh if touched
                 self.__stdscr.refresh()
+
+    # rgb between 0 and 1000
+    def addColor(self, r: int, g: int, b: int, colorId):
+        with self.__lock:
+            self.__colors[colorId] = self.__nextColorID
+            
+            curses.init_color(self.__nextColorID, r, g, b)
+
+            self.__nextColorID += 1
+
+    def addColorPair(self, foreground, background, pairId):
+        with self.__lock:
+            self.__colorPairs[pairId] = self.__nextColorPairID
+
+            fgColorCode = self.__colors[foreground]
+            bgColorCode = self.__colors[background]
+
+            curses.init_pair(self.__nextColorPairID, fgColorCode, bgColorCode)
+
+            self.__nextColorPairID += 1
+
+    def setBackground(self, colorPairId):
+        with self.__lock:
+            colorPairCode = self.__colorPairs[colorPairId]
+
+            self.__stdscr.bkgd(' ', curses.color_pair(colorPairCode))
