@@ -77,22 +77,11 @@ class ServerCommunicate(Process):
     def shutdown(self):
         node.destroy()
 
+
+
+
 def start(game : str, node_name : str):
     global node
     node = Node(node_name, cookie = "Sh4rKM3ld0n")
     serverComms = ServerCommunicate(game, node_name)
     node.run()
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-g", "--game", type=str, default="")
-    parser.add_argument("-n", "--node_name", type=str, default="")
-    args = parser.parse_args()
-
-    if (args.game == ""):
-        print("ERROR: No Game Supplied to ServerCommunicate", file=sys.stderr)
-    elif (args.node_name == ""):
-        print("ERROR: No Node Name Supplied", file=sys.stderr)
-    else:
-        start(args.game, args.node_name)

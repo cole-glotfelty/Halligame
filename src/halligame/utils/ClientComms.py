@@ -83,6 +83,9 @@ class ClientCommunicate(Process):
         node.destroy()
         sys.exit(0)
 
+
+
+
 def start(commServerName, gameName):
     global name, node
     name = f'{randint(0, 999999) :06d}@{os.environ["HOST"]}'
@@ -90,11 +93,3 @@ def start(commServerName, gameName):
     node = Node(node_name = name, cookie = "Sh4rKM3ld0n")
     clientComms = ClientCommunicate(gameName, commServerName)
     node.run()
-
-# This is an entry point!
-# Arguments on command line:
-# Argument 1: name of communicationServer node ("name@host"), from the
-# erpyServerCommunicate you launched seperately
-if __name__ == '__main__':
-    serverPid = sys.argv[1]
-    start(serverPid, "TicTacToe")
