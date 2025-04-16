@@ -6,9 +6,10 @@
 
 from halligame.utils.ServerComms import ServerCommunicate
 from halligame.utils.gameState import GameState
+from halligame.utils.gameServerTemplate import ServerSuper
 from typing import Any
 
-class Server():
+class Server(ServerSuper):
     def __init__(self, comms: ServerCommunicate) -> None:
         self.__comms = comms
 
@@ -96,11 +97,3 @@ class Server():
         else:
             playerId = 0 if self.__usersConnected == 1 else 1
             self.__comms.confirmJoin(clientPid, (playerId, self.__state.serialize()))
-
-    # TODO: would be nice to implement
-    def removeClient(self, clientPID):
-        pass
-
-
-    def otherMessageType(self, clientPID, msg):
-        pass

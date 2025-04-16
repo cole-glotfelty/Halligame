@@ -15,10 +15,9 @@ validation server setup can be automated. The interface is as follows:
 ## Required Implementation for Adding Games
 #### Functions that are required to be implemented in gameServer.py
 - `__init__(comms)` : Called automatically when the server is started. comms is an instance of the ServerCommunicate class and gives the game server access to the public ServerCommunicate functions (documented below)
-- `addClient(ClientPid)` : Called automatically by the client when a new client node joins. Should ideally call `confirmJoin(ClientPid, Message)` to confirm the request.
+- `addClient(ClientPid)` : Called automatically by the client when a new client node joins. Should call `confirmJoin(ClientPid, Message)` to confirm the request.
 - `removeClient(ClientPid)` : Called when the game client calls the function `ClientComms.shutdown()`
 - `gotClientMessage(ClientPid, Message)` : Called when the game client calls `sendMessage(Message)`
-- `otherMessageType(ClientPid, Message)` : Called when the server receives a message from a game client that has an unidentified header (none of the above)
 
 #### Functions that are required to be implemented in gameClient.py
 - `__init__(comms)` : Called automatically when the client is started. comms is an instance of the ClientCommunicate class and gives the game client access to the public ClientCommunicate functiosn (documented below)

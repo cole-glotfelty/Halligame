@@ -12,12 +12,13 @@
 
 from halligame.utils.screen import Screen
 from halligame.utils.gameState import GameState
+from halligame.utils.gameClientTemplate import ClientSuper
 import threading
 
 import time
 import pyfiglet
 
-class Client():
+class Client(ClientSuper):
     # comms is an instance of halligame.utils.ClientCommunicate 
     def __init__(self, comms):
         """
