@@ -54,8 +54,8 @@ class Client(ClientSuper):
 
             self.__updateState(msg[1])
 
-    def confirmedJoin(self, Msg):
-        (playerID, state) = Msg
+    def joinConfirmed(self, msg):
+        (playerID, state) = msg
         self.__playerID = playerID
         self.updateState(state)
         self.defineClickableRegions()
@@ -73,9 +73,6 @@ class Client(ClientSuper):
         self.__screen.addColorPair("black", "background", "terminal")
         self.__screen.setStyle("terminal")
         # self.__screen.setStyle("white_random")
-
-
-
 
     def defineClickableRegions(self):
         letter = self.__formatter.renderText("X")

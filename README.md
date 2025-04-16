@@ -23,14 +23,14 @@ validation server setup can be automated. The interface is as follows:
 - `__init__(comms)` : Called automatically when the client is started. comms is an instance of the ClientCommunicate class and gives the game client access to the public ClientCommunicate functiosn (documented below)
 - `updateState(newState)` : Called with the provided state when the game server calls `broadcastState(state)`
 - `gotServerMessage(Message)` : Called on the particular client node when the game server calls `sendClientMessage(ClientPid, Message)`
-- `confirmedJoin(Message)` : Called when the game server responds to addClient by calling `confirmJoin(ClientPid, Message)`
+- `joinConfirmed(Message)` : Called when the game server responds to addClient by calling `confirmJoin(ClientPid, Message)`
 
 ### Exported Functions available to Games
 
 #### Functions exported by ServerComms
 - `broadcastState(State)` : Sends the provided state to all clients connected to the server, with `updateState(newState)` being called when the client receives the message. This assumes the usage of the provided gameState.py module.
 - `broadcastMessage(Message)` : Sends the provided message to all connected clients, with `gotServerMessage(Message)` being called in each client with the message.
-- `confirmJoin(ClientPid, Message)` : When called by the server, confirmedJoin(Message) is called on the client node associated with ClientPid 
+- `confirmJoin(ClientPid, Message)` : When called by the server, joinConfirmed(Message) is called on the client node associated with ClientPid 
 - `sendClientMessage(ClientPid, Message)` : Sends a message to a particular client, with the `gotServerMessage(Message)` function being called when the client receives it
 - `shutdown()` : Should be called when the game is over and the server should be shut down
 

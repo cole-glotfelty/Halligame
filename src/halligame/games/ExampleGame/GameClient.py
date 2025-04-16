@@ -43,5 +43,5 @@ class ClientSuper:
             print(message)
         pass
 
-    def confirmedJoin(self, msg) -> None:
+    def joinConfirmed(self, msg) -> None:
         pass

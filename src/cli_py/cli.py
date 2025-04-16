@@ -39,6 +39,9 @@ def new(args) -> None:
     cli[-1] += f'newGame(\'{args.game}\', \'{server_node_name}\')'
     env = os.environ
     env["ERL_LIBS"] = f"{env['HG_ROOT']}/src/cli/_build/default/lib:{env['HG_ROOT']}/src/communicationServer/_build/default/lib:{env['ERL_LIBS']}" # TODO: remove the reference to communication server
+
+    print(f"RoomName: {server_node_name}") # TODO: this is a hack because I cannot change the gameserver. Plz remove
+
     subprocess.run(cli, stdout = sys.stdout, stderr = sys.stderr, env = env)
     try:
         ServerComms.start(args.game, server_node_name)

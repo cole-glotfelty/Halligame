@@ -30,9 +30,6 @@ class ClientCommunicate(Process):
 
         self.__serverPid = serverPid
 
-        # "TicTacToe"
-        #    - Import the tictactoe module
-        #    - Call the init function of that tictactoe module
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__clientGameInstance = gameModule.Client(self)
 
@@ -58,7 +55,7 @@ class ClientCommunicate(Process):
         elif (msg[0] == "message"):
             self.__clientGameInstance.gotServerMessage(messageContents)
         elif (msg[0] == "confirmed_join"):
-            self.__clientGameInstance.confirmedJoin(messageContents)
+            self.__clientGameInstance.joinConfirmed(messageContents)
         elif (msg[0] == "quit_confirm"):
             # can continue quit process
             self.__delayQuitUntilConfirmation.release()
@@ -86,7 +83,7 @@ class ClientCommunicate(Process):
         # the following will block until receiving a confirmation message from 
         # the server
         self.__delayQuitUntilConfirmation.acquire()
-        
+
         node.destroy()
         sys.exit(0)
 

@@ -18,5 +18,5 @@ class ClientSuper:
     def gotServerMessage(self, msg) -> None:
         pass
 
-    def confirmedJoin(self, msg) -> None:
+    def joinConfirmed(self, msg) -> None:
         pass
