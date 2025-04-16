@@ -43,9 +43,11 @@ class ServerCommunicate(Process):
             clientPid = msg[1]
             self.__serverGameInstance.addClient(clientPid) # send them the client
         elif (msg[0] == "remove_client"):
-            clientPid = msg[1]
-            self.__connectedClients.remove(clientPid)
-            self.__serverGameInstance.removeClient(clientPid)
+            ClientPid = msg[1]
+            self.__sendMessage(ClientPid, ("quit_confirm", self.pid_))
+
+            self.__connectedClients.remove(ClientPid)
+            self.__serverGameInstance.removeClient(ClientPid)
         elif (msg[0] == "message"):
             clientPid = msg[1][0]
             message = msg[1][1]
@@ -65,6 +67,10 @@ class ServerCommunicate(Process):
     def broadcastState(self, State : GameState):
         for ClientPid in self.__connectedClients:
             self.__sendMessage(ClientPid, ("state", State.serialize()))
+
+    def broadcastMessage(self, Message):
+        for ClientPid in self.__connectedClients:
+            self.sendClientMessage(ClientPid, Message)
 
     def confirmJoin(self, ClientPid, Message):
         self.__connectedClients.add(ClientPid)

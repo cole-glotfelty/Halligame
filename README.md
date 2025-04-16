@@ -29,7 +29,8 @@ validation server setup can be automated. The interface is as follows:
 ### Exported Functions available to Games
 
 #### Functions exported by ServerComms
-- `broadcastState(State)` : Sends the provided state to all clients connected to the server, with `updateState(newState)` being called when the client receives the message.
+- `broadcastState(State)` : Sends the provided state to all clients connected to the server, with `updateState(newState)` being called when the client receives the message. This assumes the usage of the provided gameState.py module.
+- `broadcastMessage(Message)` : Sends the provided message to all connected clients, with `gotServerMessage(Message)` being called in each client with the message.
 - `confirmJoin(ClientPid, Message)` : When called by the server, confirmedJoin(Message) is called on the client node associated with ClientPid 
 - `sendClientMessage(ClientPid, Message)` : Sends a message to a particular client, with the `gotServerMessage(Message)` function being called when the client receives it
 - `shutdown()` : Should be called when the game is over and the server should be shut down

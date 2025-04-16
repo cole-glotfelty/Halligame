@@ -125,21 +125,21 @@ class Client():
 
             self.__comms.sendMessage((self.__playerID, region))
 
-    def updateState(self, state):
+    def updateState(self, newState):
         """
         Takes in a message that contains the new state (this message is sent 
         from the server side of the game class) and updates the internal 
         state, potentially updating/refreshing the display
         """
         with self.__stateLock:
-            self.__updateState(state)
+            self.__updateState(newState)
 
-    def __updateState(self, state):
+    def __updateState(self, newState):
         """
         Backend for update state that does not use the statelock. Meant to be 
         called by other functions that have already acquired the statelock
         """
-        self.__state.deserialize(state)
+        self.__state.deserialize(newState)
 
         if self.__state.getValue("gameOver") != "":
             self.__drawGameOver()

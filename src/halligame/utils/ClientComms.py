@@ -20,8 +20,7 @@ from term import Atom
 from halligame.games import *
 from random import randint
 from time import sleep
-
-from halligame.utils.screen import Screen
+import threading
 
 class ClientCommunicate(Process):
     # TODO: there are some serious shenanigans of imports going on here and I hate it
@@ -39,6 +38,8 @@ class ClientCommunicate(Process):
 
         self.__backendSendMessage(("new_client", self.pid_))
 
+        self.__delayQuitUntilConfirmation = threading.Semaphore(0)
+
     def handle_one_inbox_message(self, msg: tuple):
         """
         Await messages/check inbox of erlang/pyrlang node and call callback
@@ -53,12 +54,14 @@ class ClientCommunicate(Process):
         messageContents = msg[1]
 
         if (msg[0] == "state"):
-            Message = msg[1]
             self.__clientGameInstance.updateState(messageContents)
         elif (msg[0] == "message"):
             self.__clientGameInstance.gotServerMessage(messageContents)
         elif (msg[0] == "confirmed_join"):
             self.__clientGameInstance.confirmedJoin(messageContents)
+        elif (msg[0] == "quit_confirm"):
+            # can continue quit process
+            self.__delayQuitUntilConfirmation.release()
         else:
             raise ValueError("ClientComms Received an unknown message"  + str(msg))
 
@@ -79,7 +82,11 @@ class ClientCommunicate(Process):
 
     def shutdown(self):
         self.__backendSendMessage(("remove_client", self.pid_))
-        sleep(0.5)
+
+        # the following will block until receiving a confirmation message from 
+        # the server
+        self.__delayQuitUntilConfirmation.acquire()
+        
         node.destroy()
         sys.exit(0)
 
