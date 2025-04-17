@@ -11,6 +11,7 @@
 import importlib # allows us to import a module based on the name
 import os
 import sys
+import asyncio
 
 from pyrlang import Node
 from pyrlang.process import Process
@@ -18,23 +19,23 @@ from pyrlang.gen.server import GenServerInterface
 from term import Atom
 from halligame.games import *
 from random import randint
+from time import sleep
+import threading
 
 class ClientCommunicate(Process):
     # TODO: there are some serious shenanigans of imports going on here and I hate it
-    def __init__(self, gameName):
+    def __init__(self, gameName, serverPid):
         super().__init__()
         node.register_name(self, f'pyClient')
 
-        # "TicTacToe"
-        #    - Import the tictactoe module
-        #    - Call the init function of that tictactoe module
+        self.__serverPid = serverPid
+
         gameModule = importlib.import_module("halligame.games." + gameName)
-        self.__serverGameInstance = gameModule.Client(self.sendMessage)
-        self.__commGenServer = GenServerInterface(self,
-                                                  (Atom(commServerName),
-                                                   Atom("communicationServer")))
-        
-        self.__commGenServer.cast_nowait((Atom("add_client"), self.pid_))
+        self.__clientGameInstance = gameModule.Client(self)
+
+        self.__backendSendMessage(("new_client", self.pid_))
+
+        self.__delayQuitUntilConfirmation = threading.Semaphore(0)
 
     def handle_one_inbox_message(self, msg: tuple):
         """
@@ -44,45 +45,55 @@ class ClientCommunicate(Process):
 
         msg : message received
         """
-        if msg == Atom("close"):
+        if msg == "close":
             exit(0)
+        
+        messageContents = msg[1]
 
-        try:
-            if (msg[0] == "state"):
-                self.__serverGameInstance.updateState(msg[1])
-            elif (msg[0] == "reply"):
-                self.__serverGameInstance.gotReply(msg[1])
-            elif (msg[0] == "confirmed_join"):
-                self.__serverGameInstance.setPlayerId(msg[1])
-            else:
-                raise UserWarning("Unknown message")
-        except:
-            print(f"Could not process message {msg}")
+        if (msg[0] == "state"):
+            self.__clientGameInstance.updateState(messageContents)
+        elif (msg[0] == "message"):
+            self.__clientGameInstance.gotServerMessage(messageContents)
+        elif (msg[0] == "confirmed_join"):
+            self.__clientGameInstance.joinConfirmed(messageContents)
+        elif (msg[0] == "quit_confirm"):
+            # can continue quit process
+            self.__delayQuitUntilConfirmation.release()
+        else:
+            raise ValueError("ClientComms Received an unknown message"  + str(msg))
 
-    def sendMessage(self, msg):
+    def sendMessage(self, Msg):
         """
         Given a message (msg) send it to the server
 
         msg : message to send
         """
-        if msg == "close":
-            node.destroy()
-        else:
-            node.send_nowait(sender = self.pid_,
-                            receiver = (Atom(commServerName),
-                                        Atom("communicationServer")),
-                            message = (self.pid_, (Atom("data"), (Atom("event"), msg))))
 
-# This is an entry point!
-# Arguments on command line:
-# Argument 1: player ID (0 or 1)
-# Argument 2: name of communicationServer node ("name@host"), from the
-# erpyServerCommunicate you launched seperately
-if __name__ == '__main__':
+        self.__backendSendMessage(("message", (self.pid_, Msg)))
+
+
+    def __backendSendMessage(self, Msg):
+        node.send_nowait(sender = self.pid_,
+                         receiver = (Atom(self.__serverPid), Atom("pyServer")),
+                         message = Msg)
+
+    def shutdown(self):
+        self.__backendSendMessage(("remove_client", self.pid_))
+
+        # the following will block until receiving a confirmation message from 
+        # the server
+        self.__delayQuitUntilConfirmation.acquire()
+
+        node.destroy()
+        sys.exit(0)
+
+
+
+
+def start(commServerName, gameName):
+    global name, node
     name = f'{randint(0, 999999) :06d}@{os.environ["HOST"]}'
-    print(name)
-    commServerName = sys.argv[1]
-    print(commServerName)
-    node = Node(node_name = name, cookie = "COOKIE")
-    clientComms = ClientCommunicate("TicTacToe")
+    print("ClientComms NodeName: ", name)
+    node = Node(node_name = name, cookie = "Sh4rKM3ld0n")
+    clientComms = ClientCommunicate(gameName, commServerName)
     node.run()

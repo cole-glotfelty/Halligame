@@ -19,86 +19,75 @@ from pyrlang.gen.server import GenServerInterface
 from term import Atom
 from halligame.games import *
 from halligame.utils.gameState import GameState
-import os
+import socket
 from random import randint
+import os
  
 class ServerCommunicate(Process):
     def __init__(self, gameName: str, NodeName: str):
         super().__init__()
-        self.__commserver_name = f"{randint(0, 999999):06d}"
-        self.__full_commserver_name = self.__commserver_name + "@" +  os.environ["HOST"]
-        print(f"Communication server node: {self.__full_commserver_name}")
-        subprocess.Popen(['bash', '-xc',
-                        #   'ls'
-                          f'erl -noinput -sname {self.__commserver_name} -setcookie COOKIE -eval "communicationServer:start_link([\'TicTacToe\', \'{NodeName}\'])"'
-                          ],
-                          cwd = '../communicationServer')
         node.register_name(self, Atom("pyServer"))
 
-        self.__commGenServer = GenServerInterface(self,
-                                                  (self.__full_commserver_name,
-                                                   Atom("communicationServer")))
+        self.__connectedClients = set()
 
-        sleep(0.5)
-        self.__commGenServer.cast_nowait((Atom("replace_server"), self.pid_))
-
-        sleep(0.5)
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__serverGameInstance = gameModule.Server(self)
 
     def handle_one_inbox_message(self, msg):
-        print(f"DEBUG: erpyServerComm got message {msg}")
+        print(f"DEBUG: ServerComms got message {msg}\n")
         if msg == "close":
             self.exit()
             exit(0)
-            
+
         if (msg[0] == "new_client"):
-            self.__serverGameInstance.addUser(msg[1]) # send them the user
+            clientPid = msg[1]
+            self.__serverGameInstance.addClient(clientPid) # send them the client
         elif (msg[0] == "remove_client"):
-            self.__serverGameInstance.removeUser(msg[1])
-        elif (msg[0] == "event"):
-            self.__serverGameInstance.eventIsValid(msg[1][1], msg[1][0])
-        elif (msg[0] == "other"):
-            self.__serverGameInstance.otherMessageType(msg[1][0], msg[1][1])
+            ClientPid = msg[1]
+            self.__sendMessage(ClientPid, ("quit_confirm", self.pid_))
 
-    def play(self):
-        self.__serverGameInstance.play()
+            self.__connectedClients.remove(ClientPid)
+            self.__serverGameInstance.removeClient(ClientPid)
+        elif (msg[0] == "message"):
+            clientPid = msg[1][0]
+            message = msg[1][1]
+            self.__serverGameInstance.gotClientMessage(clientPid, message)
+        else:
+            raise ValueError("ServerComms Received an unknown message: " + str(msg))
 
-    def sendMessage(self, Msg):
+    # front end wrapper for sending a message with correct formatting
+    def __sendMessage(self, ClientPid, Msg):
+        print(f"DEBUG: Sending Message from ServerComms to Client {ClientPid}: {Msg}\n")
+
         node.send_nowait(sender = self.pid_,
-                         receiver = (self.__full_commserver_name,
-                                     Atom("communicationServer")),
+                         receiver = ClientPid,
                          message = Msg)
 
     # State should have type halligame.utils.GameState
-    def sendState(self, State : GameState):
-        print(f"Sending serialized state {State.serialize()}")
-        self.sendMessage((self.pid_,
-                          (Atom("data"),
-                           (Atom("broadcastState"), State.serialize()))))
-    def shutDownServer(self):
-        self.sendMessage(("terminate", "normal"))
-    
-    def sendClientMessage(self, pid, msg):
-        node.send_nowait(sender = self.pid_,
-                         receiver = pid,
-                         message = msg)
+    def broadcastState(self, State : GameState):
+        for ClientPid in self.__connectedClients:
+            self.__sendMessage(ClientPid, ("state", State.serialize()))
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-g", "--game", type=str, default="")
-    parser.add_argument("-n", "--node_name", type=str, default="")
-    args = parser.parse_args()
+    def broadcastMessage(self, Message):
+        for ClientPid in self.__connectedClients:
+            self.sendClientMessage(ClientPid, Message)
 
-    if (args.game == ""):
-        print("ERROR: No Game Supplied to ServerCommunicate", file=sys.stderr)
-    elif (args.node_name == ""):
-        print("ERROR: No Node Name Supplied", file=sys.stderr)
-    else:
-        node = Node(node_name = args.node_name, cookie = "COOKIE")
-        serverComms = ServerCommunicate(args.game, args.node_name)
-        node.run()
+    def confirmJoin(self, ClientPid, Message):
+        self.__connectedClients.add(ClientPid)
+        self.__sendMessage(ClientPid, ("confirmed_join", Message))
 
-        serverComms.play()
 
-        serverComms.shutDownServer()
+    def sendClientMessage(self, ClientPid, Message):
+        self.__sendMessage(ClientPid, ("message", Message))
+
+    def shutdown(self):
+        node.destroy()
+
+
+
+
+def start(game : str, node_name : str):
+    global node
+    node = Node(node_name, cookie = "Sh4rKM3ld0n")
+    serverComms = ServerCommunicate(game, node_name)
+    node.run()

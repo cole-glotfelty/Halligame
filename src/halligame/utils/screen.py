@@ -7,6 +7,8 @@
 import curses
 import time
 import threading
+import subprocess
+import sys
 
 # INTERFACE:
 #   __init__():               initializes the class
@@ -34,18 +36,18 @@ import threading
     # of the line, and then split the printedd string across those multiple 
     # lines manually
 
-# TODO: Add color support
-
 class Screen():
     # gotInputFunc = the function to call when receiving input
-    def __init__(self, gotInputFunc: callable, width: int, height: int):
+    def __init__(self, gotInputFunc: callable, gotMouseClickFunc: callable, width: int, height: int):
         self.__gotInput = gotInputFunc
+        self.__gotMouse = gotMouseClickFunc
         self.__width = width
         self.__height = height
 
         self.__lock = threading.Lock()
 
         self.__initCurses()
+        self.__colorSupported = (curses.COLORS >= 128)
 
         self.__stdscr.clear()
 
@@ -55,14 +57,34 @@ class Screen():
         self.__monitorInputThread.daemon = True # kill thread when main done
         self.__monitorInputThread.start()
 
-        self.__stdscr.move(self.__height - 1, 0) # set starting printing loc
+        try:
+            self.__stdscr.move(self.__height - 1, 0) # set starting printing loc
+        except: # terminal window too small
+            pass
+
+        self.__colors = {"black": curses.COLOR_BLACK,
+                         "blue": curses.COLOR_BLUE,
+                         "cyan": curses.COLOR_CYAN,
+                         "green": curses.COLOR_GREEN,
+                         "magenta": curses.COLOR_MAGENTA,
+                         "red": curses.COLOR_RED,
+                         "white": curses.COLOR_WHITE,
+                         "yellow": curses.COLOR_YELLOW}
+        self.__colorPairs = {}
+        self.__nextColorID = 10
+        self.__nextColorPairID = 10
+
+        self.__clickableRegions = []
 
         # give screen time to set up (instantaneous printing causes weird bugs)
         # idk why
-        time.sleep(0.1) 
+        time.sleep(0.1)
 
     def __initCurses(self) -> None:
         self.__stdscr = curses.initscr() # turn the terminal into a curses window
+        curses.start_color() # enable color support
+        curses.use_default_colors() # keep the curr colors of the terminal
+        curses.mousemask(curses.ALL_MOUSE_EVENTS) # enable mouse support
         curses.noecho() # prevent user input from appearing on screen
         curses.cbreak() # get key input before user types [enter]
 
@@ -82,27 +104,58 @@ class Screen():
 
         curses.endwin()
 
+        if self.__colorSupported:
+            # Needed to reset colors to the old state.
+            subprocess.run(["reset"], stdout = sys.stdout)
+        time.sleep(0.5)
+
     # Note that .getch() also refreshes the screen
     def __monitorInput(self) -> None:
-        window = curses.newwin(self.__height, self.__width)
+        window = curses.newwin(self.terminalHeight(), self.terminalWidth())
         window.keypad(True) # enable support for special keys like up-arrow.
         while True:
             c = window.getch() # this blocks until input
 
-            if (type(c) == int): # if int, try to convert to char
-                try:
-                    c = chr(c)
-                except ValueError: # other code, so ignore
-                    pass
-            self.__gotInput(c)
+            if (c == curses.KEY_MOUSE):
+                (_, mcol, mrow, _, bstate) = curses.getmouse()
 
-    def height(self) -> int:
-        with self.__lock:
-            return self.__height
+                # if left click
+                if (bstate & curses.BUTTON1_PRESSED != 0 or
+                    bstate & curses.BUTTON1_CLICKED != 0):
+                    regionId = self.__findRegion(mrow, mcol)
+                    self.__gotMouse(mrow, mcol, regionId)
+            else:
+                if (type(c) == int): # if int, try to convert to char
+                    try:
+                        c = chr(c)
+                    except ValueError: # other code, so ignore
+                        pass
+                self.__gotInput(c)
 
-    def width(self) -> int:
+    def __findRegion(self, mrow, mcol):
         with self.__lock:
-            return self.__width
+            # reverse the list to check more recently defined regions first
+            for (row, col, height, width, id) in reversed(self.__clickableRegions):
+                if (mrow >= row and mrow < row + height and 
+                    mcol >= col and mcol < col + width):
+                   return id
+        return None
+
+    def terminalHeight(self) -> int:
+        with self.__lock:
+            return self.__terminalHeight()
+
+    def terminalWidth(self) -> int:
+        with self.__lock:
+            return self.__terminalWidth()
+
+    def __terminalHeight(self):
+        rows, cols = self.__stdscr.getmaxyx()
+        return rows
+
+    def __terminalWidth(self):
+        rows, cols = self.__stdscr.getmaxyx()
+        return cols
 
     # clears the screen (removes all text)
     def clearScreen(self) -> None:
@@ -111,7 +164,9 @@ class Screen():
             self.__stdscr.move(self.__height - 1, 0) # move cursor to bottom left
 
     # prints a string to the screen, starting at (row, col)
-    def write(self, row: int, col: int, toPrint) -> None:
+    def write(self, row: int, col: int, toPrint, colorPairId=None) -> None:
+        if not self.__colorSupported:
+            colorPairId = None
         with self.__lock:
             (prevRow, prevCol) = self.__stdscr.getyx() # save cursor position
 
@@ -119,14 +174,20 @@ class Screen():
 
             lines = printing.split('\n')
             for i in range(len(lines) - 1):
-                self.__write(row + i, col, lines[i])
-            self.__write(row + len(lines) - 1, col, lines[-1])
+                self.__write(row + i, col, lines[i], colorPairId)
+            self.__write(row + len(lines) - 1, col, lines[-1], colorPairId)
 
             self.__stdscr.move(prevRow, prevCol) # reset cursor position
 
-    def __write(self, row: int, col: int, printing: str) -> None:
+    def __write(self, row: int, col: int, printing: str, colorPairId=None) -> None:
+        if not self.__colorSupported:
+            colorPairId = None
         try:
-            self.__stdscr.addstr(row, col, printing)
+            if (colorPairId == None):
+                self.__stdscr.addstr(row, col, printing)
+            else:
+                colorPairCode = self.__colorPairs[colorPairId]
+                self.__stdscr.addstr(row, col, printing, curses.color_pair(colorPairCode))
         except curses.error:
             pass # ignore out of bounds characters # TODO
 
@@ -167,3 +228,47 @@ class Screen():
         with self.__lock:
             if (self.__stdscr.is_wintouched()): # only refresh if touched
                 self.__stdscr.refresh()
+
+    # rgb between 0 and 1000
+    def addColor(self, r: int, g: int, b: int, colorId) -> None:
+        if not self.__colorSupported:
+            return
+        with self.__lock:
+            self.__colors[colorId] = self.__nextColorID
+            r = self.__scaleColor(r)
+            g = self.__scaleColor(g)
+            b = self.__scaleColor(b)
+            
+            curses.init_color(self.__nextColorID, r, g, b)
+
+            self.__nextColorID += 1
+
+    # scales a color from between 0 and 256 to between 0 and 1000
+    def __scaleColor(self, color):
+        return min(max(int(color * (1000.0 / 256.0)), 0), 1000)
+
+    def addColorPair(self, foreground, background, pairId) -> None:
+        if not self.__colorSupported:
+            return
+        with self.__lock:
+            self.__colorPairs[pairId] = self.__nextColorPairID
+
+            fgColorCode = self.__colors[foreground]
+            bgColorCode = self.__colors[background]
+
+            curses.init_pair(self.__nextColorPairID, fgColorCode, bgColorCode)
+
+            self.__nextColorPairID += 1
+
+    def setStyle(self, colorPairId) -> None:
+        if not self.__colorSupported:
+            return
+        with self.__lock:
+            colorPairCode = self.__colorPairs[colorPairId]
+
+            self.__stdscr.bkgd(' ', curses.color_pair(colorPairCode))
+
+    def addClickableRegion(self, row: int, col: int, 
+                           height: int, width: int, id) -> None:
+        with self.__lock:
+            self.__clickableRegions.append((row, col, height, width, id))

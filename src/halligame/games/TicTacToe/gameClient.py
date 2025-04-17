@@ -12,13 +12,15 @@
 
 from halligame.utils.screen import Screen
 from halligame.utils.gameState import GameState
+from halligame.utils.gameClientTemplate import ClientSuper
 import threading
 
 import time
+import pyfiglet
 
-class Client():
-    # comms is the function to call when you want to send a message to the server
-    def __init__(self, comms: callable, playerID):
+class Client(ClientSuper):
+    # comms is an instance of halligame.utils.ClientCommunicate 
+    def __init__(self, comms):
         """
         Memeber Variables:
             screen
@@ -29,41 +31,59 @@ class Client():
             myTurn
             done
         """
-        self.__screen = Screen(self.userInput) # create new instance of the ncurses module
+        self.__screen = Screen(self.userInput, self.mouseInput, width=50, height=25)
         self.__stateLock = threading.Lock()
         self.__comms = comms
         self.__state: GameState = GameState()
-        self.__playerID = playerID
+        self.__playerID = None
         self.__myTurn = True
-        self.done = False
 
-    def updateState(self, msg : list[tuple]):
-        """
-        Takes in a message that contains the new state (this message is sent 
-        from the server side of the game class) and updates the internal 
-        state, potentially updating/refreshing the display
-        """
+        self.__formatter = pyfiglet.Figlet(font='georgia11')
+        self.__topRow = 5
+
+        self.initializeScreenColors()
+
+    def gotServerMessage(self, msg):
         with self.__stateLock:
-            self.__state = GameState.deserialize(msg)
+            toPrint = self.__formatter.renderText(msg[0])
+            self.__screen.clearScreen()
+            self.__screen.write(0, 15, toPrint)
+            self.__screen.refresh()
 
-            for row in self.__state.objects["board"]:
-                self.__screen.print("-------------")
-                self.__screen.print("|   |   |   |")
-                self.__screen.print(f"| {row[0]} | {row[1]} | {row[2]} |")
-                self.__screen.print("|   |   |   |")
-            self.__screen.print("-------------\n")
+            time.sleep(1.5)
 
-            self.__myTurn = (self.__state.objects["currentPlayer"] == self.__playerID)
+            self.__updateState(msg[1])
 
+    def joinConfirmed(self, msg):
+        (playerID, state) = msg
+        self.__playerID = playerID
+        self.updateState(state)
+        self.defineClickableRegions()
 
-            if self.__state.objects["gameOver"] != "":
-                self.__screen.print(self.__state.objects["gameOver"])
-                self.__screen.print("Type 'q' to quit")
-            elif (self.__myTurn):
-                self.__screen.print("Select a square [1..9]: ")
+    def initializeScreenColors(self):
+        self.__screen.addColor(44, 29, 219, "O")
+        self.__screen.addColor(219, 33, 61, "X")
+        self.__screen.addColor(209, 107, 177, "background")
 
-    def gotReply(self, msg):
-        self.__screen.print("That Square is Occupied!")
+        # define the color palette for printing X and O
+        self.__screen.addColorPair("O", "background", "O")
+        self.__screen.addColorPair("X", "background", "X")
+        self.__screen.addColorPair("white", "background", " ")
+
+        self.__screen.addColorPair("black", "background", "terminal")
+        self.__screen.setStyle("terminal")
+        # self.__screen.setStyle("white_random")
+
+    def defineClickableRegions(self):
+        letter = self.__formatter.renderText("X")
+        letterHeight = len(letter.split("\n"))
+        letterWidth = len(letter.split("\n")[0])
+
+        for i in range(3):
+            for j in range(3):
+                verticalOffset = (letterHeight + 2) * i
+                horizontalOffset = (letterWidth + 2) * j
+                self.__screen.addClickableRegion(self.__topRow + verticalOffset, horizontalOffset, letterHeight, letterWidth, (3 * i) + j)
 
     def userInput(self, input):
         """
@@ -78,13 +98,91 @@ class Client():
         """
         with self.__stateLock:
             if (input == "q"):
-                self.done = True
+                self.__screen.shutdown()
+                self.__comms.shutdown()
 
-            if self.__myTurn:
-                playerInput = -1
-                while not (1 <= playerInput and playerInput <= 9):
-                    try:
-                        playerInput = int(input)
-                        self.__comms(playerInput - 1)
-                    except: # 
-                        self.__screen.print("Please enter a number between 1 and 9!")
+            elif self.__myTurn:
+                try:
+                    playerInput = int(input)
+                    if (playerInput >= 1 and playerInput <= 9):
+                        self.__comms.sendMessage((self.__playerID, 
+                                                  playerInput - 1))
+                except Exception as e: # didn't ent
+                    pass
+
+    def mouseInput(self, row, col, region):
+        if (region != None and self.__myTurn):
+            with self.__stateLock: # draw it so it appears instantaneously
+                newBoard = self.__state.getValue("board")
+                playerSymbol = "X" if self.__playerID == 0 else "O"
+                newBoard[region // 3][region % 3] = playerSymbol
+                self.__state.setValue("board", newBoard)
+                self.__screen.clearScreen()
+                self.__drawBoard()
+                self.__screen.refresh()
+
+            self.__comms.sendMessage((self.__playerID, region))
+
+    def updateState(self, newState):
+        """
+        Takes in a message that contains the new state (this message is sent 
+        from the server side of the game class) and updates the internal 
+        state, potentially updating/refreshing the display
+        """
+        with self.__stateLock:
+            self.__updateState(newState)
+
+    def __updateState(self, newState):
+        """
+        Backend for update state that does not use the statelock. Meant to be 
+        called by other functions that have already acquired the statelock
+        """
+        self.__state.deserialize(newState)
+
+        if self.__state.getValue("gameOver") != "":
+            self.__drawGameOver()
+        else:
+            self.__drawGame()
+        
+        self.__myTurn = (self.__state.getValue("currentPlayer") == self.__playerID)
+
+    def __drawGameOver(self):
+        Message = self.__formatter.renderText(self.__state.getValue("gameOver"))
+        self.__screen.clearScreen()
+        self.__screen.write(15, 15, Message)
+        self.__screen.refresh()
+
+        time.sleep(3)
+        self.__screen.clearScreen()
+        self.__drawBoard()
+        self.__screen.refresh()
+
+
+    def __drawGame(self):
+        self.__screen.clearScreen()
+        self.__drawBoard()
+        self.__screen.refresh()
+
+    def __drawBoard(self):
+        letter = self.__formatter.renderText("X")
+        letterHeight = len(letter.split("\n"))
+        letterWidth = len(letter.split("\n")[0])
+
+        for i in range(3):
+            for j in range(3):
+                character = self.__state.getValue("board")[i][j]
+
+                letter = self.__formatter.renderText(character)
+
+                verticalOffset = (letterHeight + 2) * i
+                horizontalOffset = (letterWidth + 2) * j
+
+                self.__screen.write(row=self.__topRow + verticalOffset, col=horizontalOffset, toPrint=letter, colorPairId=character)
+
+        for i in range(letterHeight * 3 + 4):
+            self.__screen.write(self.__topRow + i, letterWidth, "||")
+            self.__screen.write(self.__topRow + i, (letterWidth * 2) + 2, "||")
+        
+        for i in range(letterWidth * 3 + 4):
+            self.__screen.write(self.__topRow + letterHeight, i, "-\n-")
+            self.__screen.write(self.__topRow + (letterHeight * 2) + 2, i, "-\n-")

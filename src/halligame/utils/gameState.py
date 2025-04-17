@@ -3,6 +3,11 @@
 # GameState Class for serializing and desearlizing game state for server 
 # communication
 # Written by Will Cordray, Cole Glotfelty, Michael Daniels <2025-03-29>
+# Last modified by: Cole Glotfelty <2025-04-14>
+
+# Changelog:
+# Cole Glotfelty <2025-04-14> - Added Documentation
+# Michael Daniels <2025-04-03> - Switched to pickle for serialization
 
 import threading
 import pickle
@@ -13,14 +18,14 @@ class GameState():
     """
     def __init__(self, args: dict = {}):
         self.__lock = threading.Lock()
-        self.objects = args
+        self.__objects = args
 
     def serialize(self):
         """
         Serlialize the state dictionary into binary using pickle.
         """
         with self.__lock:
-            return pickle.dumps(self.objects)
+            return pickle.dumps(self.__objects)
 
     def deserialize(self, state: bytes):
         """
@@ -28,4 +33,18 @@ class GameState():
         state: pickled binary
         """
         with self.__lock:
-            self.objects = pickle.loads(state)
+            self.__objects = pickle.loads(state)
+
+    def getValue(self, Key):
+        """
+        Getter for Value
+        """
+        with self.__lock:
+            return self.__objects[Key]
+
+    def setValue(self, Key, Value):
+        """
+        Setter for Value
+        """
+        with self.__lock:
+            self.__objects[Key] = Value
