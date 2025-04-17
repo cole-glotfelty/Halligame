@@ -4,6 +4,7 @@
 %%%
 %%% @end
 %%% Created : 22 Mar 2025
+%%% Last edited: Michael Daniels, 16 April 2025
 %%%-------------------------------------------------------------------
 -module(serverbroker).
 -include_lib("eunit/include/eunit.hrl").
@@ -22,7 +23,7 @@
 -record(game, {name :: string(), min_players :: pos_integer(),
                max_players :: pos_integer() | inf}).
 
--record(user, {login :: string(), pids = [] :: [pid()],
+-record(user, {login :: string(), pids = [] :: [string()],
                playing = [] :: [#game{}]}).
 
 -record(gameclient, {login :: string(), pid :: pid()}).
@@ -103,43 +104,6 @@ init([]) ->
       {stop, Reason :: term(), NewState :: term()}.
 handle_call(Request, {Pid, _FromTag}, State) ->
     case Request of
-        {add_user, Login} ->
-            {ThisUser, Rest} = lists:partition(eq(Login), State#state.users),
-            case ThisUser of
-                [] ->
-                    User = #user{login = Login, pids = [Pid]};
-                #user{login = Login, pids = Pids, playing = Playing} ->
-                    User = #user{login   = Login,
-                                     pids    = [Pid | Pids],
-                                     playing = Playing}
-            end,
-            NewState = State#state{users = [User | Rest]},
-            Reply   = ok;
-        {del_user, Login} ->
-            Fun      = fun (X) -> Login == X#user.login end,
-            {ThisUser, Rest} = lists:partition(Fun, State#state.users),
-            case ThisUser of
-                [] ->
-                    % User not found.
-                    Users = Rest;
-                [#user{login = Login, pids = []}] ->
-                    % User has no pids, delete.
-                    Users = Rest;
-                [#user{login = Login, pids = [Pid]}] ->
-                    % The user has only this pid, so delete them.
-                    Users = Rest;
-                [#user{login = Login, pids = [_Other]}] ->
-                    % This pid wasn't found, so ignore.
-                    Users = State#state.users;
-                [#user{login = Login, pids = Pids, playing = Playing}] ->
-                    % User has 2+ pids, delete only this pid, keep the user.
-                    User  = #user{login   = Login,
-                                  pids    = lists:filter(neq(Pid), Pids),
-                                  playing = Playing},
-                    Users = [User | Rest]
-            end,
-            Reply    = ok,
-            NewState = State#state{users = Users};
         {register_gameserver, Game} ->
             % Must be called by the game server, not a client.
             % TODO: monitor?
@@ -207,7 +171,47 @@ handle_call(Request, {Pid, _FromTag}, State) ->
       {stop, Reason :: term(), NewState :: term()}.
 handle_cast(Request, State) ->
     case Request of
-        _ -> {noreply, State}
+        % ShellPid is a string containing a Linux process ID, not an erlang one.
+        {add_user, Login, ShellPid} ->
+            io:format("in add_user, login ~p; shell pid ~p~n", [Login, ShellPid]),
+            {ThisUser, Rest} = lists:partition(eq(Login), State#state.users),
+            case ThisUser of
+                [] ->
+                    User = #user{login = Login, pids = [ShellPid]};
+                #user{login = Login, pids = Pids, playing = Playing} ->
+                    OtherPids = lists:filter(neq(ShellPid), Pids),
+                    User = #user{login   = Login,
+                                 pids    = [ShellPid | OtherPids],
+                                 playing = Playing}
+            end,
+            {noreply, State#state{users = [User | Rest]}};
+        {del_user, Login, ShellPid} ->
+            Fun      = fun (X) -> Login == X#user.login end,
+            {ThisUser, Rest} = lists:partition(Fun, State#state.users),
+            case ThisUser of
+                [] ->
+                    % User not found.
+                    Users = Rest;
+                [#user{login = Login, pids = []}] ->
+                    % User has no pids, delete.
+                    Users = Rest;
+                [#user{login = Login, pids = [ShellPid]}] ->
+                    % The user has only this pid, so delete them.
+                    Users = Rest;
+                [#user{login = Login, pids = [_Other]}] ->
+                    % This pid wasn't found, so ignore.
+                    Users = State#state.users;
+                [#user{login = Login, pids = Pids, playing = Playing}] ->
+                    % User has 2+ pids, delete only this pid, keep the user.
+                    User  = #user{login   = Login,
+                                    pids    = lists:filter(neq(ShellPid), Pids),
+                                    playing = Playing},
+                    Users = [User | Rest]
+            end,
+            {noreply, State#state{users = Users}};
+        Catchall ->
+            io:format("Unrecognized call: ~p~n", [Catchall]),
+            {noreply, State}
     end.
     
 
@@ -305,16 +309,16 @@ server_is_alive(Pid) ->
 
 add_list_user_1(Pid) ->
     fun () ->
-        ?assertEqual(ok, gen_server:call(Pid, {add_user, "mdanie09"})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09", "123"})),
         ?assertMatch([#user{login = "mdanie09"}],
                      gen_server:call(Pid, {list_users}))
     end.
 
 add_list_user_2(Pid) ->
     fun () ->
-        ?assertEqual(ok, gen_server:call(Pid, {add_user, "wcordr01"})),
-        ?assertEqual(ok, gen_server:call(Pid, {add_user, "mdanie09"})),
-        ?assertEqual(ok, gen_server:call(Pid, {add_user, "cglotf01"})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "wcordr01", "111"})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09", "222"})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "cglotf01", "333"})),
         ?assertMatch([#user{login = "cglotf01"}, #user{login = "mdanie09"},
                       #user{login = "wcordr01"}],
                      lists:sort(gen_server:call(Pid, {list_users})))
@@ -322,13 +326,13 @@ add_list_user_2(Pid) ->
 
 add_list_del_list(Pid) ->
     fun () ->
-        ?assertEqual(ok, gen_server:call(Pid, {add_user, "wcordr01"})),
-        ?assertEqual(ok, gen_server:call(Pid, {add_user, "mdanie09"})),
-        ?assertEqual(ok, gen_server:call(Pid, {add_user, "cglotf01"})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "wcordr01", "111"})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09", "222"})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "cglotf01", "333"})),
         ?assertMatch([#user{login = "cglotf01"}, #user{login = "mdanie09"},
                       #user{login = "wcordr01"}],
                      lists:sort(gen_server:call(Pid, {list_users}))),
-        ?assertEqual(ok, gen_server:call(Pid, {del_user, "mdanie09"})),
+        ?assertEqual(ok, gen_server:cast(Pid, {del_user, "mdanie09", "222"})),
         ?assertMatch([#user{login = "cglotf01"}, #user{login = "wcordr01"}],
                      lists:sort(gen_server:call(Pid, {list_users})))
     end.
