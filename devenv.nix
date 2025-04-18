@@ -3,6 +3,7 @@
 {
   packages = with pkgs; [
     git
+    rebar3
   ];
 
   languages.rust.enable = true;
@@ -17,8 +18,10 @@
       enable = true;
       sync.enable = true;
     };
-    venv = {
-      enable = true;
-    };
+    venv = { enable = true; };
   };
+
+  enterShell = ''
+    git submodule update --init
+  '';
 }
