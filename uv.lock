@@ -17,7 +17,7 @@ dependencies = [
 requires-dist = [
     { name = "psutil" },
     { name = "pyfiglet" },
-    { name = "pyrlang", editable = "vendor/Pyrlang" },
+    { name = "pyrlang", directory = "vendor/Pyrlang" },
     { name = "pyrlang-term", directory = "vendor/Term" },
 ]
 
@@ -48,7 +48,7 @@ wheels = [
 [[package]]
 name = "pyrlang"
 version = "0.12a4"
-source = { editable = "vendor/Pyrlang" }
+source = { directory = "vendor/Pyrlang" }
 dependencies = [
     { name = "pyrlang-term" },
 ]
