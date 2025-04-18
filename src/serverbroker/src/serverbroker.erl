@@ -23,7 +23,8 @@
 -record(game, {name :: string(), min_players :: pos_integer(),
                max_players :: pos_integer() | inf}).
 
--record(user, {login :: string(), pids = [] :: [string()],
+-record(session, {linuxpid = "" :: string(), erlangpid :: pid()}).
+-record(user, {login :: string(), sessions = [] :: [#session{}],
                playing = [] :: [#game{}]}).
 
 -record(gameclient, {login :: string(), pid :: pid()}).
@@ -171,41 +172,42 @@ handle_call(Request, {Pid, _FromTag}, State) ->
       {stop, Reason :: term(), NewState :: term()}.
 handle_cast(Request, State) ->
     case Request of
-        % ShellPid is a string containing a Linux process ID, not an erlang one.
-        {add_user, Login, ShellPid} ->
-            io:format("in add_user, login ~p; shell pid ~p~n", [Login, ShellPid]),
-            {ThisUser, Rest} = lists:partition(eq(Login), State#state.users),
+        {add_user, Login, LinuxPid, ErlangPid} ->
+            {ThisUser, Rest} = lists:partition(fun (Usr) -> Usr#user.login == Login end, State#state.users),
+            NewSession = #session{erlangpid = ErlangPid, linuxpid = LinuxPid},
+            monitor(process, ErlangPid),
             case ThisUser of
                 [] ->
-                    User = #user{login = Login, pids = [ShellPid]};
-                #user{login = Login, pids = Pids, playing = Playing} ->
-                    OtherPids = lists:filter(neq(ShellPid), Pids),
-                    User = #user{login   = Login,
-                                 pids    = [ShellPid | OtherPids],
-                                 playing = Playing}
+                    User = #user{login = Login, sessions = [NewSession]};
+                [#user{login = Login, sessions = OldSessions, playing = Playing}] ->
+                    User = #user{login    = Login,
+                                 sessions = [NewSession | OldSessions],
+                                 playing  = Playing}
             end,
             {noreply, State#state{users = [User | Rest]}};
-        {del_user, Login, ShellPid} ->
+        {del_user, Login, LinuxPid} ->
             Fun      = fun (X) -> Login == X#user.login end,
             {ThisUser, Rest} = lists:partition(Fun, State#state.users),
             case ThisUser of
                 [] ->
                     % User not found.
                     Users = Rest;
-                [#user{login = Login, pids = []}] ->
-                    % User has no pids, delete.
-                    Users = Rest;
-                [#user{login = Login, pids = [ShellPid]}] ->
-                    % The user has only this pid, so delete them.
-                    Users = Rest;
-                [#user{login = Login, pids = [_Other]}] ->
+                [#user{login = Login, sessions = [], playing = []}] ->
+                    % The user has no pid, so just keep the user.
+                    Users = [ThisUser | Rest];
+                [#user{login = Login, sessions = [#session{linuxpid = LinuxPid}]}] ->
+                    % The user has only this pid, so delete it.
+                    Users = [#user{login = Login}, Rest];
+                [#user{login = Login, sessions = [_Other]}] ->
                     % This pid wasn't found, so ignore.
                     Users = State#state.users;
-                [#user{login = Login, pids = Pids, playing = Playing}] ->
+                [#user{login = Login, sessions = Sessions, playing = Playing}] ->
                     % User has 2+ pids, delete only this pid, keep the user.
+                    Filter = fun (X) -> X#session.linuxpid =/= LinuxPid end,
+                    FilteredSessions = lists:filter(Filter, Sessions),
                     User  = #user{login   = Login,
-                                    pids    = lists:filter(neq(ShellPid), Pids),
-                                    playing = Playing},
+                                  sessions = FilteredSessions,
+                                  playing = Playing},
                     Users = [User | Rest]
             end,
             {noreply, State#state{users = Users}};
@@ -226,7 +228,13 @@ handle_cast(Request, State) ->
       {noreply, NewState :: term(), Timeout :: timeout()} |
       {noreply, NewState :: term(), hibernate} |
       {stop, Reason :: normal | term(), NewState :: term()}.
-handle_info(_Info, State) ->
+handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
+    FilterSession = fun (Ses) -> Ses#session.erlangpid =/= ErlangPid end,
+    MapFun = fun (Usr) -> Usr#user{sessions = lists:filter(FilterSession, Usr#user.sessions)} end,
+    NewUsers = lists:map(MapFun, State#state.users),
+    {noreply, State#state{users = NewUsers}};
+handle_info(Info, State) ->
+    io:format("Unrecognized info: ~p~n", [Info]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
