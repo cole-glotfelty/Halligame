@@ -1,6 +1,9 @@
 # Halligame
 A framework for running multiplayer games concurrently.
 
+# Installation
+TODO
+
 # System Architecture
 ![](./topology/HalligameTopology.drawio.svg)
 
