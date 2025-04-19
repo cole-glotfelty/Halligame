@@ -11,7 +11,8 @@ import subprocess
 import asyncio
 import psutil
 import socket
-import os, io
+import os
+import io
 
 WAIT_TIME_SEC = 30
 
