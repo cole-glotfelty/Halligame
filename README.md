@@ -15,6 +15,10 @@ validation server setup can be automated. The interface is as follows:
 
 ![](./topology/ClassDiagrams.drawio.svg)
 
+# Addiing your Own Game to Halligame
+Below is a list  of functions that are required to be implemented for your game
+to work on the Halligame framework
+
 ## Required Implementation for Adding Games
 #### Functions that are required to be implemented in gameServer.py
 - `__init__(comms)` : Called automatically when the server is started. comms is an instance of the ServerCommunicate class and gives the game server access to the public ServerCommunicate functions (documented below)
@@ -99,5 +103,3 @@ that run of the python file.
 ## For Nix/Devenv Users
 There is a provided `devenv.nix` file which should enforce that all dependencies
 are installed properly provided you have devenv set up.
-
-
