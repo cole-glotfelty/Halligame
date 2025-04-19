@@ -39,7 +39,7 @@ def new(args) -> None:
     # cli[-1] += f'newGame(\'{args.game}\', \'{server_node_name}\').'
     # env = os.environ
     # env["ERL_LIBS"] = f"{env['HG_ROOT']}/src/cli/_build/default/lib"
-    print(f"RoomName: {server_node_name}") # TODO: this is a hack because I cannot change the gameserver. Plz remove
+    print(f"RoomName: {server_node_name}") 
 
     # subprocess.run(cli, stdout = sys.stdout, stderr = sys.stderr, env = env)
     try:
