@@ -29,7 +29,7 @@
 
 -record(gameclient, {login :: string(), pid :: pid()}).
 
--record(gameserver, {game :: #game{}, pid :: pid(),
+-record(gameserver, {game :: string(), pid :: pid(),
                      players = [] :: [#gameclient{}]}).
                     
 -record(state, {users = [] :: [#user{}],
@@ -103,60 +103,13 @@ init([]) ->
       {noreply, NewState :: term(), hibernate} |
       {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
       {stop, Reason :: term(), NewState :: term()}.
-handle_call(Request, {Pid, _FromTag}, State) ->
-    case Request of
-        {register_gameserver, Game} ->
-            % Must be called by the game server, not a client.
-            % TODO: monitor?
-            CurrGS   = State#state.gameservers,
-            NewGS    = #gameserver{game = Game, pid = Pid},
-            Reply    = ok,
-            NewState = State#state{gameservers = [NewGS | CurrGS]};
-        {unregister_gameserver} ->
-            % Must be called by the game server, not a client.
-            CurrGS   = State#state.gameservers,
-            IsRegistered = fun (X) -> Pid == X#gameserver.pid end,
-            Filtered = lists:filter(IsRegistered, CurrGS),
-            Reply = ok,
-            NewState = State#state{gameservers = Filtered};
-        {joined_gameserver, JoinedLogin, JoinedPid} ->
-            % Must be called by the game server, not a client.
-            % TODO: update user's currently playing games too.
-            % TODO: monitor?
-            CurrGS         = State#state.gameservers,
-            IsRegistered   = fun (X) -> Pid == X#gameserver.pid end,
-            {ThisGS, Rest} = lists:partition(IsRegistered, CurrGS),
-            OldGCs         = ThisGS#gameserver.players,
-            NewGC          = #gameclient{login = JoinedLogin, pid = JoinedPid},
-            NewGS          = ThisGS#gameserver{players = [NewGC | OldGCs]},
-            Reply          = ok,
-            NewState       = State#state{gameservers = [NewGS | Rest]};
-        {left_gameserver, LeftLogin, LeftPid} ->
-            % Must be called by the game server, not a client.
-            % TODO: update user's currently playing games too.
-            CurrGS         = State#state.gameservers,
-            IsRegistered   = fun (X) -> Pid == X#gameserver.pid end,
-            {ThisGS, Rest} = lists:partition(IsRegistered, CurrGS),
-            OldGCs         = ThisGS#gameserver.players,
-            NewGCs         = lists:filter(neq(#gameclient{login = LeftLogin,
-                                                          pid = LeftPid}),
-                                          OldGCs),
-            NewGS          = ThisGS#gameserver{players = NewGCs},
-            Reply          = ok,
-            NewState       = State#state{gameservers = [NewGS | Rest]};
-        {list_users} ->
-            Reply = State#state.users,
-            NewState = State;
-        {list_gameservers} ->
-            Reply = State#state.gameservers,
-            NewState = State;
-        _ -> 
-            io:format("Got request ~p, ignoring~n", [Request]),
-            Reply = error,
-            NewState = State
-    end,
-    % io:format("Reply = ~p, NewState = ~p~n", [Reply, NewState]),
-    {reply, Reply, NewState}.
+handle_call({list_users}, _From, State) ->
+    {reply, State#state.users, State};
+handle_call({list_gameservers}, _From, State) ->
+    {reply, State#state.gameservers, State};
+handle_call(Catchall, From, State) ->
+    io:format("Unrecognized call ~p from ~p~n", [Catchall, From]),
+    {reply, error, State}.
 
 
 %%--------------------------------------------------------------------
@@ -170,52 +123,85 @@ handle_call(Request, {Pid, _FromTag}, State) ->
       {noreply, NewState :: term(), Timeout :: timeout()} |
       {noreply, NewState :: term(), hibernate} |
       {stop, Reason :: term(), NewState :: term()}.
-handle_cast(Request, State) ->
-    case Request of
-        {add_user, Login, LinuxPid, ErlangPid} ->
-            {ThisUser, Rest} = lists:partition(fun (Usr) -> Usr#user.login == Login end, State#state.users),
-            NewSession = #session{erlangpid = ErlangPid, linuxpid = LinuxPid},
-            monitor(process, ErlangPid),
-            case ThisUser of
-                [] ->
-                    User = #user{login = Login, sessions = [NewSession]};
-                [#user{login = Login, sessions = OldSessions, playing = Playing}] ->
-                    User = #user{login    = Login,
-                                 sessions = [NewSession | OldSessions],
-                                 playing  = Playing}
-            end,
-            {noreply, State#state{users = [User | Rest]}};
-        {del_user, Login, LinuxPid} ->
-            Fun      = fun (X) -> Login == X#user.login end,
-            {ThisUser, Rest} = lists:partition(Fun, State#state.users),
-            case ThisUser of
-                [] ->
-                    % User not found.
-                    Users = Rest;
-                [#user{login = Login, sessions = [], playing = []}] ->
-                    % The user has no pid, so just keep the user.
-                    Users = [ThisUser | Rest];
-                [#user{login = Login, sessions = [#session{linuxpid = LinuxPid}]}] ->
-                    % The user has only this pid, so delete it.
-                    Users = [#user{login = Login}, Rest];
-                [#user{login = Login, sessions = [_Other]}] ->
-                    % This pid wasn't found, so ignore.
-                    Users = State#state.users;
-                [#user{login = Login, sessions = Sessions, playing = Playing}] ->
-                    % User has 2+ pids, delete only this pid, keep the user.
-                    Filter = fun (X) -> X#session.linuxpid =/= LinuxPid end,
-                    FilteredSessions = lists:filter(Filter, Sessions),
-                    User  = #user{login   = Login,
-                                  sessions = FilteredSessions,
-                                  playing = Playing},
-                    Users = [User | Rest]
-            end,
-            {noreply, State#state{users = Users}};
-        Catchall ->
-            io:format("Unrecognized call: ~p~n", [Catchall]),
-            {noreply, State}
-    end.
-    
+handle_cast({register_gameserver, GameName, ServerPid}, State) ->
+    % Must be called by the game server, not a client.
+    % TODO: monitor?
+    CurrGS   = State#state.gameservers,
+    NewGS    = #gameserver{game = GameName, pid = ServerPid},
+    monitor(process, ServerPid),
+    {noreply, State#state{gameservers = [NewGS | CurrGS]}};
+handle_cast({unregister_gameserver, ServerPid}, State) ->
+    % Must be called by the game server, not a client.
+    CurrGS   = State#state.gameservers,
+    IsRegistered = fun (X) -> ServerPid == X#gameserver.pid end,
+    Filtered = lists:filter(IsRegistered, CurrGS),
+    {noreply, State#state{gameservers = Filtered}};
+handle_cast({joined_gameserver, JoinedLogin, JoinedPid, ServerPid}, State) ->
+    % Must be called by the game server, not a client.
+    % TODO: update user's currently playing games too.
+    % TODO: monitor?
+    CurrGS         = State#state.gameservers,
+    IsRegistered   = fun (X) -> ServerPid == X#gameserver.pid end,
+    {ThisGS, Rest} = lists:partition(IsRegistered, CurrGS),
+    OldGCs         = ThisGS#gameserver.players,
+    NewGC          = #gameclient{login = JoinedLogin, pid = JoinedPid},
+    NewGS          = ThisGS#gameserver{players = [NewGC | OldGCs]},
+    {noreply, State#state{gameservers = [NewGS | Rest]}};
+handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
+    % Must be called by the game server, not a client.
+    % TODO: update user's currently playing games too.
+    CurrGS         = State#state.gameservers,
+    IsRegistered   = fun (X) -> ServerPid == X#gameserver.pid end,
+    {ThisGS, Rest} = lists:partition(IsRegistered, CurrGS),
+    OldGCs         = ThisGS#gameserver.players,
+    NewGCs         = lists:filter(neq(#gameclient{login = LeftLogin,
+                                                    pid = LeftPid}),
+                                    OldGCs),
+    NewGS          = ThisGS#gameserver{players = NewGCs},
+    {noreply, State#state{gameservers = [NewGS | Rest]}};
+handle_cast({add_user, Login, LinuxPid, ErlangPid}, State) ->
+    {ThisUser, Rest} = lists:partition(fun (Usr) -> Usr#user.login == Login end, State#state.users),
+    NewSession = #session{erlangpid = ErlangPid, linuxpid = LinuxPid},
+    monitor(process, ErlangPid),
+    case ThisUser of
+        [] ->
+            User = #user{login = Login, sessions = [NewSession]};
+        [#user{login = Login, sessions = OldSessions, playing = Playing}] ->
+            User = #user{login    = Login,
+                            sessions = [NewSession | OldSessions],
+                            playing  = Playing}
+    end,
+    {noreply, State#state{users = [User | Rest]}};
+handle_cast({del_user, Login, LinuxPid}, State) ->
+    Fun      = fun (X) -> Login == X#user.login end,
+    {ThisUser, Rest} = lists:partition(Fun, State#state.users),
+    case ThisUser of
+        [] ->
+            % User not found.
+            Users = Rest;
+        [#user{login = Login, sessions = [], playing = []}] ->
+            % The user has no pid, so just keep the user.
+            Users = [ThisUser | Rest];
+        [#user{login = Login, sessions = [#session{linuxpid = LinuxPid}]}] ->
+            % The user has only this pid, so delete it.
+            Users = [#user{login = Login}, Rest];
+        [#user{login = Login, sessions = [_Other]}] ->
+            % This pid wasn't found, so ignore.
+            Users = State#state.users;
+        [#user{login = Login, sessions = Sessions, playing = Playing}] ->
+            % User has 2+ pids, delete only this pid, keep the user.
+            Filter = fun (X) -> X#session.linuxpid =/= LinuxPid end,
+            FilteredSessions = lists:filter(Filter, Sessions),
+            User  = #user{login   = Login,
+                            sessions = FilteredSessions,
+                            playing = Playing},
+            Users = [User | Rest]
+    end,
+    {noreply, State#state{users = Users}};
+handle_cast(Catchall, State) ->
+    io:format("Unrecognized cast: ~p~n", [Catchall]),
+    {noreply, State}.
+
 
 %%--------------------------------------------------------------------
 %% @private
@@ -229,10 +215,19 @@ handle_cast(Request, State) ->
       {noreply, NewState :: term(), hibernate} |
       {stop, Reason :: normal | term(), NewState :: term()}.
 handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
+    io:format("Current state ~p~n", [State]),
+    io:format("Got down message for process ~p~n", [ErlangPid]),
     FilterSession = fun (Ses) -> Ses#session.erlangpid =/= ErlangPid end,
     MapFun = fun (Usr) -> Usr#user{sessions = lists:filter(FilterSession, Usr#user.sessions)} end,
     NewUsers = lists:map(MapFun, State#state.users),
-    {noreply, State#state{users = NewUsers}};
+
+    FilterGameServer = fun (GS) -> GS#gameserver.pid =/= ErlangPid end,
+    NewGSs = lists:filter(FilterGameServer, State#state.gameservers),
+    {noreply, State#state{users = NewUsers, gameservers = NewGSs}};
+handle_info({getBrokerPid, FromPid}, State) ->
+    io:format("Got info: ~p~n", [{getBrokerPid, FromPid}]),
+    FromPid ! {brokerPid, self()},
+    {noreply, State};
 handle_info(Info, State) ->
     io:format("Unrecognized info: ~p~n", [Info]),
     {noreply, State}.

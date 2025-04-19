@@ -12,7 +12,7 @@
 
 
 -module(handleCLIRequest).
--export([help/0, newGame/2, joinGame/1, listGames/0, listActiveGames/0]).
+-export([help/0, listGames/0, listActiveGames/0]).
 
 -define(GameDir, "/h/wcordr01/cs21/final_project/Halligame/src/halligame/games/"). % the directory of games. TODO: change
 -define(AvailableGames, "availableGames"). % the directory of games. TODO: change
@@ -31,24 +31,15 @@ help() ->
     io:format("Usage:...\n"),
     init:stop().
 
--spec newGame(GameName :: atom(), NodeName :: node()) -> no_return().
+% -spec newGame(GameName :: atom(), NodeName :: node()) -> no_return().
 
-newGame(GameName, NodeName) ->
-    Games = gen_server:call(?SERVERBROKER, {list_games}),
-    GameNameString = atom_to_list(GameName),
-    case lists:member(GameNameString, Games) of
-        true ->
-            io:format("Room Name: ~p~n", [NodeName]),
-            halt(0);
-        false ->
-            io:format("Game ~p not found.~n", [GameName]),
-            halt(1)
-    end.
+% newGame(GameName, NodeName) ->
+%     gen_server:call(?SERVERBROKER, {start_gameserver, atom_to_list(GameName)}),
+%     init:stop().
 
 %% Join an active gameserver
-joinGame(Game) ->
-    gen_server:call(?SERVERBROKER, {start_gameserver, Game}),
-    init:stop().
+% joinGame(Game) ->
+%     gen_server:call()
 
 %% List all of the potential games that the user could start a room for and play
 listGames() ->
