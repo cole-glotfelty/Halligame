@@ -1,18 +1,19 @@
 # background.py
 #
 
-from pyrlang import Node
-from pyrlang.process import Process
-from pyrlang.gen.server import GenServerInterface
-from term import Atom
-from random import randint
-from argparse import ArgumentParser
-import subprocess
 import asyncio
-import psutil
-import socket
-import os
 import io
+import os
+import socket
+import subprocess
+from argparse import ArgumentParser
+from random import randint
+
+import psutil
+from pyrlang import Node
+from pyrlang.gen.server import GenServerInterface
+from pyrlang.process import Process
+from term import Atom
 
 WAIT_TIME_SEC = 30
 

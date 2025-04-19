@@ -1,12 +1,14 @@
 #!/usr/bin/env python
+import os
+import socket
+import subprocess
 from argparse import ArgumentParser
+from random import randint
+
+import psutil
+
 import halligame.utils.ClientComms as ClientComms
 import halligame.utils.ServerComms as ServerComms
-from random import randint
-import subprocess
-import socket
-import psutil
-import os
 
 GAMES_DIR = os.path.join(os.environ["HG_ROOT"], "src", "halligame", "games")
 
