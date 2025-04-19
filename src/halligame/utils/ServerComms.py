@@ -19,27 +19,33 @@ from pyrlang.gen.server import GenServerInterface
 from term import Atom
 from halligame.games import *
 from halligame.utils.gameState import GameState
-import socket
-from random import randint
-import os
  
 class ServerCommunicate(Process):
     def __init__(self, gameName: str, NodeName: str):
         super().__init__()
         node.register_name(self, Atom("pyServer"))
+        self.__gameName = gameName
 
         self.__connectedClients = set()
 
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__serverGameInstance = gameModule.Server(self)
+        # Pyrlang has node name and registered name backwards
+        self.__sendMessage((Atom("serverbroker@vm-projectweb3"), 
+                            Atom("serverbroker")),
+                           (Atom("getBrokerPid"), self.pid_))
+        self.__serverBroker = None
 
     def handle_one_inbox_message(self, msg):
         print(f"DEBUG: ServerComms got message {msg}\n")
         if msg == "close":
-            self.exit()
+            self.shutdown()
             exit(0)
-
-        if (msg[0] == "new_client"):
+        elif msg[0] == Atom("brokerPid"):
+            self.__serverBroker = GenServerInterface(self, msg[1])
+            self.__serverBroker.cast_nowait((Atom("register_gameserver"),
+                                             self.__gameName, self.pid_))
+        elif (msg[0] == "new_client"):
             clientPid = msg[1]
             self.__serverGameInstance.addClient(clientPid) # send them the client
         elif (msg[0] == "remove_client"):
@@ -55,13 +61,12 @@ class ServerCommunicate(Process):
         else:
             raise ValueError("ServerComms Received an unknown message: " + str(msg))
 
-    # front end wrapper for sending a message with correct formatting
-    def __sendMessage(self, ClientPid, Msg):
-        print(f"DEBUG: Sending Message from ServerComms to Client {ClientPid}: {Msg}\n")
-
+    # wrapper for sending a message with correct formatting
+    def __sendMessage(self, dest, msg):
+        # print(f"DEBUG: Sending Message from ServerComms to {dest}: {msg}")
         node.send_nowait(sender = self.pid_,
-                         receiver = ClientPid,
-                         message = Msg)
+                         receiver = dest,
+                         message = msg)
 
     # State should have type halligame.utils.GameState
     def broadcastState(self, State : GameState):
@@ -81,7 +86,10 @@ class ServerCommunicate(Process):
         self.__sendMessage(ClientPid, ("message", Message))
 
     def shutdown(self):
+        self.__serverBroker.cast_nowait((Atom("unregister_gameserver"),
+                                         self.pid_))
         node.destroy()
+
 
 
 

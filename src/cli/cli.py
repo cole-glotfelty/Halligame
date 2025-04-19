@@ -35,14 +35,13 @@ def new(args) -> None:
     ensure_epmd()
     hostname = socket.gethostname()
     server_node_name = f'{randint(0, 999999):06d}@{hostname}'
-    cli = SCRIPT.copy()
-    cli[-1] += f'newGame(\'{args.game}\', \'{server_node_name}\')'
-    env = os.environ
-    env["ERL_LIBS"] = f"{env['HG_ROOT']}/src/cli/_build/default/lib:{env['HG_ROOT']}/src/communicationServer/_build/default/lib:{env['ERL_LIBS']}" # TODO: remove the reference to communication server
-
+    # cli = SCRIPT.copy()
+    # cli[-1] += f'newGame(\'{args.game}\', \'{server_node_name}\').'
+    # env = os.environ
+    # env["ERL_LIBS"] = f"{env['HG_ROOT']}/src/cli/_build/default/lib"
     print(f"RoomName: {server_node_name}") # TODO: this is a hack because I cannot change the gameserver. Plz remove
 
-    subprocess.run(cli, stdout = sys.stdout, stderr = sys.stderr, env = env)
+    # subprocess.run(cli, stdout = sys.stdout, stderr = sys.stderr, env = env)
     try:
         ServerComms.start(args.game, server_node_name)
     except KeyboardInterrupt:

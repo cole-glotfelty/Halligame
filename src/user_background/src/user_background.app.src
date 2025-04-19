@@ -1,4 +1,4 @@
-{application, cli, [
+{application, user_background, [
     {description, "An OTP library"},
     {vsn, "0.1.0"},
     {registered, []},
@@ -7,7 +7,7 @@
         stdlib
     ]},
     {env, []},
-    {modules, [clientServerTest, handleCLIRequest]},
+    {modules, []},
     {licenses, ["Apache-2.0"]},
     {links, []}
  ]}.
