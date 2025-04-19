@@ -192,6 +192,9 @@ handle_cast({del_user, Login, LinuxPid}, State) ->
             Users = [ThisUser#user{sessions = FilteredSessions} | Rest]
     end,
     {noreply, State#state{users = Users}};
+handle_cast({message_user, FromUser, ToUser, Message}, State) ->
+    message_user(FromUser, ToUser, Message, State#state.users),
+    {noreply, State};
 handle_cast(Catchall, State) ->
     io:format("Unrecognized cast: ~p~n", [Catchall]),
     {noreply, State}.
@@ -279,6 +282,18 @@ eq(A) ->
 % That fun takes one argument, B, and returns whether A =/= B.
 neq(A) ->
     fun (B) -> A =/= B end.
+
+
+% TODO: doc
+message_user(FromUser, ToUser, Message, [])      ->
+    ok;
+message_user(FromUser, ToUser, Message, [H | T]) ->
+    Fun = fun (X) -> X#session.erlangpid ! {message, Message} end,
+    case H#user.login of
+        ToUser -> lists:map(Fun, H#user.sessions);
+        _  -> ok
+    end,
+    message_user(FromUser, ToUser, Message, T).
 
 
 % Tests

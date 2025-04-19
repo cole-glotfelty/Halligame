@@ -47,9 +47,15 @@ class UserBackground(Process):
             # print(f"Sending {toSend}")
             self.__serverBroker.cast_nowait(toSend)
         elif msg[0] == Atom("message"):
-            # Tuple is {'message', From, Message}
+            # Tuple is {'message', FromName, Message}
             with openTty(self.__ttyName) as f:
-                print(f"Got message from {f}")
+                print(f"Got message from {msg[1][0]}: {msg[2]}",
+                      file = f, flush = True)
+                print("Your reply?")
+                reply = f.readline()
+                if reply != "":
+                    fullReply = (Atom("message"), self.__username, reply)
+                    self.__sendMessage(msg[1][1], fullReply)
         elif msg[0] == Atom("invite"):
             # Tuple is {'invite', GameName, InviterName, JoinCommand}
             with openTty(self.__ttyName) as f:

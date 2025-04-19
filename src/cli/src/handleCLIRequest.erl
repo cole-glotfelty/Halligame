@@ -54,6 +54,8 @@ listActiveGames() ->
     io:format("~p~n", [Reply]),
     halt().
 
+% sendMessage() ->
+    
 % % optional
 % addFriend(FriendID) ->
 %     init:stop().

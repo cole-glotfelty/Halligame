@@ -61,19 +61,23 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(required = True)
 
     join_parser = subparsers.add_parser('join', help = "Join an existing game")
-    join_parser.add_argument('-g', '--game', choices=GAMES, required = True)
+    join_parser.add_argument('-g', '--game', choices = GAMES, required = True)
     join_parser.add_argument('-s', '--commServer', required = True)
     join_parser.set_defaults(func = join)
 
-    new_parser = subparsers.add_parser('new')
+    new_parser = subparsers.add_parser('new', help = "Create a new game")
     new_parser.add_argument('-g', '--game', choices = GAMES, required = True)
     new_parser.set_defaults(func = new)
 
-    games_parser = subparsers.add_parser('games')
+    games_parser = subparsers.add_parser('games', help = "List active games")
     games_parser.set_defaults(func = listGames)
 
-    active_games_parser = subparsers.add_parser('availableGames')
+    active_games_parser = subparsers.add_parser('availableGames',
+                                                help = "List all playable games")
     active_games_parser.set_defaults(func = listActiveGames)
+
+    write_parser = subparsers.add_parser('write',
+                                         help = "Write a user message")
 
     # the_args = parser.parse_args()    
     parsed = parser.parse_args()
