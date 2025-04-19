@@ -110,9 +110,12 @@ class Client(ClientSuper):
                 except Exception as e: # didn't ent
                     pass
 
-    def mouseInput(self, row, col, region):
-        if (region != None and self.__myTurn):
-            with self.__stateLock: # draw it so it appears instantaneously
+    def mouseInput(self, row, col, region, mouseEventType):
+        with self.__stateLock: # draw it so it appears instantaneously
+            if (region != None and self.__myTurn and 
+                self.__state.getValue("gameOver") == "" and 
+                mouseEventType == "left_click"):
+                
                 newBoard = self.__state.getValue("board")
                 playerSymbol = "X" if self.__playerID == 0 else "O"
                 newBoard[region // 3][region % 3] = playerSymbol

@@ -47,7 +47,8 @@ class Screen():
         self.__lock = threading.Lock()
 
         self.__initCurses()
-        self.__colorSupported = (curses.COLORS >= 128)
+        self.__colorSupport = (curses.COLORS >= 8)
+        self.__extendedColorSupport = (curses.COLORS >= 128)
 
         self.__stdscr.clear()
 
@@ -104,10 +105,9 @@ class Screen():
 
         curses.endwin()
 
-        if self.__colorSupported:
+        if self.__colorSupport:
             # Needed to reset colors to the old state.
             subprocess.run(["reset"], stdout = sys.stdout)
-        time.sleep(0.5)
 
     # Note that .getch() also refreshes the screen
     def __monitorInput(self) -> None:
@@ -119,11 +119,9 @@ class Screen():
             if (c == curses.KEY_MOUSE):
                 (_, mcol, mrow, _, bstate) = curses.getmouse()
 
-                # if left click
-                if (bstate & curses.BUTTON1_PRESSED != 0 or
-                    bstate & curses.BUTTON1_CLICKED != 0):
-                    regionId = self.__findRegion(mrow, mcol)
-                    self.__gotMouse(mrow, mcol, regionId)
+                regionId = self.__findRegion(mrow, mcol)
+                mouseEventType = self.__getMouseEventType(bstate)
+                self.__gotMouse(mrow, mcol, regionId, mouseEventType)
             else:
                 if (type(c) == int): # if int, try to convert to char
                     try:
@@ -140,6 +138,20 @@ class Screen():
                     mcol >= col and mcol < col + width):
                    return id
         return None
+
+    def __getMouseEventType(self, bstate) -> str:
+            # if left click
+            if (bstate & curses.BUTTON1_PRESSED != 0 or
+                bstate & curses.BUTTON1_CLICKED != 0):
+                return "left_click"
+            elif (bstate & curses.BUTTON2_PRESSED != 0 or
+                  bstate & curses.BUTTON2_CLICKED != 0):
+                return "middle_click"
+            elif (bstate & curses.BUTTON3_PRESSED != 0 or
+                  bstate & curses.BUTTON3_CLICKED != 0):
+                return "right_click"
+            else:
+                return "other"
 
     def terminalHeight(self) -> int:
         with self.__lock:
@@ -165,9 +177,10 @@ class Screen():
 
     # prints a string to the screen, starting at (row, col)
     def write(self, row: int, col: int, toPrint, colorPairId=None) -> None:
-        if not self.__colorSupported:
-            colorPairId = None
         with self.__lock:
+            if not self.__colorSupport or colorPairId not in self.__colorPairs:
+                colorPairId = None
+            
             (prevRow, prevCol) = self.__stdscr.getyx() # save cursor position
 
             printing = str(toPrint)
@@ -180,8 +193,6 @@ class Screen():
             self.__stdscr.move(prevRow, prevCol) # reset cursor position
 
     def __write(self, row: int, col: int, printing: str, colorPairId=None) -> None:
-        if not self.__colorSupported:
-            colorPairId = None
         try:
             if (colorPairId == None):
                 self.__stdscr.addstr(row, col, printing)
@@ -231,7 +242,7 @@ class Screen():
 
     # rgb between 0 and 1000
     def addColor(self, r: int, g: int, b: int, colorId) -> None:
-        if not self.__colorSupported:
+        if not self.__extendedColorSupport:
             return
         with self.__lock:
             self.__colors[colorId] = self.__nextColorID
@@ -248,7 +259,7 @@ class Screen():
         return min(max(int(color * (1000.0 / 256.0)), 0), 1000)
 
     def addColorPair(self, foreground, background, pairId) -> None:
-        if not self.__colorSupported:
+        if not self.__extendedColorSupport:
             return
         with self.__lock:
             self.__colorPairs[pairId] = self.__nextColorPairID
@@ -261,9 +272,9 @@ class Screen():
             self.__nextColorPairID += 1
 
     def setStyle(self, colorPairId) -> None:
-        if not self.__colorSupported:
-            return
         with self.__lock:
+            if not self.__colorSupport or colorPairCode not in self.__colorPairs:
+                return
             colorPairCode = self.__colorPairs[colorPairId]
 
             self.__stdscr.bkgd(' ', curses.color_pair(colorPairCode))

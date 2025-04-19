@@ -91,14 +91,17 @@ class Client(ClientSuper):
             self.__screen.shutdown()
             self.__comms.shutdown()
 
-    def mouseInput(self, row, col, region):
-        if region == "board":
-            self.__comms.sendMessage((row - self.__boardVOffset, 
-                                      col - self.__boardHOffset, 
-                                      self.__currColor))
-        elif region != None:
-            # the region is equal to the color name, so update it
-            self.__updateCurrColor(region)
+    def mouseInput(self, row, col, region, mouseEventType):
+        with self.__stateLock:
+            if region == "board" and mouseEventType == "left_click":
+                pixelToDraw = (row - self.__boardVOffset, 
+                            col - self.__boardHOffset, 
+                            self.__currColor)
+                self.__drawPixel(pixelToDraw)
+                self.__comms.sendMessage(pixelToDraw)
+            elif region != None:
+                # the region is equal to the color name, so update it
+                self.__updateCurrColor(region)
 
     def __updateCurrColor(self, color):
         colorBoxDraw = ((" " * self.__colorBoxWidth) + "\n") * self.__colorBoxHeight
@@ -107,6 +110,11 @@ class Client(ClientSuper):
 
         self.__currColor = color
 
+    def __drawPixel(self, pixelToDraw):
+        (row, col, color) = pixelToDraw
+        self.__screen.write(row + self.__boardVOffset, 
+                            col + self.__boardHOffset, " ", color)
+        self.__screen.refresh()
 
     def joinConfirmed(self, newState):
         with self.__stateLock:
@@ -116,9 +124,7 @@ class Client(ClientSuper):
     def gotServerMessage(self, msg):
         if (msg[0] == "state_diff"):
             with self.__stateLock:
-                (row, col, color) = msg[1]
-                self.__screen.write(row + self.__boardVOffset, col + self.__boardHOffset, " ", color)
-                self.__screen.refresh()
+                self.__drawPixel(msg[1])
 
     def __drawBoard(self):
         board = self.__state.getValue("board")
