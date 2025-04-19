@@ -4,6 +4,7 @@ from halligame.utils.screen import Screen
 from halligame.utils.gameState import GameState
 from halligame.utils.gameClientTemplate import ClientSuper
 import threading
+import pyfiglet
 
 import time
 
@@ -82,9 +83,14 @@ class Client(ClientSuper):
 
     def __drawBlankBoard(self):
         boardDraw = ((" " * self.__boardWidth) + "\n") * self.__boardHeight
-        # self.__screen.write(self.__boardVOffset, self.__boardHOffset, 
-        #                     boardDraw, "white")
+        self.__screen.write(self.__boardVOffset, self.__boardHOffset, 
+                            boardDraw, "white")
         self.__updateCurrColor(self.__currColor)
+
+        instructions = "Left-Click to select color and draw\n\n"
+        instructions += "Right-Click to erase"
+
+        self.__screen.write(self.__boardVOffset + self.__boardHeight + 5, self.__boardHOffset, instructions)
 
     def userInput(self, input):
         if (input == "q"):
@@ -93,15 +99,22 @@ class Client(ClientSuper):
 
     def mouseInput(self, row, col, region, mouseEventType):
         with self.__stateLock:
-            if region == "board" and mouseEventType == "left_click":
+            if mouseEventType == "left_click":
+                if region == "board":
+                    pixelToDraw = (row - self.__boardVOffset, 
+                                col - self.__boardHOffset, 
+                                self.__currColor)
+                    self.__drawPixel(pixelToDraw)
+                    self.__comms.sendMessage(pixelToDraw)
+                elif region != None:
+                    # the region is equal to the color name, so update it
+                    self.__updateCurrColor(region)
+            elif (mouseEventType == "right_click" and region == "board"):
                 pixelToDraw = (row - self.__boardVOffset, 
-                            col - self.__boardHOffset, 
-                            self.__currColor)
+                               col - self.__boardHOffset, 
+                               "white")
                 self.__drawPixel(pixelToDraw)
                 self.__comms.sendMessage(pixelToDraw)
-            elif region != None:
-                # the region is equal to the color name, so update it
-                self.__updateCurrColor(region)
 
     def __updateCurrColor(self, color):
         colorBoxDraw = ((" " * self.__colorBoxWidth) + "\n") * self.__colorBoxHeight
