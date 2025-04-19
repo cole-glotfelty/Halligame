@@ -9,6 +9,23 @@ from halligame.utils.gameServerTemplate import ServerSuper
 from halligame.utils.ServerComms import ServerCommunicate
 from halligame.utils.gameState import GameState
 
+from threading import Lock
+
+class Player:
+    """
+    (Sort of a stuct) Holds the ships per player and allows access to how many
+    are remaining.
+    """
+    def __init__ (self):
+        self.ships = [[] for x in range(4)]
+        self.__shipsRemaining = 4
+
+    def shipsRemaining(self):
+        remShips = len(list(filter(lambda x: x == [], ships)))
+        shipsRemaining = remShips
+        return self.__shipsRemaining
+
+
 class Server(ServerSuper):
     def __init__(self, comms: ServerCommunicate) -> None:
         """
@@ -23,7 +40,9 @@ class Server(ServerSuper):
         your game. (We do this for serialization and server communication)
         """
         self.__comms = comms
-        self.__state = GameState()
+        self.__players = [Player, Player]
+        self.__userLock = Lock()
+        self.__usersConnected = 0
         pass
 
     def gotClientMessage(self, event, clientPID) -> None:
@@ -54,10 +73,15 @@ class Server(ServerSuper):
 
         Arguemnts;
             clientPID - PID of the client that joined the game
+
+        Verify user count (using a lock to enforce that players must wait).
         """
-        msg = "You've joined!"
-        self.__comms.confirmJoin(clientPID, msg)
-        pass
+        with self.__userLock:
+            self.__usersConnected += 1
+            if self.__usersConnected > 2:
+                self.__comms.sendClientMessage(clientPID, ("error", "Error: Room Full"))
+            playerId = 0 if self.__usersConnected == 1 else 1
+            self.__comms.confirmJoin(clientPid, playerId) 
 
     def removeClient(self, clientPID) -> None:
         """
