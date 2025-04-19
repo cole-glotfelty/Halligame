@@ -6,18 +6,9 @@
 %% "init:stop()" to terminate the process.
 
 -module(handleCLIRequest).
--export([listGames/0, listActiveGames/0, sendMessage/1]).
+-export([listActiveGames/0, sendMessage/1]).
 
 -define(SERVERBROKER, {serverbroker, 'serverbroker@vm-projectweb3'}).
-
-%% List on stdout all of the potential games that the user could start a
-%% room for and play.
--spec listGames() -> no_return().
-listGames() ->
-    Games = gen_server:call(?SERVERBROKER, {list_games}),
-    io:format("Available Games:~n"),
-    lists:map(fun (Game) -> io:format("\t~p~n", [Game]) end, Games),
-    init:stop().
 
 %% List the active rooms on stdout.
 -spec listActiveGames() -> no_return().

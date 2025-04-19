@@ -22,17 +22,15 @@
 
 -define(SERVER, ?MODULE).
 
--record(game, {name :: string(), min_players :: pos_integer(),
-               max_players :: pos_integer() | inf}).
-
 -record(session, {linuxpid = "" :: string(), erlangpid :: pid()}).
 -record(user, {login :: string(), sessions = [] :: [#session{}],
-               playing = [] :: [#game{}]}).
+               playing = [] :: [string()]}).
 
 -record(gameclient, {login :: string(), pid :: pid()}).
 
 -record(gameserver, {game :: string(), pid :: pid(),
-                     players = [] :: [#gameclient{}]}).
+                     players = [] :: [#gameclient{}],
+                     nodeName :: string()}).
                     
 -record(state, {users = [] :: [#user{}],
                 gameservers = [] :: [#gameserver{}]}).
@@ -125,11 +123,11 @@ handle_call(Catchall, From, State) ->
       {noreply, NewState :: term(), Timeout :: timeout()} |
       {noreply, NewState :: term(), hibernate} |
       {stop, Reason :: term(), NewState :: term()}.
-handle_cast({register_gameserver, GameName, ServerPid}, State) ->
+handle_cast({register_gameserver, GameName, NodeName, ServerPid}, State) ->
     % Must be called by the game server, not a client.
-    % TODO: monitor?
     CurrGS   = State#state.gameservers,
-    NewGS    = #gameserver{game = GameName, pid = ServerPid},
+    NewGS    = #gameserver{game = GameName, pid = ServerPid,
+                           nodeName = NodeName},
     monitor(process, ServerPid),
     {noreply, State#state{gameservers = [NewGS | CurrGS]}};
 handle_cast({unregister_gameserver, ServerPid}, State) ->
@@ -141,13 +139,13 @@ handle_cast({unregister_gameserver, ServerPid}, State) ->
 handle_cast({joined_gameserver, JoinedLogin, JoinedPid, ServerPid}, State) ->
     % Must be called by the game server, not a client.
     % TODO: update user's currently playing games too.
-    % TODO: monitor?
     CurrGS         = State#state.gameservers,
     IsRegistered   = fun (X) -> ServerPid == X#gameserver.pid end,
     {[ThisGS], Rest} = lists:partition(IsRegistered, CurrGS),
     OldGCs         = ThisGS#gameserver.players,
     NewGC          = #gameclient{login = JoinedLogin, pid = JoinedPid},
     NewGS          = ThisGS#gameserver{players = [NewGC | OldGCs]},
+    monitor(process, JoinedPid),
     {noreply, State#state{gameservers = [NewGS | Rest]}};
 handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
     % Must be called by the game server, not a client.
@@ -213,12 +211,16 @@ handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
     io:format("Current state ~p~n", [State]),
     io:format("Got down message for process ~p~n", [ErlangPid]),
     FilterSession = fun (Ses) -> Ses#session.erlangpid =/= ErlangPid end,
-    MapFun = fun (Usr) -> Usr#user{sessions = lists:filter(FilterSession, Usr#user.sessions)} end,
-    NewUsers = lists:map(MapFun, State#state.users),
+    SesMapFun = fun (Usr) -> Usr#user{sessions = lists:filter(FilterSession, Usr#user.sessions)} end,
+    NewUsers = lists:map(SesMapFun, State#state.users),
 
     FilterGameServer = fun (GS) -> GS#gameserver.pid =/= ErlangPid end,
-    NewGSs = lists:filter(FilterGameServer, State#state.gameservers),
-    {noreply, State#state{users = NewUsers, gameservers = NewGSs}};
+    FilteredGSs = lists:filter(FilterGameServer, State#state.gameservers),
+
+    FilterPlayers = fun (P) -> P#gameclient.pid =/= ErlangPid end,
+    PlayerMapFun = fun (GS) -> lists:filter(FilterPlayers, GS#gameserver.players) end,
+    FinalGSs = lists:map(PlayerMapFun, FilteredGSs),
+    {noreply, State#state{users = NewUsers, gameservers = FinalGSs}};
 handle_info({getBrokerPid, FromPid}, State) ->
     io:format("Got info: ~p~n", [{getBrokerPid, FromPid}]),
     FromPid ! {brokerPid, self()},

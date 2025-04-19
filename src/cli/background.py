@@ -1,6 +1,6 @@
-# background.py
-#
-
+# background.py allows for erlang messages to be sent and recieved from the
+# server broker, in the background.
+# Michael Daniels, 2025-04-19
 import asyncio
 import io
 import os
@@ -94,7 +94,7 @@ class UserBackground(Process):
 
 def openTty(tty):
     return io.TextIOWrapper(
-        io.FileIO(os.open(tty, os.O_NOCTTY | os.O_RDWR), "r+")
+        io.FileIO(os.open(tty, os.O_NOCTTY | os.O_RDWR), "w")
     )
 
 

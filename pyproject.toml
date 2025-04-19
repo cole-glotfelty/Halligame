@@ -52,6 +52,9 @@ extend-select = [
     "I",   # Import sorting
 ]
 
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
 [tool.ruff.format]
 indent-style = "space"
 line-ending = "lf"

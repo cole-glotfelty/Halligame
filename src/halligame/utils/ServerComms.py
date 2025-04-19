@@ -6,35 +6,35 @@
 
 # import importlib # allows us to import a module based on the name
 
-import subprocess
-from time import sleep
-import argparse
-import sys
 import importlib
 
 from pyrlang import Node
-from pyrlang.process import Process
 from pyrlang.gen.server import GenServerInterface
-
+from pyrlang.process import Process
 from term import Atom
-from halligame.games import *
+
+from halligame.games import *  # noqa: F403
 from halligame.utils.gameState import GameState
- 
+
+
 class ServerCommunicate(Process):
-    def __init__(self, gameName: str, NodeName: str):
+    def __init__(self, gameName: str, nodeName: str):
         super().__init__()
         node.register_name(self, Atom("pyServer"))
         self.__gameName = gameName
-
+        self.__nodeName = nodeName
+        self.__serverBroker = None
         self.__connectedClients = set()
 
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__serverGameInstance = gameModule.Server(self)
-        # Pyrlang has node name and registered name backwards
-        self.__sendMessage((Atom("serverbroker@vm-projectweb3"), 
-                            Atom("serverbroker")),
-                           (Atom("getBrokerPid"), self.pid_))
-        self.__serverBroker = None
+
+        # Pyrlang has node name and registered name backwards >:(
+        self.__sendMessage(
+            (Atom("serverbroker@vm-projectweb3"), Atom("serverbroker")),
+            (Atom("getBrokerPid"), self.pid_),
+        )
+        
 
     def handle_one_inbox_message(self, msg):
         print(f"DEBUG: ServerComms got message {msg}\n")
@@ -43,33 +43,41 @@ class ServerCommunicate(Process):
             exit(0)
         elif msg[0] == Atom("brokerPid"):
             self.__serverBroker = GenServerInterface(self, msg[1])
-            self.__serverBroker.cast_nowait((Atom("register_gameserver"),
-                                             self.__gameName, self.pid_))
-        elif (msg[0] == "new_client"):
+            self.__serverBroker.cast_nowait(
+                (
+                    Atom("register_gameserver"),
+                    self.__gameName,
+                    self.__nodeName,
+                    self.pid_,
+                )
+            )
+        elif msg[0] == "new_client":
             clientPid = msg[1]
-            self.__serverGameInstance.addClient(clientPid) # send them the client
-        elif (msg[0] == "remove_client"):
+            self.__serverGameInstance.addClient(
+                clientPid
+            )  # send them the client
+        elif msg[0] == "remove_client":
             ClientPid = msg[1]
             self.__sendMessage(ClientPid, ("quit_confirm", self.pid_))
 
             self.__connectedClients.remove(ClientPid)
             self.__serverGameInstance.removeClient(ClientPid)
-        elif (msg[0] == "message"):
+        elif msg[0] == "message":
             clientPid = msg[1][0]
             message = msg[1][1]
             self.__serverGameInstance.gotClientMessage(clientPid, message)
         else:
-            raise ValueError("ServerComms Received an unknown message: " + str(msg))
+            raise ValueError(
+                "ServerComms Received an unknown message: " + str(msg)
+            )
 
     # wrapper for sending a message with correct formatting
     def __sendMessage(self, dest, msg):
         # print(f"DEBUG: Sending Message from ServerComms to {dest}: {msg}")
-        node.send_nowait(sender = self.pid_,
-                         receiver = dest,
-                         message = msg)
+        node.send_nowait(sender=self.pid_, receiver=dest, message=msg)
 
     # State should have type halligame.utils.GameState
-    def broadcastState(self, State : GameState):
+    def broadcastState(self, State: GameState):
         for ClientPid in self.__connectedClients:
             self.__sendMessage(ClientPid, ("state", State.serialize()))
 
@@ -81,21 +89,18 @@ class ServerCommunicate(Process):
         self.__connectedClients.add(ClientPid)
         self.__sendMessage(ClientPid, ("confirmed_join", Message))
 
-
     def sendClientMessage(self, ClientPid, Message):
         self.__sendMessage(ClientPid, ("message", Message))
 
     def shutdown(self):
-        self.__serverBroker.cast_nowait((Atom("unregister_gameserver"),
-                                         self.pid_))
+        self.__serverBroker.cast_nowait(
+            (Atom("unregister_gameserver"), self.pid_)
+        )
         node.destroy()
 
 
-
-
-
-def start(game : str, node_name : str):
+def start(game: str, node_name: str):
     global node
-    node = Node(node_name, cookie = "Sh4rKM3ld0n")
-    serverComms = ServerCommunicate(game, node_name)
+    node = Node(node_name, cookie="Sh4rKM3ld0n")
+    ServerCommunicate(game, node_name)
     node.run()

@@ -1,9 +1,12 @@
 #!/usr/bin/env python
+# cli.py is the command-line interface for Halligame.
+# Created by:  Michael Daniels, 2025-04-14
+# Last edited: Michael Daniels, 2025-04-19
 import os
-import socket
 import subprocess
 from argparse import ArgumentParser
 from random import randint
+from socket import gethostname
 
 import psutil
 
@@ -12,9 +15,16 @@ import halligame.utils.ServerComms as ServerComms
 
 GAMES_DIR = os.path.join(os.environ["HG_ROOT"], "src", "halligame", "games")
 
-GAMES = os.listdir(GAMES_DIR)
-# TODO: fix
-# GAMES=filter(lambda elem: os.path.isdir(os.path.join(GAMES_DIR, elem)), GAMES)
+GAMES = list(
+    filter(
+        lambda elem: (
+            os.path.isdir(os.path.join(GAMES_DIR, elem))
+            and elem != "__pycache__"
+            and elem != "ExampleGame"
+        ),
+        os.listdir(GAMES_DIR),
+    )
+)
 
 SCRIPT = [
     "env",
@@ -47,7 +57,7 @@ def join(args) -> None:
 
 def new(args) -> None:
     ensure_epmd()
-    hostname = socket.gethostname()
+    hostname = gethostname()
     server_node_name = f"{randint(0, 999999):06d}@{hostname}"
     print(f"RoomName: {server_node_name}")
     try:
@@ -57,8 +67,9 @@ def new(args) -> None:
 
 
 def listGames(_) -> None:
-    # TODO: insufficently pretty?
-    print(GAMES)
+    print("Games available:")
+    for game in GAMES:
+        print("    * " + game)
 
 
 def listActiveGames(_) -> None:
@@ -97,11 +108,11 @@ if __name__ == "__main__":
     new_parser.add_argument("-g", "--game", choices=GAMES, required=True)
     new_parser.set_defaults(func=new)
 
-    games_parser = subparsers.add_parser("games", help="List active games")
+    games_parser = subparsers.add_parser("games", help="List all games")
     games_parser.set_defaults(func=listGames)
 
     active_games_parser = subparsers.add_parser(
-        "availableGames", help="List all playable games"
+        "active", help="List all current game sessions"
     )
     active_games_parser.set_defaults(func=listActiveGames)
 
