@@ -52,11 +52,13 @@ to work on the Halligame framework
     Input is either a normal char or a special character, which is handled by 
     [ncurses curses.KEY_* constants](https://docs.python.org/3/library/curses.html#curses.KEY_MIN). 
     Additionally, takes another callback function gotMouseClickFunc that is 
-    called when the user left clicks on the screen. gotMouseClickFunct 
-    should have signature `gotMouseClickFunc(row, col, region)` where row and 
-    col are the row and column of the screen respectively, and region is the 
-    region of the mouse click (as created by `addClickableRegion`) or None 
-    if the click was not in a region.
+    called when the user clicks on the screen. gotMouseClickFunc 
+    should have signature `gotMouseClickFunc(row, col, region, mouseEventType)` 
+    where row and col are the row and column of the screen respectively, and 
+    region is the region of the mouse click (as created by 
+    `addClickableRegion`) or None if the click was not in a region. 
+    mouseEventType is the type of the mouse event, either "left_click", 
+    "right_click", "middle_click", or "other"
 - `write(row, col, toPrint)` : Prints the contents of toPrint starting at 
     (row, col) to the screen. toPrint must be convertible to string. Updates 
     made when refresh is called.
