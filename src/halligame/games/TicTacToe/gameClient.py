@@ -124,7 +124,7 @@ class Client(ClientSuper):
                 self.__drawBoard()
                 self.__screen.refresh()
 
-            self.__comms.sendMessage((self.__playerID, region))
+                self.__comms.sendMessage((self.__playerID, region))
 
     def updateState(self, newState):
         """
