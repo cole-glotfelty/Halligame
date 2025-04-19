@@ -49,6 +49,7 @@ exclude = [
 extend-select = [
     "E501", # line too long
     "UP",  # pyupgrade
+    "I",   # Import sorting
 ]
 
 [tool.ruff.format]
