@@ -46,13 +46,16 @@ class UserBackground(Process):
                       self.__shellPid, self.pid_)
             # print(f"Sending {toSend}")
             self.__serverBroker.cast_nowait(toSend)
+        elif msg[0] == Atom("message"):
+            # Tuple is {'message', From, Message}
+            with openTty(self.__ttyName) as f:
+                print(f"Got message from {f}")
         elif msg[0] == Atom("invite"):
             # Tuple is {'invite', GameName, InviterName, JoinCommand}
             with openTty(self.__ttyName) as f:
                 print(f"You were invited to a game of {msg[1]} by {msg[2]}!",
                       file = f, flush = True)
                 print(f"Run {msg[3]} to play!", file = f, flush = True)
-                f.readline()
 
     def checkOSProcessAlive(self):
         if not psutil.pid_exists(int(self.__shellPid)):

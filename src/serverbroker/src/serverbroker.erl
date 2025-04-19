@@ -173,7 +173,7 @@ handle_cast({add_user, Login, LinuxPid, ErlangPid}, State) ->
     end,
     {noreply, State#state{users = [User | Rest]}};
 handle_cast({del_user, Login, LinuxPid}, State) ->
-    Fun      = fun (X) -> Login == X#user.login end,
+    Fun      = fun (Usr) -> Login == Usr#user.login end,
     {ThisUser, Rest} = lists:partition(Fun, State#state.users),
     case ThisUser of
         [] ->
@@ -182,20 +182,14 @@ handle_cast({del_user, Login, LinuxPid}, State) ->
         [#user{login = Login, sessions = [], playing = []}] ->
             % The user has no pid, so just keep the user.
             Users = [ThisUser | Rest];
-        [#user{login = Login, sessions = [#session{linuxpid = LinuxPid}]}] ->
-            % The user has only this pid, so delete it.
-            Users = [#user{login = Login}, Rest];
         [#user{login = Login, sessions = [_Other]}] ->
             % This pid wasn't found, so ignore.
             Users = State#state.users;
-        [#user{login = Login, sessions = Sessions, playing = Playing}] ->
-            % User has 2+ pids, delete only this pid, keep the user.
+        [#user{login = Login, sessions = Sessions}] ->
+            % Remove t
             Filter = fun (X) -> X#session.linuxpid =/= LinuxPid end,
             FilteredSessions = lists:filter(Filter, Sessions),
-            User  = #user{login   = Login,
-                            sessions = FilteredSessions,
-                            playing = Playing},
-            Users = [User | Rest]
+            Users = [ThisUser#user{sessions = FilteredSessions} | Rest]
     end,
     {noreply, State#state{users = Users}};
 handle_cast(Catchall, State) ->

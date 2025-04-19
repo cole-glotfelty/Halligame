@@ -60,7 +60,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     subparsers = parser.add_subparsers(required = True)
 
-    join_parser = subparsers.add_parser('join')
+    join_parser = subparsers.add_parser('join', help = "Join an existing game")
     join_parser.add_argument('-g', '--game', choices=GAMES, required = True)
     join_parser.add_argument('-s', '--commServer', required = True)
     join_parser.set_defaults(func = join)
