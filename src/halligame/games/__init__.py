@@ -4,4 +4,4 @@
 from halligame.games.TicTacToe import *
 
 # Define what symbols are exported when using "from halligame.games import *"
-__all__ = ['TicTacToe']
+__all__ = ['TicTacToe' 'Canvas' 'Battleship']

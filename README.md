@@ -1,6 +1,9 @@
 # Halligame
 A framework for running multiplayer games concurrently.
 
+# Installation
+TODO
+
 # System Architecture
 ![](./topology/HalligameTopology.drawio.svg)
 
@@ -11,6 +14,10 @@ should aim to follow the same uniform interface so that the game server and
 validation server setup can be automated. The interface is as follows:
 
 ![](./topology/ClassDiagrams.drawio.svg)
+
+# Addiing your Own Game to Halligame
+Below is a list  of functions that are required to be implemented for your game
+to work on the Halligame framework
 
 ## Required Implementation for Adding Games
 #### Functions that are required to be implemented in gameServer.py
@@ -96,5 +103,3 @@ that run of the python file.
 ## For Nix/Devenv Users
 There is a provided `devenv.nix` file which should enforce that all dependencies
 are installed properly provided you have devenv set up.
-
-
