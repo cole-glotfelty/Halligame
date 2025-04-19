@@ -21,6 +21,7 @@ from halligame.games import *
 from random import randint
 from time import sleep
 import threading
+import socket
 
 class ClientCommunicate(Process):
     # TODO: there are some serious shenanigans of imports going on here and I hate it
@@ -92,7 +93,7 @@ class ClientCommunicate(Process):
 
 def start(commServerName, gameName):
     global name, node
-    name = f'{randint(0, 999999) :06d}@{os.environ["HOST"]}'
+    name = f'{randint(0, 999999) :06d}@{socket.gethostname()}'
     print("ClientComms NodeName: ", name)
     node = Node(node_name = name, cookie = "Sh4rKM3ld0n")
     clientComms = ClientCommunicate(gameName, commServerName)
