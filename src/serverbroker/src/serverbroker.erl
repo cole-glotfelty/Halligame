@@ -186,13 +186,14 @@ handle_cast({del_user, Login, LinuxPid}, State) ->
             % This pid wasn't found, so ignore.
             Users = State#state.users;
         [#user{login = Login, sessions = Sessions}] ->
-            % Remove t
+            % Remove this session.
             Filter = fun (X) -> X#session.linuxpid =/= LinuxPid end,
             FilteredSessions = lists:filter(Filter, Sessions),
             Users = [ThisUser#user{sessions = FilteredSessions} | Rest]
     end,
     {noreply, State#state{users = Users}};
 handle_cast({message_user, FromUser, ToUser, Message}, State) ->
+    io:format("Supposed to send message from ~p to ~p~n.", [FromUser, ToUser]),
     message_user(FromUser, ToUser, Message, State#state.users),
     {noreply, State};
 handle_cast(Catchall, State) ->
@@ -285,13 +286,18 @@ neq(A) ->
 
 
 % TODO: doc
-message_user(FromUser, ToUser, Message, [])      ->
+message_user(_FromUser, _ToUser, _Message, [])      ->
+    io:format("Done sending message"),
     ok;
 message_user(FromUser, ToUser, Message, [H | T]) ->
-    Fun = fun (X) -> X#session.erlangpid ! {message, Message} end,
+    Fun = fun (X) -> X#session.erlangpid ! {message, FromUser, Message} end,
     case H#user.login of
-        ToUser -> lists:map(Fun, H#user.sessions);
-        _  -> ok
+        ToUser ->
+            io:format("~p is the same as ~p~n", [H#user.login, ToUser]),
+            lists:map(Fun, H#user.sessions);
+        Any  ->
+            io:format("~p is not the same as ~p~n", [Any, ToUser]),
+            ok
     end,
     message_user(FromUser, ToUser, Message, T).
 

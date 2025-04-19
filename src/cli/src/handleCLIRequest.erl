@@ -12,7 +12,7 @@
 
 
 -module(handleCLIRequest).
--export([help/0, listGames/0, listActiveGames/0]).
+-export([help/0, listGames/0, listActiveGames/0, sendMessage/1]).
 
 -define(GameDir, "/h/wcordr01/cs21/final_project/Halligame/src/halligame/games/"). % the directory of games. TODO: change
 -define(AvailableGames, "availableGames"). % the directory of games. TODO: change
@@ -46,15 +46,18 @@ listGames() ->
     Games = gen_server:call(?SERVERBROKER, {list_games}),
     io:format("Available Games:~n"),
     lists:map(fun (Game) -> io:format("\t~p~n", [Game]) end, Games),
-    halt().
+    init:stop().
 
 %% List the active rooms
 listActiveGames() ->
     Reply = gen_server:call(?SERVERBROKER, {list_gameservers}),
     io:format("~p~n", [Reply]),
-    halt().
+    init:stop().
 
-% sendMessage() ->
+% TODO: doc
+sendMessage([FromUser, ToUser, Message]) ->
+    gen_server:cast(?SERVERBROKER, {message_user, FromUser, ToUser, Message}),
+    init:stop().
     
 % % optional
 % addFriend(FriendID) ->

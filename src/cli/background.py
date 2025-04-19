@@ -49,13 +49,11 @@ class UserBackground(Process):
         elif msg[0] == Atom("message"):
             # Tuple is {'message', FromName, Message}
             with openTty(self.__ttyName) as f:
-                print(f"Got message from {msg[1][0]}: {msg[2]}",
+                print(f"Got message from {msg[1]}: {msg[2]}",
                       file = f, flush = True)
-                print("Your reply?")
-                reply = f.readline()
-                if reply != "":
-                    fullReply = (Atom("message"), self.__username, reply)
-                    self.__sendMessage(msg[1][1], fullReply)
+                print(f"Want to reply? Run \"hg write {msg[1]}\"!",
+                      file = f, flush = True)
+                print("(Press enter now.)", file = f, flush = True)
         elif msg[0] == Atom("invite"):
             # Tuple is {'invite', GameName, InviterName, JoinCommand}
             with openTty(self.__ttyName) as f:
@@ -90,7 +88,7 @@ def start(shellPid : str, tty : str):
     hostname = socket.gethostname()
     node = Node(f"{randint(0, 999999):06d}@{hostname}", cookie = "Sh4rKM3ld0n")
     username = subprocess.run(["whoami"], capture_output=True).stdout
-    UserBackground(shellPid, username, tty)
+    UserBackground(shellPid, username.decode().strip(), tty)
     node.run()
 
 # TOOD: put in a utils thing, copied from cli.py

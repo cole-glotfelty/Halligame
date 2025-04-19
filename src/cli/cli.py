@@ -6,7 +6,6 @@ from random import randint
 import subprocess
 import socket
 import psutil
-import sys
 import os
 
 GAMES_DIR = os.path.join(os.environ['HG_ROOT'], "src", 
@@ -15,8 +14,9 @@ GAMES_DIR = os.path.join(os.environ['HG_ROOT'], "src",
 GAMES = os.listdir(GAMES_DIR)
 # TODO: fix - GAMES = filter(lambda elem: os.path.isdir(os.path.join(GAMES_DIR, elem)), GAMES)
 
-SCRIPT = ['erl', '-noshell', '-sname', f'cli{randint(0, 999999):06d}',
-                    '-setcookie', 'Sh4rKM3ld0n', '-eval', 'handleCLIRequest:']
+SCRIPT = ['env', f"ERL_LIBS={os.environ['HG_ROOT']}/src/cli/_build/default/lib",
+          'erl', '-noshell', '-sname', f'cli{randint(0, 999999):06d}',
+          '-setcookie', 'Sh4rKM3ld0n', '-run', 'handleCLIRequest']
 
 def ensure_epmd():
     epmd_running = False
@@ -35,13 +35,7 @@ def new(args) -> None:
     ensure_epmd()
     hostname = socket.gethostname()
     server_node_name = f'{randint(0, 999999):06d}@{hostname}'
-    # cli = SCRIPT.copy()
-    # cli[-1] += f'newGame(\'{args.game}\', \'{server_node_name}\').'
-    # env = os.environ
-    # env["ERL_LIBS"] = f"{env['HG_ROOT']}/src/cli/_build/default/lib"
     print(f"RoomName: {server_node_name}") 
-
-    # subprocess.run(cli, stdout = sys.stdout, stderr = sys.stderr, env = env)
     try:
         ServerComms.start(args.game, server_node_name)
     except KeyboardInterrupt:
@@ -53,8 +47,24 @@ def listGames(_) -> None:
 
 def listActiveGames(_) -> None:
     cli = SCRIPT.copy()
-    cli[-1] += 'listActiveGames()'
+    cli.append('listActiveGames')
     subprocess.run(cli)
+
+def write(args) -> None:
+    cli = SCRIPT.copy()
+    cli.append('sendMessage')
+    thisUser = subprocess.run(["whoami"], capture_output=True).stdout
+    cli.append(thisUser.decode().strip())
+    cli.append(args.username)
+
+    try:
+        message = input("Enter your message here: ")
+    except EOFError:
+        message = ""
+
+    if message != "":
+        cli.append(message)
+        subprocess.run(cli)
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -77,7 +87,9 @@ if __name__ == '__main__':
     active_games_parser.set_defaults(func = listActiveGames)
 
     write_parser = subparsers.add_parser('write',
-                                         help = "Write a user message")
+                                         help = "Write a user a message")
+    write_parser.add_argument("username")
+    write_parser.set_defaults(func = write)
 
     # the_args = parser.parse_args()    
     parsed = parser.parse_args()
