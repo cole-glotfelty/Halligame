@@ -273,7 +273,7 @@ class Screen():
 
     def setStyle(self, colorPairId) -> None:
         with self.__lock:
-            if not self.__colorSupport or colorPairCode not in self.__colorPairs:
+            if not self.__colorSupport or colorPairId not in self.__colorPairs:
                 return
             colorPairCode = self.__colorPairs[colorPairId]
 
