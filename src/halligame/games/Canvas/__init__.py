@@ -3,4 +3,4 @@
 from halligame.games.Canvas.gameClient import Client
 from halligame.games.Canvas.gameServer import Server
 
-__all__ = ['Client', 'Server']
+__all__ = ["Client", "Server"]

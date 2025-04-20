@@ -23,6 +23,7 @@ class Server(ServerSuper):
         your game. (We do this for serialization and server communication)
         """
         self.__comms = comms
+        self.__usersConnected = 0
         self.__state = GameState()
         pass
 
@@ -55,6 +56,7 @@ class Server(ServerSuper):
         Arguemnts;
             clientPID - PID of the client that joined the game
         """
+        self.__usersConnected += 1
         msg = "You've joined!"
         self.__comms.confirmJoin(clientPID, msg)
         pass

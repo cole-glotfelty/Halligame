@@ -5,8 +5,6 @@
 # available for use when creating halligame games. This also includes some 
 # typical patterns 
 
-from halligame.utils.gameState import GameState
-from typing import Any
 
 class ClientSuper:
     def __init__(self) -> None:

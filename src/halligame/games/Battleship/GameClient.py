@@ -23,7 +23,7 @@ class Client(ClientSuper):
         your game. (We do this for serialization and server communication)
         """
         self.__comms = comms
-        self.__state = GameState()
+        self.__playerID = None
         pass
 
     def updateState(self, state: bytes) -> None:
@@ -44,11 +44,10 @@ class Client(ClientSuper):
         (status, message) = msg
         if status == "error":
             print(message)
-        pass
 
     def joinConfirmed(self, msg) -> None:
         """
         Callback function for when the player joins the server. This message
         can be set in GameServer::addClient().
         """
-        pass
+        self.__playerID = msg

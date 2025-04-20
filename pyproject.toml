@@ -49,7 +49,11 @@ exclude = [
 extend-select = [
     "E501", # line too long
     "UP",  # pyupgrade
+    "I",   # Import sorting
 ]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
 
 [tool.ruff.format]
 indent-style = "space"

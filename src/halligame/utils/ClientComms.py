@@ -8,35 +8,39 @@
 # Changelog:
 # Cole Glotfelty <2025-04-09> - Added documentation to functions
 
-import importlib # allows us to import a module based on the name
-import os
+import importlib  # allows us to import a module based on the name
+import socket
+import subprocess
 import sys
-import asyncio
+import threading
+from random import randint
 
 from pyrlang import Node
 from pyrlang.process import Process
-from pyrlang.gen.server import GenServerInterface
 from term import Atom
-from halligame.games import *
-from random import randint
-from time import sleep
-import threading
-import socket
+
+from halligame.games import *  # noqa: F403
+
 
 class ClientCommunicate(Process):
-    # TODO: there are some serious shenanigans of imports going on here and I hate it
     def __init__(self, gameName, serverPid):
         super().__init__()
-        node.register_name(self, f'pyClient')
+        node.register_name(self, "pyClient")
 
         self.__serverPid = serverPid
 
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__clientGameInstance = gameModule.Client(self)
 
-        self.__backendSendMessage(("new_client", self.pid_))
 
         self.__delayQuitUntilConfirmation = threading.Semaphore(0)
+        self.__thisUser = (
+            subprocess.run(["whoami"], capture_output=True)
+            .stdout.decode()
+            .strip()
+        )
+        self.__backendSendMessage(("new_client", self.pid_, self.__thisUser))
+
 
     def handle_one_inbox_message(self, msg: tuple):
         """
@@ -48,20 +52,22 @@ class ClientCommunicate(Process):
         """
         if msg == "close":
             exit(0)
-        
+
         messageContents = msg[1]
 
-        if (msg[0] == "state"):
+        if msg[0] == "state":
             self.__clientGameInstance.updateState(messageContents)
-        elif (msg[0] == "message"):
+        elif msg[0] == "message":
             self.__clientGameInstance.gotServerMessage(messageContents)
-        elif (msg[0] == "confirmed_join"):
+        elif msg[0] == "confirmed_join":
             self.__clientGameInstance.joinConfirmed(messageContents)
-        elif (msg[0] == "quit_confirm"):
+        elif msg[0] == "quit_confirm":
             # can continue quit process
             self.__delayQuitUntilConfirmation.release()
         else:
-            raise ValueError("ClientComms Received an unknown message"  + str(msg))
+            raise ValueError(
+                "ClientComms Received an unknown message" + str(msg)
+            )
 
     def sendMessage(self, Msg):
         """
@@ -72,16 +78,17 @@ class ClientCommunicate(Process):
 
         self.__backendSendMessage(("message", (self.pid_, Msg)))
 
-
     def __backendSendMessage(self, Msg):
-        node.send_nowait(sender = self.pid_,
-                         receiver = (Atom(self.__serverPid), Atom("pyServer")),
-                         message = Msg)
+        node.send_nowait(
+            sender=self.pid_,
+            receiver=(Atom(self.__serverPid), Atom("pyServer")),
+            message=Msg,
+        )
 
     def shutdown(self):
-        self.__backendSendMessage(("remove_client", self.pid_))
+        self.__backendSendMessage(("remove_client", self.pid_, self.__thisUser))
 
-        # the following will block until receiving a confirmation message from 
+        # the following will block until receiving a confirmation message from
         # the server
         self.__delayQuitUntilConfirmation.acquire()
 
@@ -89,12 +96,10 @@ class ClientCommunicate(Process):
         sys.exit(0)
 
 
-
-
 def start(commServerName, gameName):
     global name, node
-    name = f'{randint(0, 999999) :06d}@{socket.gethostname()}'
+    name = f"{randint(0, 999999):06d}@{socket.gethostname()}"
     print("ClientComms NodeName: ", name)
-    node = Node(node_name = name, cookie = "Sh4rKM3ld0n")
-    clientComms = ClientCommunicate(gameName, commServerName)
+    node = Node(node_name=name, cookie="Sh4rKM3ld0n")
+    ClientCommunicate(gameName, commServerName)
     node.run()
