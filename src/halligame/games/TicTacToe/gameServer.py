@@ -6,6 +6,8 @@
 
 from typing import Any
 
+from term import Pid
+
 from halligame.utils.gameServerTemplate import ServerSuper
 from halligame.utils.gameState import GameState
 from halligame.utils.ServerComms import ServerCommunicate
@@ -15,17 +17,16 @@ class Server(ServerSuper):
     def __init__(self, comms: ServerCommunicate) -> None:
         self.__comms = comms
 
-        self.__usersConnected = 0
-
         # "Public/Client Facing Members - For GameClient.py"
         self.__state: GameState = GameState()
         self.__state.setValue(
-            "board", [[" " for x in range(3)] for y in range(3)]
+            "board", [[" " for _ in range(3)] for _ in range(3)]
         )
         self.__state.setValue("currentPlayer", 0)
         self.__state.setValue("gameOver", "")
 
         self.__playersSymbol = ["X", "O"]
+        self.__playersNames = ["nobody", "nobody"]
 
         # print(f"GameState objects: {self.__state.objects}")
         # "Private" Members for internal use only
@@ -35,9 +36,10 @@ class Server(ServerSuper):
     # from one of the clients, most likely an event/move. Note that I haven't
     # quite figured out the erlang side of things to determine which player
     # sent the message, but that is obviously coming.
-    def gotClientMessage(self, clientPID, event: tuple[int, Any]) -> None:
+    # TODO: still right?
+    def gotClientMessage(self, clientPID: Pid, event: Any) -> None:
         """
-        Determine if an event is valid
+        Determine if an event (tuple[int, Any]) is valid
 
         If valid: broadcast new state to clients
         otherwise: tell client who requested change it's not valid
@@ -55,7 +57,10 @@ class Server(ServerSuper):
                 clientPID, ("Error: Invalid Move", self.__state.serialize())
             )
 
-    def __updateState(self, event: tuple[int, Any]) -> None:
+    def __updateState(self, event: tuple[int, Any] | Any) -> None:
+        """
+        event should be of tuple[int, Any], but the superclass allows Any
+        """
         (currentPlayer, move) = event
 
         playerSymbol = self.__playersSymbol[currentPlayer]
@@ -105,14 +110,15 @@ class Server(ServerSuper):
 
         self.__state.setValue("currentPlayer", (currentPlayer + 1) % 2)
 
-    def addClient(self, clientPid, username):
-        self.__usersConnected += 1
-        if self.__usersConnected > 2:
+    def addClient(self, clientPid: Pid, username: str) -> None:
+        for i in range(2):
+            if self.__playersNames[i] in ("nobody", username):
+                self.__playersNames[i] = username
+                self.__comms.confirmJoin(
+                    clientPid, (i, self.__state.serialize())
+                )
+                break
+        else:
             self.__comms.sendClientMessage(
                 clientPid, ("Error: Too Many Players", self.__state.serialize())
-            )
-        else:
-            playerId = 0 if self.__usersConnected == 1 else 1
-            self.__comms.confirmJoin(
-                clientPid, (playerId, self.__state.serialize())
             )

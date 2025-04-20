@@ -12,6 +12,10 @@ __pycache__
 *.egg
 .ruff_cache
 dist
+.mypy_cache
+
+# pdoc
+html
 
 # Devenv
 .devenv*

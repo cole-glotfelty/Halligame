@@ -1,5 +1,4 @@
-"""
-Functions used by various modules.
+"""Functions used by various modules.
 Michael Daniels, 2025-04-20
 """
 
@@ -8,7 +7,7 @@ import subprocess
 from psutil import process_iter
 
 
-def ensure_epmd():
+def ensure_epmd() -> None:
     """Ensure that the Erlang port-mapper daemon is running"""
     epmd_running = False
     for proc in process_iter(["pid", "name"]):
@@ -19,7 +18,7 @@ def ensure_epmd():
         subprocess.Popen(["epmd", "-daemon"])
 
 
-def whoami():
+def whoami():  # noqa: ANN201
     """Returns the current user's username."""
     return (
         subprocess.run(["whoami"], capture_output=True).stdout.decode().strip()

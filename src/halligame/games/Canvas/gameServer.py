@@ -1,6 +1,9 @@
 # GameServer.py
 
 import threading
+from typing import Any
+
+from term import Pid
 
 from halligame.utils.gameServerTemplate import ServerSuper
 from halligame.utils.gameState import GameState
@@ -19,12 +22,12 @@ class Server(ServerSuper):
         self.__state: GameState = GameState()
 
         board = [
-            ["white" for i in range(self.__boardWidth)]
-            for i in range(self.__boardHeight)
+            ["white" for _ in range(self.__boardWidth)]
+            for _ in range(self.__boardHeight)
         ]
         self.__state.setValue("board", board)
 
-    def gotClientMessage(self, ClientPid, message):
+    def gotClientMessage(self, clientPid: Pid, message: Any) -> None:
         (row, col, color) = message
 
         with self.__stateLock:
@@ -32,6 +35,6 @@ class Server(ServerSuper):
 
             self.__comms.broadcastMessage(("state_diff", message))
 
-    def addClient(self, clientPid, username):
+    def addClient(self, clientPid: Pid, username: str) -> None:
         with self.__stateLock:
             self.__comms.confirmJoin(clientPid, self.__state.serialize())

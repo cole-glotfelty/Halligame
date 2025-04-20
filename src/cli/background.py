@@ -10,20 +10,23 @@ import os
 import socket
 from argparse import ArgumentParser
 from random import randint
+from typing import Any, TypeAlias
 
 from psutil import pid_exists
 from pyrlang import Node
 from pyrlang.gen.server import GenServerInterface
 from pyrlang.process import Process
-from term import Atom
+from term import Atom, Pid
 
 from halligame.utils.common import ensure_epmd, whoami
 
 WAIT_TIME_SEC = 30
 
+DestType: TypeAlias = Atom | tuple[Atom, Atom] | Pid
+
 
 class UserBackground(Process):
-    def __init__(self, shellPid: str, username: str, ttyName: str):
+    def __init__(self, shellPid: str, username: str, ttyName: str) -> None:
         super().__init__()
         node.register_name(self, Atom("backgroundProc"))
         self.__shellPid = shellPid
@@ -38,14 +41,14 @@ class UserBackground(Process):
             (Atom("serverbroker@vm-projectweb3"), Atom("serverbroker")),
             (Atom("getBrokerPid"), self.pid_),
         )
-        self.__serverBroker = None
+        self.__serverBroker = GenServerInterface(self, None)
 
         # print("DEBUG: Sent getBroker message")
 
         event_loop = asyncio.get_event_loop()
         event_loop.call_soon(self.checkOSProcessAlive)
 
-    def handle_one_inbox_message(self, msg):
+    def handle_one_inbox_message(self, msg: Any) -> None:
         # print(f"DEBUG: Got message {msg}")
         if msg[0] == Atom("brokerPid"):
             # print(f"DEBUG: pid is {msg[1]}")
@@ -80,7 +83,7 @@ class UserBackground(Process):
                 )
                 print(f"Run {msg[3]} to play!", file=f, flush=True)
 
-    def checkOSProcessAlive(self):
+    def checkOSProcessAlive(self) -> None:
         """
         Checks whether the OS process whose ID is stored in self.__shellPid
         is alive. If not, shutdown. If so, check again in WAIT_TIME_SEC seconds.
@@ -92,7 +95,7 @@ class UserBackground(Process):
         event_loop.call_later(WAIT_TIME_SEC, self.checkOSProcessAlive)
 
     #
-    def __sendMessage(self, dest, msg):
+    def __sendMessage(self, dest: DestType, msg: Any) -> None:
         """
         wrapper for sending a message with correct formatting
         dest is either:
@@ -104,11 +107,11 @@ class UserBackground(Process):
         # print(f"DEBUG: Sending Message from Background to {dest}: {msg}")
         node.send_nowait(sender=self.pid_, receiver=dest, message=msg)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         node.destroy()
 
 
-def openTty(tty):
+def openTty(tty: str):  # noqa: ANN201
     """
     Open the TTY whose path is given for writing. The caller must close it.
     """
@@ -117,11 +120,9 @@ def openTty(tty):
     )
 
 
-def start(shellPid: str, tty: str):
+def start(shellPid: str, tty: str) -> None:
     ensure_epmd()
-    global node
-    hostname = socket.gethostname()
-    node = Node(f"{randint(0, 999999):06d}@{hostname}", cookie="Sh4rKM3ld0n")
+
     UserBackground(shellPid, whoami(), tty)
     node.run()
 
@@ -131,6 +132,9 @@ if __name__ == "__main__":
     parser.add_argument("ParentShellPid")
     parser.add_argument("tty")
     args = parser.parse_args()
+
+    hostname = socket.gethostname()
+    node = Node(f"{randint(0, 999999):06d}@{hostname}", cookie="Sh4rKM3ld0n")
 
     try:
         start(args.ParentShellPid, args.tty)

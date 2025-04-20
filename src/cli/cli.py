@@ -4,7 +4,7 @@
 # Last edited: Michael Daniels, 2025-04-19
 import os
 import subprocess
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from random import randint
 from socket import gethostname
 
@@ -12,9 +12,13 @@ import halligame.utils.ClientComms as ClientComms
 import halligame.utils.ServerComms as ServerComms
 from halligame.utils.common import ensure_epmd, whoami
 
-GAMES_DIR = os.path.join(os.environ["HG_ROOT"], "src", "halligame", "games")
+#: The directory in which all games are contained.
+GAMES_DIR: str = os.path.join(
+    os.environ["HG_ROOT"], "src", "halligame", "games"
+)
 
-GAMES = list(
+#: A list of all playable games.
+GAMES: list[str] = list(
     filter(
         lambda elem: (
             os.path.isdir(os.path.join(GAMES_DIR, elem))
@@ -25,7 +29,9 @@ GAMES = list(
     )
 )
 
-SCRIPT = [
+#: The command to use for Erlang calls. The module handleCLIRequest is
+#: pre-specified, but the function and any arguments need to be appended.
+BASESCRIPT: list[str] = [
     "env",
     f"ERL_LIBS={os.environ['HG_ROOT']}/src/cli/_build/default/lib",
     "erl",
@@ -39,17 +45,19 @@ SCRIPT = [
 ]
 
 
-def join(args) -> None:
+def join(args: Namespace) -> None:
+    """Join the game with the ID stored in args.gameID."""
     ensure_epmd()
     inputGameID = str(args.gameID).replace("-", "")
 
-    cli = SCRIPT.copy()
+    cli = BASESCRIPT.copy()
     cli.append("lookupGameServerID")
     cli.append(inputGameID)
 
     gameAndNode = (
         subprocess.run(cli, capture_output=True).stdout.decode().splitlines()
     )
+
     if gameAndNode[0].strip() == "notfound":
         print(f"Error: game with id {inputGameID} not found.")
     else:
@@ -58,7 +66,11 @@ def join(args) -> None:
         ClientComms.start(nodeName, gameName)
 
 
-def new(args) -> None:
+def new(args: Namespace) -> None:
+    """
+    Create a new game of the game whose name is stored in args.game.
+    Outputs the game ID to stdout.
+    """
     ensure_epmd()
     hostname = gethostname()
     gameID = f"{randint(0, 999999):06d}"
@@ -71,25 +83,32 @@ def new(args) -> None:
 
 
 def listGames(_) -> None:
+    """List on stdout all games that can be played."""
     print("Games available:")
     for game in GAMES:
         print("    * " + game)
 
 
 def listActiveGames(_) -> None:
-    cli = SCRIPT.copy()
+    """List on stdout all active game sessions."""
+    cli = BASESCRIPT.copy()
     cli.append("listActiveGames")
     subprocess.run(cli)
 
 
 def listOnline(_) -> None:
-    cli = SCRIPT.copy()
+    """List on stdout all online users' names."""
+    cli = BASESCRIPT.copy()
     cli.append("listOnline")
     subprocess.run(cli)
 
 
-def write(args) -> None:
-    cli = SCRIPT.copy()
+def write(args: Namespace) -> None:
+    """
+    Send a message to the user whose username is stored in args.username.
+    Prints a prompt to stdout and gets input from stdin.
+    """
+    cli = BASESCRIPT.copy()
     cli.append("sendMessage")
     cli.append(whoami())
     cli.append(args.username)
@@ -133,6 +152,5 @@ if __name__ == "__main__":
     write_parser.add_argument("username")
     write_parser.set_defaults(func=write)
 
-    # the_args = parser.parse_args()
     parsed = parser.parse_args()
     parsed.func(parsed)

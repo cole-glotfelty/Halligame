@@ -6,6 +6,9 @@
 # typical patterns
 
 
+from typing import Any
+
+
 class ClientSuper:
     def __init__(self) -> None:
         pass
@@ -13,8 +16,8 @@ class ClientSuper:
     def updateState(self, state: bytes) -> None:
         pass
 
-    def gotServerMessage(self, msg) -> None:
+    def gotServerMessage(self, msg: Any) -> None:
         pass
 
-    def joinConfirmed(self, msg) -> None:
+    def joinConfirmed(self, msg: Any) -> None:
         pass

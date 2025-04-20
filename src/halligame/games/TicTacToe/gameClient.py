@@ -12,6 +12,7 @@
 
 import threading
 import time
+from typing import Any
 
 import pyfiglet
 
@@ -22,7 +23,7 @@ from halligame.utils.screen import Screen
 
 class Client(ClientSuper):
     # comms is an instance of halligame.utils.ClientCommunicate
-    def __init__(self, comms):
+    def __init__(self, comms) -> None:  # noqa: ANN001
         """
         Memeber Variables:
             screen
@@ -47,7 +48,7 @@ class Client(ClientSuper):
 
         self.initializeScreenColors()
 
-    def gotServerMessage(self, msg):
+    def gotServerMessage(self, msg: tuple[str, Any]) -> None:
         with self.__stateLock:
             toPrint = self.__formatter.renderText(msg[0])
             self.__screen.clearScreen()
@@ -58,13 +59,13 @@ class Client(ClientSuper):
 
             self.__updateState(msg[1])
 
-    def joinConfirmed(self, msg):
+    def joinConfirmed(self, msg: Any) -> None:
         (playerID, state) = msg
         self.__playerID = playerID
         self.updateState(state)
         self.defineClickableRegions()
 
-    def initializeScreenColors(self):
+    def initializeScreenColors(self) -> None:
         self.__screen.addColor(44, 29, 219, "O")
         self.__screen.addColor(219, 33, 61, "X")
         self.__screen.addColor(209, 107, 177, "background")
@@ -78,7 +79,7 @@ class Client(ClientSuper):
         self.__screen.setStyle("terminal")
         # self.__screen.setStyle("white_random")
 
-    def defineClickableRegions(self):
+    def defineClickableRegions(self) -> None:
         letter = self.__formatter.renderText("X")
         letterHeight = len(letter.split("\n"))
         letterWidth = len(letter.split("\n")[0])
@@ -95,7 +96,7 @@ class Client(ClientSuper):
                     (3 * i) + j,
                 )
 
-    def userInput(self, input):
+    def userInput(self, input: int | str) -> None:
         """
         called when the screen receives user input (a char). For now, I'm just
         forwarding input to the server side for the server side to handle
@@ -121,7 +122,9 @@ class Client(ClientSuper):
                 except Exception:  # didn't ent
                     pass
 
-    def mouseInput(self, row, col, region, mouseEventType):
+    def mouseInput(
+        self, row: int, col: int, region: int | None, mouseEventType: str
+    ) -> None:
         with self.__stateLock:  # draw it so it appears instantaneously
             if (
                 region is not None
@@ -139,7 +142,7 @@ class Client(ClientSuper):
 
                 self.__comms.sendMessage((self.__playerID, region))
 
-    def updateState(self, newState):
+    def updateState(self, newState: bytes) -> None:
         """
         Takes in a message that contains the new state (this message is sent
         from the server side of the game class) and updates the internal
@@ -148,7 +151,7 @@ class Client(ClientSuper):
         with self.__stateLock:
             self.__updateState(newState)
 
-    def __updateState(self, newState):
+    def __updateState(self, newState: bytes) -> None:
         """
         Backend for update state that does not use the statelock. Meant to be
         called by other functions that have already acquired the statelock
@@ -164,7 +167,7 @@ class Client(ClientSuper):
             self.__state.getValue("currentPlayer") == self.__playerID
         )
 
-    def __drawGameOver(self):
+    def __drawGameOver(self) -> None:
         Message = self.__formatter.renderText(self.__state.getValue("gameOver"))
         self.__screen.clearScreen()
         self.__screen.write(15, 15, Message)
@@ -175,12 +178,12 @@ class Client(ClientSuper):
         self.__drawBoard()
         self.__screen.refresh()
 
-    def __drawGame(self):
+    def __drawGame(self) -> None:
         self.__screen.clearScreen()
         self.__drawBoard()
         self.__screen.refresh()
 
-    def __drawBoard(self):
+    def __drawBoard(self) -> None:
         letter = self.__formatter.renderText("X")
         letterHeight = len(letter.split("\n"))
         letterWidth = len(letter.split("\n")[0])

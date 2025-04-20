@@ -13,17 +13,21 @@ import socket
 import sys
 import threading
 from random import randint
+from typing import Any
 
 from pyrlang import Node
 from pyrlang.process import Process
-from term import Atom
+from term import Atom, Pid
 
 from halligame.games import *  # noqa: F403
 from halligame.utils.common import whoami
 
+node: Node  # Placeholder for mypy
+name: str  # Placeholder for mypy
+
 
 class ClientCommunicate(Process):
-    def __init__(self, gameName, serverPid):
+    def __init__(self, gameName: str, serverPid: Pid) -> None:
         super().__init__()
         node.register_name(self, "pyClient")
 
@@ -35,7 +39,7 @@ class ClientCommunicate(Process):
         self.__thisUser = whoami()
         self.__backendSendMessage(("new_client", self.pid_, self.__thisUser))
 
-    def handle_one_inbox_message(self, msg: tuple):
+    def handle_one_inbox_message(self, msg: tuple) -> None:
         """
         Await messages/check inbox of erlang/pyrlang node and call callback
         function when it receives a known message, other wise, informs the user
@@ -62,23 +66,23 @@ class ClientCommunicate(Process):
                 "ClientComms Received an unknown message" + str(msg)
             )
 
-    def sendMessage(self, Msg):
+    def sendMessage(self, msg: Any) -> None:
         """
         Given a message (msg) send it to the server
 
         msg : message to send
         """
 
-        self.__backendSendMessage(("message", (self.pid_, Msg)))
+        self.__backendSendMessage(("message", (self.pid_, msg)))
 
-    def __backendSendMessage(self, Msg):
+    def __backendSendMessage(self, msg: Any) -> None:
         node.send_nowait(
             sender=self.pid_,
             receiver=(Atom(self.__serverPid), Atom("pyServer")),
-            message=Msg,
+            message=msg,
         )
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         self.__backendSendMessage(("remove_client", self.pid_, self.__thisUser))
 
         # the following will block until receiving a confirmation message from
@@ -89,7 +93,7 @@ class ClientCommunicate(Process):
         sys.exit(0)
 
 
-def start(commServerName, gameName):
+def start(commServerName: str, gameName: str) -> None:
     global name, node
     name = f"{randint(0, 999999):06d}@{socket.gethostname()}"
     print("DEBUG: ClientComms NodeName: ", name)

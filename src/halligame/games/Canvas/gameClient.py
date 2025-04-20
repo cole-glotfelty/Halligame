@@ -1,6 +1,7 @@
 # gameClient.py
 
 import threading
+from typing import Any
 
 from halligame.utils.gameClientTemplate import ClientSuper
 from halligame.utils.gameState import GameState
@@ -9,7 +10,7 @@ from halligame.utils.screen import Screen
 
 class Client(ClientSuper):
     # comms is an instance of halligame.utils.ClientCommunicate
-    def __init__(self, comms):
+    def __init__(self, comms) -> None:  # noqa: ANN001
         self.__screen = Screen(
             self.userInput, self.mouseInput, width=50, height=25
         )
@@ -27,7 +28,7 @@ class Client(ClientSuper):
         self.__colorBoxWidth = 5
         self.__colorBoxVSeparator = 1
 
-        self.__currColor = "blue"
+        self.__currColor: str = "blue"
 
         self.__screen.clearScreen()
 
@@ -37,7 +38,7 @@ class Client(ClientSuper):
 
         self.__screen.refresh()
 
-    def __initializeColors(self):
+    def __initializeColors(self) -> None:
         self.__colors = [
             "black",
             "blue",
@@ -63,7 +64,7 @@ class Client(ClientSuper):
 
         self.__screen.setStyle("black")  # set background to black
 
-    def __defineMouseRegions(self):
+    def __defineMouseRegions(self) -> None:
         self.__screen.addClickableRegion(
             self.__boardVOffset,
             self.__boardHOffset,
@@ -121,7 +122,7 @@ class Client(ClientSuper):
             "currColorHighlight",
         )
 
-    def __drawBlankBoard(self):
+    def __drawBlankBoard(self) -> None:
         boardDraw = ((" " * self.__boardWidth) + "\n") * self.__boardHeight
         self.__screen.write(
             self.__boardVOffset, self.__boardHOffset, boardDraw, "white"
@@ -137,12 +138,14 @@ class Client(ClientSuper):
             instructions,
         )
 
-    def userInput(self, input):
+    def userInput(self, input: str | int) -> None:
         if input == "q":
             self.__screen.shutdown()
             self.__comms.shutdown()
 
-    def mouseInput(self, row, col, region, mouseEventType):
+    def mouseInput(
+        self, row: int, col: int, region: str, mouseEventType: str
+    ) -> None:
         with self.__stateLock:
             if mouseEventType == "left_click":
                 if region == "board":
@@ -165,7 +168,7 @@ class Client(ClientSuper):
                 self.__drawPixel(pixelToDraw)
                 self.__comms.sendMessage(pixelToDraw)
 
-    def __updateCurrColor(self, color):
+    def __updateCurrColor(self, color: str) -> None:
         colorBoxDraw = (
             (" " * self.__colorBoxWidth) + "\n"
         ) * self.__colorBoxHeight
@@ -176,24 +179,24 @@ class Client(ClientSuper):
 
         self.__currColor = color
 
-    def __drawPixel(self, pixelToDraw):
+    def __drawPixel(self, pixelToDraw: tuple[int, int, str]) -> None:
         (row, col, color) = pixelToDraw
         self.__screen.write(
             row + self.__boardVOffset, col + self.__boardHOffset, " ", color
         )
         self.__screen.refresh()
 
-    def joinConfirmed(self, newState):
+    def joinConfirmed(self, newState: bytes) -> None:
         with self.__stateLock:
             self.__state.deserialize(newState)
             self.__drawBoard()
 
-    def gotServerMessage(self, msg):
+    def gotServerMessage(self, msg: Any) -> None:
         if msg[0] == "state_diff":
             with self.__stateLock:
                 self.__drawPixel(msg[1])
 
-    def __drawBoard(self):
+    def __drawBoard(self) -> None:
         board = self.__state.getValue("board")
         for row in range(len(board)):
             for col in range(len(board[row])):
