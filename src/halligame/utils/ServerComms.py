@@ -7,7 +7,6 @@
 # import importlib # allows us to import a module based on the name
 
 import importlib
-import subprocess
 
 from pyrlang import Node
 from pyrlang.gen.server import GenServerInterface
@@ -26,11 +25,6 @@ class ServerCommunicate(Process):
         self.__nodeName = nodeName
         self.__serverBroker = None
         self.__connectedClients = set()
-        self.__thisUser = (
-            subprocess.run(["whoami"], capture_output=True)
-            .stdout.decode()
-            .strip()
-        )
 
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__serverGameInstance = gameModule.Server(self)

@@ -1,19 +1,23 @@
-# background.py allows for erlang messages to be sent and recieved from the
-# server broker, in the background.
-# Michael Daniels, 2025-04-19
+"""
+background.py allows for erlang messages to be sent and recieved from the
+server broker, in the background.
+Michael Daniels, 2025-04-19
+"""
+
 import asyncio
 import io
 import os
 import socket
-import subprocess
 from argparse import ArgumentParser
 from random import randint
 
-import psutil
+from psutil import pid_exists
 from pyrlang import Node
 from pyrlang.gen.server import GenServerInterface
 from pyrlang.process import Process
 from term import Atom
+
+from halligame.utils.common import ensure_epmd, whoami
 
 WAIT_TIME_SEC = 30
 
@@ -77,14 +81,26 @@ class UserBackground(Process):
                 print(f"Run {msg[3]} to play!", file=f, flush=True)
 
     def checkOSProcessAlive(self):
-        if not psutil.pid_exists(int(self.__shellPid)):
+        """
+        Checks whether the OS process whose ID is stored in self.__shellPid
+        is alive. If not, shutdown. If so, check again in WAIT_TIME_SEC seconds.
+        """
+        if not pid_exists(int(self.__shellPid)):
             self.shutdown()
             exit(0)
         event_loop = asyncio.get_event_loop()
         event_loop.call_later(WAIT_TIME_SEC, self.checkOSProcessAlive)
 
-    # wrapper for sending a message with correct formatting
+    #
     def __sendMessage(self, dest, msg):
+        """
+        wrapper for sending a message with correct formatting
+        dest is either:
+            * an Atom(local registered name),
+            * a tuple (Atom(node name), Atom(registered name))
+              (note that this backwards from Erlang), or
+            * a Pid.
+        """
         # print(f"DEBUG: Sending Message from Background to {dest}: {msg}")
         node.send_nowait(sender=self.pid_, receiver=dest, message=msg)
 
@@ -93,6 +109,9 @@ class UserBackground(Process):
 
 
 def openTty(tty):
+    """
+    Open the TTY whose path is given for writing. The caller must close it.
+    """
     return io.TextIOWrapper(
         io.FileIO(os.open(tty, os.O_NOCTTY | os.O_RDWR), "w")
     )
@@ -103,20 +122,8 @@ def start(shellPid: str, tty: str):
     global node
     hostname = socket.gethostname()
     node = Node(f"{randint(0, 999999):06d}@{hostname}", cookie="Sh4rKM3ld0n")
-    username = subprocess.run(["whoami"], capture_output=True).stdout
-    UserBackground(shellPid, username.decode().strip(), tty)
+    UserBackground(shellPid, whoami(), tty)
     node.run()
-
-
-# TOOD: put in a utils thing, copied from cli.py
-def ensure_epmd():
-    epmd_running = False
-    for proc in psutil.process_iter(["pid", "name"]):
-        if proc.info["name"] == "epmd":
-            epmd_running = True
-            break
-    if not epmd_running:
-        subprocess.Popen(["epmd", "-daemon"])
 
 
 if __name__ == "__main__":

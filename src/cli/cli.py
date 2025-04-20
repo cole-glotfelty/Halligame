@@ -8,10 +8,9 @@ from argparse import ArgumentParser
 from random import randint
 from socket import gethostname
 
-import psutil
-
 import halligame.utils.ClientComms as ClientComms
 import halligame.utils.ServerComms as ServerComms
+from halligame.utils.common import ensure_epmd, whoami
 
 GAMES_DIR = os.path.join(os.environ["HG_ROOT"], "src", "halligame", "games")
 
@@ -40,16 +39,6 @@ SCRIPT = [
 ]
 
 
-def ensure_epmd():
-    epmd_running = False
-    for proc in psutil.process_iter(["pid", "name"]):
-        if proc.info["name"] == "epmd":
-            epmd_running = True
-            break
-    if not epmd_running:
-        subprocess.Popen(["epmd", "-daemon"])
-
-
 def join(args) -> None:
     ensure_epmd()
     inputGameID = str(args.gameID).replace("-", "")
@@ -72,8 +61,9 @@ def join(args) -> None:
 def new(args) -> None:
     ensure_epmd()
     hostname = gethostname()
-    server_node_name = f"{randint(0, 999999):06d}@{hostname}"
-    print(f"RoomName: {server_node_name}")
+    gameID = f"{randint(0, 999999):06d}"
+    server_node_name = f"{gameID}@{hostname}"
+    print(f"Game ID: {gameID[:3]}-{gameID[3:]}")
     try:
         ServerComms.start(args.game, server_node_name)
     except KeyboardInterrupt:
@@ -101,8 +91,7 @@ def listOnline(_) -> None:
 def write(args) -> None:
     cli = SCRIPT.copy()
     cli.append("sendMessage")
-    thisUser = subprocess.run(["whoami"], capture_output=True).stdout
-    cli.append(thisUser.decode().strip())
+    cli.append(whoami())
     cli.append(args.username)
 
     try:

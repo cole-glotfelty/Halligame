@@ -10,7 +10,6 @@
 
 import importlib  # allows us to import a module based on the name
 import socket
-import subprocess
 import sys
 import threading
 from random import randint
@@ -20,6 +19,7 @@ from pyrlang.process import Process
 from term import Atom
 
 from halligame.games import *  # noqa: F403
+from halligame.utils.common import whoami
 
 
 class ClientCommunicate(Process):
@@ -27,17 +27,12 @@ class ClientCommunicate(Process):
         super().__init__()
         node.register_name(self, "pyClient")
 
-        self.__serverPid = serverPid
-
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__clientGameInstance = gameModule.Client(self)
 
+        self.__serverPid = serverPid
         self.__delayQuitUntilConfirmation = threading.Semaphore(0)
-        self.__thisUser = (
-            subprocess.run(["whoami"], capture_output=True)
-            .stdout.decode()
-            .strip()
-        )
+        self.__thisUser = whoami()
         self.__backendSendMessage(("new_client", self.pid_, self.__thisUser))
 
     def handle_one_inbox_message(self, msg: tuple):
@@ -97,7 +92,7 @@ class ClientCommunicate(Process):
 def start(commServerName, gameName):
     global name, node
     name = f"{randint(0, 999999):06d}@{socket.gethostname()}"
-    print("ClientComms NodeName: ", name)
+    print("DEBUG: ClientComms NodeName: ", name)
     node = Node(node_name=name, cookie="Sh4rKM3ld0n")
     ClientCommunicate(gameName, commServerName)
     node.run()

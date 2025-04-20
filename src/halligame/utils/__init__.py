@@ -2,6 +2,7 @@
 
 # Import game classes
 from halligame.utils.ClientComms import ClientCommunicate
+from halligame.utils.common import *  # noqa: F403
 from halligame.utils.gameState import GameState
 from halligame.utils.screen import Screen
 from halligame.utils.ServerComms import ServerCommunicate
