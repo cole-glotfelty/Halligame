@@ -21,7 +21,7 @@ class Uno():
         self.__colors = ["red", "yellow", "green", "blue"]
         self.__deck = self.__createDeck()
         self.__discards = []
-        self.__topCard = "blank"
+        self.__topCard = self.dealCard()
 
         self.__valueformatter = pyfiglet.Figlet(font='mcg_____')
     

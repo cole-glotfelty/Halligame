@@ -46,7 +46,7 @@ class Server(ServerSuper):
             playerChange = 1
 
         if self.__game.type(card) == "reverse":
-            self.__turnChangeDelta
+            self.__turnChangeDelta *= -1
 
         playerChange *= self.__turnChangeDelta
 
@@ -55,9 +55,11 @@ class Server(ServerSuper):
         nextTurnPlayersClientId = self.__clientIdsToClientPids[self.__currUsersTurn]
         if (self.__game.type(card) == "+2"):
             for i in range(2):
+                self.__userCardCounts[nextTurnPlayersClientId][1] += 2
                 self.__comms.sendClientMessage(nextTurnPlayersClientId, ("newCard", self.__game.dealCard()))
         elif (self.__game.type(card) == "+4"):
             for i in range(4):
+                self.__userCardCounts[nextTurnPlayersClientId][1] += 4
                 self.__comms.sendClientMessage(nextTurnPlayersClientId, ("newCard", self.__game.dealCard()))
 
         if (self.__userCardCounts[userId][1] == 0):
