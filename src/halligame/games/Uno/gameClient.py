@@ -101,7 +101,7 @@ class Client(ClientSuper):
             if (msg[0] == "Game Over"):
                 self.__screen.clearScreen()
                 text = pyfiglet.figlet_format(f"Game Over, Player {msg[1]} Won", font="red_phoenix")
-                self.__screen.write(15, 15, text, "white") # TODO: don't use constants
+                self.__screen.write(15, 15, text) # TODO: don't use constants
                 self.__screen.refresh()
             elif (msg[0] == "state"):
                 self.__screen.clearScreen()
