@@ -103,6 +103,12 @@ class ServerCommunicate(Process):
             (Atom("unregister_gameserver"), self.pid_)
         )
         node.destroy()
+    
+    def sendMsgViaServerBroker(self, fromName, toUser, message):
+        # Note: fromName should be a username (all lowercase), or
+        # an arbitrary string containing at least one capital letter.
+        self.__serverBroker.cast_nowait((Atom("message_user"), fromName,
+                                         toUser, message))
 
 
 def start(game: str, node_name: str):
