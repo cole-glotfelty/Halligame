@@ -46,7 +46,7 @@ class UserBackground(Process):
         # print("DEBUG: Sent getBroker message")
 
         event_loop = asyncio.get_event_loop()
-        event_loop.call_soon(self.checkOSProcessAlive)
+        event_loop.call_soon(self.__checkOSProcessAlive)
 
     def handle_one_inbox_message(self, msg: Any) -> None:
         # print(f"DEBUG: Got message {msg}")
@@ -83,7 +83,7 @@ class UserBackground(Process):
                 )
                 print(f"Run {msg[3]} to play!", file=f, flush=True)
 
-    def checkOSProcessAlive(self) -> None:
+    def __checkOSProcessAlive(self) -> None:
         """
         Checks whether the OS process whose ID is stored in self.__shellPid
         is alive. If not, shutdown. If so, check again in WAIT_TIME_SEC seconds.
@@ -92,7 +92,7 @@ class UserBackground(Process):
             self.shutdown()
             exit(0)
         event_loop = asyncio.get_event_loop()
-        event_loop.call_later(WAIT_TIME_SEC, self.checkOSProcessAlive)
+        event_loop.call_later(WAIT_TIME_SEC, self.__checkOSProcessAlive)
 
     #
     def __sendMessage(self, dest: DestType, msg: Any) -> None:

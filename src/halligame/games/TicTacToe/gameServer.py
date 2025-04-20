@@ -112,7 +112,7 @@ class Server(ServerSuper):
 
     def addClient(self, clientPid: Pid, username: str) -> None:
         for i in range(2):
-            if self.__playersNames[i] in ("nobody", username):
+            if self.__playersNames[i] == "nobody":
                 self.__playersNames[i] = username
                 self.__comms.confirmJoin(
                     clientPid, (i, self.__state.serialize())

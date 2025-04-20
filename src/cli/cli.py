@@ -2,11 +2,14 @@
 # cli.py is the command-line interface for Halligame.
 # Created by:  Michael Daniels, 2025-04-14
 # Last edited: Michael Daniels, 2025-04-19
+import multiprocessing as mp
 import os
 import subprocess
 from argparse import ArgumentParser, Namespace
 from random import randint
 from socket import gethostname
+
+import psutil
 
 import halligame.utils.ClientComms as ClientComms
 import halligame.utils.ServerComms as ServerComms
@@ -76,10 +79,15 @@ def new(args: Namespace) -> None:
     gameID = f"{randint(0, 999999):06d}"
     server_node_name = f"{gameID}@{hostname}"
     print(f"Game ID: {gameID[:3]}-{gameID[3:]}")
-    try:
-        ServerComms.start(args.game, server_node_name)
-    except KeyboardInterrupt:
-        exit(0)
+
+    thisProc = psutil.Process(os.getpid())
+    parentPid = next(p for p in thisProc.parents() if p.name() != "uv")
+
+    mp.Process(
+        target=ServerComms.start,
+        args=(args.game, server_node_name, parentPid.pid),
+        daemon=False,
+    ).start()
 
 
 def listGames(_) -> None:
@@ -124,6 +132,7 @@ def write(args: Namespace) -> None:
 
 
 if __name__ == "__main__":
+    mp.set_start_method("forkserver")
     parser = ArgumentParser()
     subparsers = parser.add_subparsers(required=True)
 
@@ -132,7 +141,7 @@ if __name__ == "__main__":
     join_parser.set_defaults(func=join)
 
     new_parser = subparsers.add_parser("new", help="Create a new game")
-    new_parser.add_argument("-g", "--game", choices=GAMES, required=True)
+    new_parser.add_argument("game", choices=GAMES)
     new_parser.set_defaults(func=new)
 
     games_parser = subparsers.add_parser("games", help="List all games")
@@ -154,3 +163,5 @@ if __name__ == "__main__":
 
     parsed = parser.parse_args()
     parsed.func(parsed)
+
+    os._exit(0)

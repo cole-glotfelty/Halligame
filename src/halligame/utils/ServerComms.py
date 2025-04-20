@@ -6,9 +6,11 @@
 
 # import importlib # allows us to import a module based on the name
 
+import asyncio
 import importlib
 from typing import Any, TypeAlias
 
+from psutil import pid_exists
 from pyrlang import Node
 from pyrlang.gen.server import GenServerInterface
 from pyrlang.process import Process
@@ -20,15 +22,18 @@ from halligame.utils.gameState import GameState
 node: Node  # Placeholder for mypy
 DestType: TypeAlias = Atom | tuple[Atom, Atom] | Pid
 
+WAIT_TIME_SEC = 30
+
 
 class ServerCommunicate(Process):
-    def __init__(self, gameName: str, nodeName: str) -> None:
+    def __init__(self, gameName: str, nodeName: str, shellPid: int) -> None:
         super().__init__()
         node.register_name(self, Atom("pyServer"))
         self.__gameName = gameName
         self.__nodeName = nodeName
         self.__serverBroker: GenServerInterface
         self.__connectedClients: set[Pid] = set()
+        self.__shellPid = shellPid
 
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__serverGameInstance = gameModule.Server(self)
@@ -39,8 +44,11 @@ class ServerCommunicate(Process):
             (Atom("getBrokerPid"), self.pid_),
         )
 
+        event_loop = asyncio.get_event_loop()
+        event_loop.call_soon(self.__checkOSProcessAlive)
+
     def handle_one_inbox_message(self, msg: Any) -> None:
-        print(f"DEBUG: ServerComms got message {msg}\n")
+        # print(f"DEBUG: ServerComms got message {msg}\n")
         if msg == "close":
             self.shutdown()
             exit(0)
@@ -111,9 +119,20 @@ class ServerCommunicate(Process):
             (Atom("message_user"), fromName, toUser, message)
         )
 
+    def __checkOSProcessAlive(self) -> None:
+        """
+        Checks whether the OS process whose ID is stored in self.__shellPid
+        is alive. If not, shutdown. If so, check again in WAIT_TIME_SEC seconds.
+        """
+        if not pid_exists(self.__shellPid):
+            self.shutdown()
+            exit(0)
+        event_loop = asyncio.get_event_loop()
+        event_loop.call_later(WAIT_TIME_SEC, self.__checkOSProcessAlive)
 
-def start(game: str, node_name: str) -> None:
+
+def start(game: str, node_name: str, shellPid: int) -> None:
     global node
     node = Node(node_name, cookie="Sh4rKM3ld0n")
-    ServerCommunicate(game, node_name)
+    ServerCommunicate(game, node_name, shellPid)
     node.run()
