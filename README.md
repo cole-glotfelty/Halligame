@@ -46,9 +46,9 @@ to work on the Halligame framework
 - `shutdown()` : Should be called when the client leaves (or the game is over)
 
 ### Screen (halligame.utils.screen)**
-- `Screen(gotInputFunc, gotClickFunc, gotMouseClickFunc)` : 
+- `Screen(gotInputFunc, gotMouseClickFunc)` : 
     Initializes the screen class. Takes a callback function gotInputFunc that 
-    has signature gotInputFunc(input) where input is the input from the user. 
+    has signature `gotInputFunc(input)` where input is the input from the user. 
     Input is either a normal char or a special character, which is handled by 
     [ncurses curses.KEY_* constants](https://docs.python.org/3/library/curses.html#curses.KEY_MIN). 
     Additionally, takes another callback function gotMouseClickFunc that is 

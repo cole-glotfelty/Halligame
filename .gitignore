@@ -2,6 +2,9 @@
 *.bkp
 *.dtmp
 
+# why tho
+gmon.out
+
 # Python
 venv/
 .venv/
