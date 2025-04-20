@@ -32,7 +32,6 @@ class ClientCommunicate(Process):
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__clientGameInstance = gameModule.Client(self)
 
-
         self.__delayQuitUntilConfirmation = threading.Semaphore(0)
         self.__thisUser = (
             subprocess.run(["whoami"], capture_output=True)
@@ -40,7 +39,6 @@ class ClientCommunicate(Process):
             .strip()
         )
         self.__backendSendMessage(("new_client", self.pid_, self.__thisUser))
-
 
     def handle_one_inbox_message(self, msg: tuple):
         """

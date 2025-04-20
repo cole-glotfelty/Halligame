@@ -58,9 +58,9 @@ def join(args) -> None:
     cli.append("lookupGameServerID")
     cli.append(inputGameID)
 
-    gameAndNode = (subprocess.run(cli, capture_output=True)
-                   .stdout.decode()
-                   .splitlines())
+    gameAndNode = (
+        subprocess.run(cli, capture_output=True).stdout.decode().splitlines()
+    )
     if gameAndNode[0].strip() == "notfound":
         print(f"Error: game with id {inputGameID} not found.")
     else:
@@ -91,10 +91,12 @@ def listActiveGames(_) -> None:
     cli.append("listActiveGames")
     subprocess.run(cli)
 
+
 def listOnline(_) -> None:
     cli = SCRIPT.copy()
     cli.append("listOnline")
     subprocess.run(cli)
+
 
 def write(args) -> None:
     cli = SCRIPT.copy()

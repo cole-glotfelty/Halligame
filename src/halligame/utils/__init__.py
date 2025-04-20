@@ -2,9 +2,9 @@
 
 # Import game classes
 from halligame.utils.ClientComms import ClientCommunicate
-from halligame.utils.ServerComms import ServerCommunicate
 from halligame.utils.gameState import GameState
 from halligame.utils.screen import Screen
+from halligame.utils.ServerComms import ServerCommunicate
 
 # Define what symbols are exported when using "from halligame.utils import *"
-__all__ = ['ClientCommunicate', 'ServerCommunicate', 'GameState', 'Screen']
+__all__ = ["ClientCommunicate", "ServerCommunicate", "GameState", "Screen"]

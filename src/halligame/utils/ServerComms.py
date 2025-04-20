@@ -63,7 +63,7 @@ class ServerCommunicate(Process):
         elif msg[0] == "remove_client":
             ClientPid = msg[1]
             username = msg[2]
-            
+
             self.__sendMessage(ClientPid, ("quit_confirm", self.pid_))
 
             self.__connectedClients.remove(ClientPid)
@@ -103,12 +103,13 @@ class ServerCommunicate(Process):
             (Atom("unregister_gameserver"), self.pid_)
         )
         node.destroy()
-    
+
     def sendMsgViaServerBroker(self, fromName, toUser, message):
         # Note: fromName should be a username (all lowercase), or
         # an arbitrary string containing at least one capital letter.
-        self.__serverBroker.cast_nowait((Atom("message_user"), fromName,
-                                         toUser, message))
+        self.__serverBroker.cast_nowait(
+            (Atom("message_user"), fromName, toUser, message)
+        )
 
 
 def start(game: str, node_name: str):

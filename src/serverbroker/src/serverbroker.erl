@@ -1,10 +1,9 @@
 %%%-------------------------------------------------------------------
-%%% @author 
 %%% @doc
-%%%
+%%% TODO
 %%% @end
 %%% Created : 22 Mar 2025
-%%% Last edited: Michael Daniels, 16 April 2025
+%%% Last edited: Michael Daniels, 19 April 2025
 %%%-------------------------------------------------------------------
 -module(serverbroker).
 -include_lib("eunit/include/eunit.hrl").
@@ -31,7 +30,7 @@
 -record(gameserver, {game :: string(), pid :: pid(),
                      players = [] :: [#gameclient{}],
                      nodeName :: string()}).
-                    
+
 -record(state, {users = [] :: [#user{}],
                 gameservers = [] :: [#gameserver{}]}).
 
@@ -94,7 +93,8 @@ init([]) ->
 %% Handling call messages
 %% @end
 %%--------------------------------------------------------------------
--spec handle_call(Request :: term(), From :: {pid(), term()}, State :: term()) ->
+-spec handle_call(Request :: term(), From :: {pid(), term()},
+                  State :: term()) ->
       {reply, Reply :: term(), NewState :: term()} |
       {reply, Reply :: term(), NewState :: term(), Timeout :: timeout()} |
       {reply, Reply :: term(), NewState :: term(), hibernate} |
@@ -119,7 +119,7 @@ handle_call({lookupGameServerID, ID}, _From, State) ->
             {reply, notfound, State}
     end;
 handle_call(Catchall, From, State) ->
-    io:format("Unrecognized call ~p from ~p~n", [Catchall, From]),
+    io:fwrite("Unrecognized call ~p from ~p~n", [Catchall, From]),
     {reply, error, State}.
 
 
@@ -159,9 +159,11 @@ handle_cast({joined_gameserver, JoinedLogin, JoinedPid, ServerPid}, State) ->
 
     FilterUser = fun (Usr) -> Usr#user.login == JoinedLogin end,
     {[ThisUser], OtherUsers} = lists:partition(FilterUser, State#state.users),
-    UpdatedUser = ThisUser#user{playing = [ThisGS#gameserver.game | ThisUser#user.playing]},
+    UpdatedUser = ThisUser#user{playing = [ThisGS#gameserver.game |
+                                           ThisUser#user.playing]},
     monitor(process, JoinedPid),
-    {noreply, State#state{gameservers = [NewGS | Rest], users = [UpdatedUser | OtherUsers]}};
+    {noreply, State#state{gameservers = [NewGS | Rest],
+                          users = [UpdatedUser | OtherUsers]}};
 handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
     % Must be called by the game server, not a client.
     % TODO: update user's currently playing games too.
@@ -177,8 +179,10 @@ handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
     FilterUser = fun (Usr) -> Usr#user.login == LeftLogin end,
     {[ThisUser], OtherUsers} = lists:partition(FilterUser, State#state.users),
     FilterPlaying = fun (GameName) -> GameName =/= CurrGS#gameserver.game end,
-    UpdatedUser = ThisUser#user{playing = lists:filter(FilterPlaying, ThisUser#user.playing)},
-    {noreply, State#state{gameservers = [NewGS | Rest], users = [UpdatedUser | OtherUsers]}};
+    UpdatedUser = ThisUser#user{playing = lists:filter(FilterPlaying,
+                                                       ThisUser#user.playing)},
+    {noreply, State#state{gameservers = [NewGS | Rest],
+                          users = [UpdatedUser | OtherUsers]}};
 handle_cast({add_user, Login, LinuxPid, ErlangPid}, State) ->
     {ThisUser, Rest} = lists:partition(fun (Usr) -> Usr#user.login == Login end,
                                        State#state.users),
@@ -212,7 +216,7 @@ handle_cast({message_user, FromUser, ToUser, Message}, State) ->
     message_user(FromUser, ToUser, Message, State#state.users),
     {noreply, State};
 handle_cast(Catchall, State) ->
-    io:format("Unrecognized cast: ~p~n", [Catchall]),
+    io:fwrite("Unrecognized cast: ~p~n", [Catchall]),
     {noreply, State}.
 
 
@@ -228,25 +232,27 @@ handle_cast(Catchall, State) ->
       {noreply, NewState :: term(), hibernate} |
       {stop, Reason :: normal | term(), NewState :: term()}.
 handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
-    io:format("Current state ~p~n", [State]),
-    io:format("Got down message for process ~p~n", [ErlangPid]),
+    io:fwrite("Current state ~p~n", [State]),
+    io:fwrite("Got down message for process ~p~n", [ErlangPid]),
     FilterSession = fun (Ses) -> Ses#session.erlangpid =/= ErlangPid end,
-    SesMapFun = fun (Usr) -> Usr#user{sessions = lists:filter(FilterSession, Usr#user.sessions)} end,
+    SesMapFun = fun (Usr) ->
+        Usr#user{sessions = lists:filter(FilterSession, Usr#user.sessions)} end,
     NewUsers = lists:map(SesMapFun, State#state.users),
 
     FilterGameServer = fun (GS) -> GS#gameserver.pid =/= ErlangPid end,
     FilteredGSs = lists:filter(FilterGameServer, State#state.gameservers),
 
     FilterPlayers = fun (P) -> P#gameclient.pid =/= ErlangPid end,
-    PlayerMapFun = fun (GS) -> lists:filter(FilterPlayers, GS#gameserver.players) end,
+    PlayerMapFun = fun (GS) ->
+        lists:filter(FilterPlayers, GS#gameserver.players) end,
     FinalGSs = lists:map(PlayerMapFun, FilteredGSs),
     {noreply, State#state{users = NewUsers, gameservers = FinalGSs}};
 handle_info({getBrokerPid, FromPid}, State) ->
-    io:format("Got info: ~p~n", [{getBrokerPid, FromPid}]),
+    io:fwrite("Got info: ~p~n", [{getBrokerPid, FromPid}]),
     FromPid ! {brokerPid, self()},
     {noreply, State};
 handle_info(Info, State) ->
-    io:format("Unrecognized info: ~p~n", [Info]),
+    io:fwrite("Unrecognized info: ~p~n", [Info]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -344,9 +350,12 @@ add_list_user_1(Pid) ->
 
 add_list_user_2(Pid) ->
     fun () ->
-        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "wcordr01", "111", self()})),
-        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09", "222", self()})),
-        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "cglotf01", "333", self()})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "wcordr01",
+                                              "111", self()})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09",
+                                               "222", self()})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "cglotf01",
+                                               "333", self()})),
         ?assertMatch([#user{login = "cglotf01"}, #user{login = "mdanie09"},
                       #user{login = "wcordr01"}],
                      lists:sort(gen_server:call(Pid, {list_users})))

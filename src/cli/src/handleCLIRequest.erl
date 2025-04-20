@@ -2,7 +2,7 @@
 %% Class: Concurrent Programming, Spring 2025
 %% Handles certain requests coming from the "hg" command line tool.
 
-%% One weird thing to note is that every function needs to end with 
+%% One weird thing to note is that every function needs to end with
 %% "init:stop()" to terminate the process.
 
 -module(handleCLIRequest).
@@ -14,13 +14,13 @@
 -spec listActiveGames() -> no_return().
 listActiveGames() ->
     Reply = gen_server:call(?SERVERBROKER, {list_gameservers}),
-    io:format("~p~n", [Reply]),
+    io:fwrite("~p~n", [Reply]),
     init:stop().
 
 -spec listOnline() -> no_return().
 listOnline() ->
     Reply = gen_server:call(?SERVERBROKER, {list_logins}),
-    lists:map(fun (X) -> io:format("~s~n", [X]) end, Reply),
+    lists:map(fun (X) -> io:fwrite("~s~n", [X]) end, Reply),
     init:stop().
 
 % Send a user a message.
@@ -33,9 +33,9 @@ sendMessage([FromUser, ToUser, Message]) ->
 lookupGameServerID([GameServerID]) ->
     case gen_server:call(?SERVERBROKER, {lookupGameServerID, GameServerID}) of
         {GameName, NodeName} ->
-            io:format("~s~n~s~n", [GameName, NodeName]);
+            io:fwrite("~s~n~s~n", [GameName, NodeName]);
         notfound ->
-            io:format("notfound~n")
+            io:fwrite("notfound~n")
     end,
     init:stop().
 

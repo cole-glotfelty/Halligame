@@ -41,15 +41,17 @@ exclude = [
     "_build",
     "build",
     "dist",
-    "venv",
     "vendor",
 ]
 
 [tool.ruff.lint]
 extend-select = [
-    "E501", # line too long
     "UP",  # pyupgrade
     "I",   # Import sorting
+    "E",   # pycodestyle
+    "F",   # Pyflakes
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
 ]
 
 [tool.ruff.lint.isort]

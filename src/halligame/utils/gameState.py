@@ -1,6 +1,6 @@
 # gameState.py
 
-# GameState Class for serializing and desearlizing game state for server 
+# GameState Class for serializing and desearlizing game state for server
 # communication
 # Written by Will Cordray, Cole Glotfelty, Michael Daniels <2025-03-29>
 # Last modified by: Cole Glotfelty <2025-04-14>
@@ -9,16 +9,21 @@
 # Cole Glotfelty <2025-04-14> - Added Documentation
 # Michael Daniels <2025-04-03> - Switched to pickle for serialization
 
-import threading
 import pickle
+import threading
 
-class GameState():
+
+class GameState:
     """
     A Thread-Safe implementation of a dictionary for storing/managing game state
     """
-    def __init__(self, args: dict = {}):
+
+    def __init__(self, args: dict = None):
         self.__lock = threading.Lock()
-        self.__objects = args
+        if args is None:
+            self.__objects = {}
+        else:
+            self.__objects = args
 
     def serialize(self):
         """

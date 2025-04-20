@@ -1,9 +1,9 @@
-# Example Game Server 
+# Example Game Server
 # Written by Cole Glotfelty <2025-04-14>
 
 # A barebones game client explaining what needs to be implemented and what's
-# available for use when creating halligame games. This also includes some 
-# typical patterns 
+# available for use when creating halligame games. This also includes some
+# typical patterns
 
 from halligame.utils.ServerComms import ServerCommunicate
 
