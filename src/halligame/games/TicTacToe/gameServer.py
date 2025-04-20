@@ -16,6 +16,7 @@ from halligame.utils.ServerComms import ServerCommunicate
 class Server(ServerSuper):
     def __init__(self, comms: ServerCommunicate) -> None:
         self.__comms = comms
+        self.__numConnected = 0
 
         # "Public/Client Facing Members - For GameClient.py"
         self.__state: GameState = GameState()
@@ -113,12 +114,21 @@ class Server(ServerSuper):
     def addClient(self, clientPid: Pid, username: str) -> None:
         for i in range(2):
             if self.__playersNames[i] == "nobody":
+                self.__numConnected += 1
                 self.__playersNames[i] = username
                 self.__comms.confirmJoin(
-                    clientPid, (i, self.__state.serialize())
+                    clientPid, username, (i, self.__state.serialize())
                 )
                 break
         else:
             self.__comms.sendClientMessage(
                 clientPid, ("Error: Too Many Players", self.__state.serialize())
             )
+    
+    def removeClient(self, clientPID : Pid, username : str) -> None:
+        # print(f"removing client {clientPID} ({username}); "
+            #   f"numConnected = {self.__numConnected}")
+        # Stop when room is empty
+        self.__numConnected -= 1
+        if self.__numConnected == 0:
+            self.__comms.shutdown()

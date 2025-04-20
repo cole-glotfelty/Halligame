@@ -23,7 +23,7 @@
 
 -record(session, {linuxpid = "" :: string(), erlangpid :: pid()}).
 -record(user, {login :: string(), sessions = [] :: [#session{}],
-               playing = [] :: [string()]}).
+               playing = [] :: [{string(), pid()}]}).
 
 -record(gameclient, {login :: string(), pid :: pid()}).
 
@@ -143,33 +143,38 @@ handle_cast({register_gameserver, GameName, NodeName, ServerPid}, State) ->
     {noreply, State#state{gameservers = [NewGS | CurrGS]}};
 handle_cast({unregister_gameserver, ServerPid}, State) ->
     % Must be called by the game server, not a client.
-    CurrGS   = State#state.gameservers,
-    IsRegistered = fun (X) -> ServerPid == X#gameserver.pid end,
-    Filtered = lists:filter(IsRegistered, CurrGS),
+    CurrGS     = State#state.gameservers,
+    NotThisPid = fun (X) -> ServerPid =/= X#gameserver.pid end,
+    Filtered   = lists:filter(NotThisPid, CurrGS),
     {noreply, State#state{gameservers = Filtered}};
 handle_cast({joined_gameserver, JoinedLogin, JoinedPid, ServerPid}, State) ->
     % Must be called by the game server, not a client.
-    % TODO: update user's currently playing games too.
     CurrGS         = State#state.gameservers,
-    IsRegistered   = fun (X) -> ServerPid == X#gameserver.pid end,
-    {[ThisGS], Rest} = lists:partition(IsRegistered, CurrGS),
+    HasThisPid     = fun (X) -> ServerPid == X#gameserver.pid end,
+    {[ThisGS], Rest} = lists:partition(HasThisPid, CurrGS),
     OldGCs         = ThisGS#gameserver.players,
     NewGC          = #gameclient{login = JoinedLogin, pid = JoinedPid},
     NewGS          = ThisGS#gameserver{players = [NewGC | OldGCs]},
 
     FilterUser = fun (Usr) -> Usr#user.login == JoinedLogin end,
-    {[ThisUser], OtherUsers} = lists:partition(FilterUser, State#state.users),
-    UpdatedUser = ThisUser#user{playing = [ThisGS#gameserver.game |
-                                           ThisUser#user.playing]},
+    {Matching, OtherUsers} = lists:partition(FilterUser, State#state.users),
+    case Matching of
+        [] ->
+            NewUsers = OtherUsers;
+        [ThisUser] ->
+            NewPlaying = [{ThisGS#gameserver.game, JoinedPid}
+                           | ThisUser#user.playing],
+            NewUsers = [ThisUser#user{playing = NewPlaying} | OtherUsers]
+    end,
     monitor(process, JoinedPid),
     {noreply, State#state{gameservers = [NewGS | Rest],
-                          users = [UpdatedUser | OtherUsers]}};
+                          users = NewUsers}};
 handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
     % Must be called by the game server, not a client.
     % TODO: update user's currently playing games too.
     CurrGS         = State#state.gameservers,
-    IsRegistered   = fun (X) -> ServerPid == X#gameserver.pid end,
-    {[ThisGS], Rest} = lists:partition(IsRegistered, CurrGS),
+    HasThisPid     = fun (X) -> ServerPid == X#gameserver.pid end,
+    {[ThisGS], Rest} = lists:partition(HasThisPid, CurrGS),
     OldGCs         = ThisGS#gameserver.players,
     FilterFun      = fun (GC) -> ((GC#gameclient.login == LeftLogin) and
                                   (GC#gameclient.pid == LeftPid)) end,
@@ -178,7 +183,9 @@ handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
 
     FilterUser = fun (Usr) -> Usr#user.login == LeftLogin end,
     {[ThisUser], OtherUsers} = lists:partition(FilterUser, State#state.users),
-    FilterPlaying = fun (GameName) -> GameName =/= CurrGS#gameserver.game end,
+    FilterPlaying = fun ({GameName, Pid}) ->
+                            ((GameName =/= CurrGS#gameserver.game) and
+                            (Pid =/= LeftPid)) end,
     UpdatedUser = ThisUser#user{playing = lists:filter(FilterPlaying,
                                                        ThisUser#user.playing)},
     {noreply, State#state{gameservers = [NewGS | Rest],
@@ -235,17 +242,21 @@ handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
     io:fwrite("Current state ~p~n", [State]),
     io:fwrite("Got down message for process ~p~n", [ErlangPid]),
     FilterSession = fun (Ses) -> Ses#session.erlangpid =/= ErlangPid end,
-    SesMapFun = fun (Usr) ->
-        Usr#user{sessions = lists:filter(FilterSession, Usr#user.sessions)} end,
-    NewUsers = lists:map(SesMapFun, State#state.users),
+    FilterPlaying = fun ({_GameName, Pid}) -> (Pid =/= ErlangPid) end,
+    UsrMapFun = fun (Usr) ->
+        Usr#user{sessions = lists:filter(FilterSession, Usr#user.sessions),
+                 playing = lists:filter(FilterPlaying, Usr#user.playing)} end,
+    NewUsers = lists:map(UsrMapFun, State#state.users),
 
     FilterGameServer = fun (GS) -> GS#gameserver.pid =/= ErlangPid end,
     FilteredGSs = lists:filter(FilterGameServer, State#state.gameservers),
-
+    io:fwrite("Filtered GSs: ~p~n", [FilteredGSs]),
     FilterPlayers = fun (P) -> P#gameclient.pid =/= ErlangPid end,
     PlayerMapFun = fun (GS) ->
-        lists:filter(FilterPlayers, GS#gameserver.players) end,
+        GS#gameserver{players =
+                        lists:filter(FilterPlayers, GS#gameserver.players)} end,
     FinalGSs = lists:map(PlayerMapFun, FilteredGSs),
+    io:fwrite("Final GSs: ~p~n", [FinalGSs]),
     {noreply, State#state{users = NewUsers, gameservers = FinalGSs}};
 handle_info({getBrokerPid, FromPid}, State) ->
     io:fwrite("Got info: ~p~n", [{getBrokerPid, FromPid}]),

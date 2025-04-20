@@ -97,18 +97,25 @@ class ServerCommunicate(Process):
         for ClientPid in self.__connectedClients:
             self.sendClientMessage(ClientPid, msg)
 
-    def confirmJoin(self, clientPid: Pid, msg: Any) -> None:
+    def confirmJoin(self, clientPid: Pid, username : str, msg: Any) -> None:
         self.__connectedClients.add(clientPid)
         self.__sendMessage(clientPid, ("confirmed_join", msg))
+        self.__serverBroker.cast_nowait((Atom("joined_gameserver"),
+                                         username, clientPid, self.pid_))
 
     def sendClientMessage(self, clientPid: Pid, msg: Any) -> None:
         self.__sendMessage(clientPid, ("message", msg))
 
     def shutdown(self) -> None:
+        self.broadcastMessage("close")
+
         self.__serverBroker.cast_nowait(
             (Atom("unregister_gameserver"), self.pid_)
         )
-        node.destroy()
+
+        event_loop = asyncio.get_event_loop()
+        event_loop.call_later(1, exit)
+        
 
     def sendMsgViaServerBroker(
         self, fromName: str, toUser: str, message: str
