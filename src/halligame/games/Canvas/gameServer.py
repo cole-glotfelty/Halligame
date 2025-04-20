@@ -37,4 +37,5 @@ class Server(ServerSuper):
 
     def addClient(self, clientPid: Pid, username: str) -> None:
         with self.__stateLock:
-            self.__comms.confirmJoin(clientPid, self.__state.serialize())
+            self.__comms.confirmJoin(clientPid, username,
+                                     self.__state.serialize())

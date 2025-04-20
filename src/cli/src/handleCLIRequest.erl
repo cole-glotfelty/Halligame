@@ -14,13 +14,28 @@
 -spec listActiveGames() -> no_return().
 listActiveGames() ->
     Reply = gen_server:call(?SERVERBROKER, {list_gameservers}),
-    io:fwrite("~p~n", [Reply]),
+    FormatPlayer = fun({gameclient, Login, _Pid}) -> Login end,
+    FormatPlayers = fun (Players) ->
+        case Players of
+            [] -> "None.";
+            _  -> io_lib:fwrite("~p", [lists:map(FormatPlayer, Players)])
+        end
+    end,
+    PrintFun = fun ({gameserver, GameName, _Pid, Players, NodeName}) ->
+        {ID, _} = lists:split(6, NodeName),
+        io:fwrite("Game: ~p; ID: ~p; Players: ~s~n",
+                  [GameName, ID, FormatPlayers(Players)])
+    end,
+    case Reply of
+        [] -> io:fwrite("No games are active currently.~n");
+        _  -> lists:foreach(PrintFun, Reply)
+    end,
     init:stop().
 
 -spec listOnline() -> no_return().
 listOnline() ->
     Reply = gen_server:call(?SERVERBROKER, {list_logins}),
-    lists:map(fun (X) -> io:fwrite("~s~n", [X]) end, Reply),
+    lists:foreach(fun (X) -> io:fwrite("~s~n", [X]) end, Reply),
     init:stop().
 
 % Send a user a message.
