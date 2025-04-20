@@ -145,8 +145,12 @@ handle_cast({joined_gameserver, JoinedLogin, JoinedPid, ServerPid}, State) ->
     OldGCs         = ThisGS#gameserver.players,
     NewGC          = #gameclient{login = JoinedLogin, pid = JoinedPid},
     NewGS          = ThisGS#gameserver{players = [NewGC | OldGCs]},
+
+    FilterUser = fun (Usr) -> Usr#user.login == JoinedLogin end,
+    {[ThisUser], OtherUsers} = lists:partition(FilterUser, State#state.users),
+    UpdatedUser = ThisUser#user{playing = [ThisGS#gameserver.game | ThisUser#user.playing]},
     monitor(process, JoinedPid),
-    {noreply, State#state{gameservers = [NewGS | Rest]}};
+    {noreply, State#state{gameservers = [NewGS | Rest], users = [UpdatedUser | OtherUsers]}};
 handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
     % Must be called by the game server, not a client.
     % TODO: update user's currently playing games too.
@@ -158,7 +162,12 @@ handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
                                   (GC#gameclient.pid == LeftPid)) end,
     NewGCs         = lists:filter(FilterFun, OldGCs),
     NewGS          = ThisGS#gameserver{players = NewGCs},
-    {noreply, State#state{gameservers = [NewGS | Rest]}};
+
+    FilterUser = fun (Usr) -> Usr#user.login == LeftLogin end,
+    {[ThisUser], OtherUsers} = lists:partition(FilterUser, State#state.users),
+    FilterPlaying = fun (GameName) -> GameName =/= CurrGS#gameserver.game end,
+    UpdatedUser = ThisUser#user{playing = lists:filter(FilterPlaying, ThisUser#user.playing)},
+    {noreply, State#state{gameservers = [NewGS | Rest], users = [UpdatedUser | OtherUsers]}};
 handle_cast({add_user, Login, LinuxPid, ErlangPid}, State) ->
     {ThisUser, Rest} = lists:partition(fun (Usr) -> Usr#user.login == Login end,
                                        State#state.users),

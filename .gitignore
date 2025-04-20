@@ -43,3 +43,4 @@ logs
 *.iml
 rebar3.crashdump
 *~
+erlang_ls.config

@@ -7,6 +7,7 @@
 # import importlib # allows us to import a module based on the name
 
 import importlib
+import subprocess
 
 from pyrlang import Node
 from pyrlang.gen.server import GenServerInterface
@@ -25,6 +26,11 @@ class ServerCommunicate(Process):
         self.__nodeName = nodeName
         self.__serverBroker = None
         self.__connectedClients = set()
+        self.__thisUser = (
+            subprocess.run(["whoami"], capture_output=True)
+            .stdout.decode()
+            .strip()
+        )
 
         gameModule = importlib.import_module("halligame.games." + gameName)
         self.__serverGameInstance = gameModule.Server(self)
@@ -34,7 +40,6 @@ class ServerCommunicate(Process):
             (Atom("serverbroker@vm-projectweb3"), Atom("serverbroker")),
             (Atom("getBrokerPid"), self.pid_),
         )
-        
 
     def handle_one_inbox_message(self, msg):
         print(f"DEBUG: ServerComms got message {msg}\n")
@@ -53,15 +58,16 @@ class ServerCommunicate(Process):
             )
         elif msg[0] == "new_client":
             clientPid = msg[1]
-            self.__serverGameInstance.addClient(
-                clientPid
-            )  # send them the client
+            username = msg[2]
+            self.__serverGameInstance.addClient(clientPid, username)
         elif msg[0] == "remove_client":
             ClientPid = msg[1]
+            username = msg[2]
+            
             self.__sendMessage(ClientPid, ("quit_confirm", self.pid_))
 
             self.__connectedClients.remove(ClientPid)
-            self.__serverGameInstance.removeClient(ClientPid)
+            self.__serverGameInstance.removeClient(ClientPid, username)
         elif msg[0] == "message":
             clientPid = msg[1][0]
             message = msg[1][1]

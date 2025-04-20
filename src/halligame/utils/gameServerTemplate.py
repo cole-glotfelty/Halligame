@@ -15,9 +15,9 @@ class ServerSuper:
     def gotClientMessage(self, event, clientPID) -> None:
         pass
 
-    def addClient(self, clientPID) -> None:
+    def addClient(self, clientPID, username) -> None:
         self.__comms.confirmJoin(clientPID, "")
         pass
 
-    def removeClient(self, clientPID) -> None:
+    def removeClient(self, clientPID, username) -> None:
         pass
