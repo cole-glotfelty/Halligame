@@ -105,8 +105,19 @@ init([]) ->
       {stop, Reason :: term(), NewState :: term()}.
 handle_call({list_users}, _From, State) ->
     {reply, State#state.users, State};
+handle_call({list_logins}, _From, State) ->
+    {reply, lists:map(fun (X) -> X#user.login end, State#state.users), State};
 handle_call({list_gameservers}, _From, State) ->
     {reply, State#state.gameservers, State};
+handle_call({lookupGameServerID, ID}, _From, State) ->
+    % ID is a list of six digits.
+    FilterFun = fun (GS) -> lists:prefix(ID, GS#gameserver.nodeName) end,
+    case lists:filter(FilterFun, State#state.gameservers) of
+        [TheGS] ->
+            {reply, {TheGS#gameserver.game, TheGS#gameserver.nodeName}, State};
+        [] ->
+            {reply, notfound, State}
+    end;
 handle_call(Catchall, From, State) ->
     io:format("Unrecognized call ~p from ~p~n", [Catchall, From]),
     {reply, error, State}.

@@ -6,7 +6,7 @@
 # typical patterns 
 
 from halligame.utils.ServerComms import ServerCommunicate
-from halligame.utils.gameState import GameState
+
 
 class ServerSuper:
     def __init__(self, comms: ServerCommunicate) -> None:

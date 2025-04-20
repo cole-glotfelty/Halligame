@@ -6,7 +6,7 @@
 %% "init:stop()" to terminate the process.
 
 -module(handleCLIRequest).
--export([listActiveGames/0, sendMessage/1]).
+-export([listActiveGames/0, sendMessage/1, lookupGameServerID/1, listOnline/0]).
 
 -define(SERVERBROKER, {serverbroker, 'serverbroker@vm-projectweb3'}).
 
@@ -17,12 +17,28 @@ listActiveGames() ->
     io:format("~p~n", [Reply]),
     init:stop().
 
+-spec listOnline() -> no_return().
+listOnline() ->
+    Reply = gen_server:call(?SERVERBROKER, {list_logins}),
+    lists:map(fun (X) -> io:format("~s~n", [X]) end, Reply),
+    init:stop().
+
 % Send a user a message.
 -spec sendMessage([string() | [string() | string() | []]]) -> no_return().
 sendMessage([FromUser, ToUser, Message]) ->
     gen_server:cast(?SERVERBROKER, {message_user, FromUser, ToUser, Message}),
     init:stop().
-    
+
+-spec lookupGameServerID([string() | []]) -> no_return().
+lookupGameServerID([GameServerID]) ->
+    case gen_server:call(?SERVERBROKER, {lookupGameServerID, GameServerID}) of
+        {GameName, NodeName} ->
+            io:format("~s~n~s~n", [GameName, NodeName]);
+        notfound ->
+            io:format("notfound~n")
+    end,
+    init:stop().
+
 % TODO: implement?
 % addFriend(FriendID) ->
 %     init:stop().

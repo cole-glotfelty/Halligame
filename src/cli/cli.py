@@ -52,7 +52,21 @@ def ensure_epmd():
 
 def join(args) -> None:
     ensure_epmd()
-    ClientComms.start(args.commServer, args.game)
+    inputGameID = str(args.gameID).replace("-", "")
+
+    cli = SCRIPT.copy()
+    cli.append("lookupGameServerID")
+    cli.append(inputGameID)
+
+    gameAndNode = (subprocess.run(cli, capture_output=True)
+                   .stdout.decode()
+                   .splitlines())
+    if gameAndNode[0].strip() == "notfound":
+        print(f"Error: game with id {inputGameID} not found.")
+    else:
+        gameName = gameAndNode[0]
+        nodeName = gameAndNode[1]
+        ClientComms.start(nodeName, gameName)
 
 
 def new(args) -> None:
@@ -77,6 +91,10 @@ def listActiveGames(_) -> None:
     cli.append("listActiveGames")
     subprocess.run(cli)
 
+def listOnline(_) -> None:
+    cli = SCRIPT.copy()
+    cli.append("listOnline")
+    subprocess.run(cli)
 
 def write(args) -> None:
     cli = SCRIPT.copy()
@@ -100,8 +118,7 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(required=True)
 
     join_parser = subparsers.add_parser("join", help="Join an existing game")
-    join_parser.add_argument("-g", "--game", choices=GAMES, required=True)
-    join_parser.add_argument("-s", "--commServer", required=True)
+    join_parser.add_argument("gameID")
     join_parser.set_defaults(func=join)
 
     new_parser = subparsers.add_parser("new", help="Create a new game")
@@ -115,6 +132,11 @@ if __name__ == "__main__":
         "active", help="List all current game sessions"
     )
     active_games_parser.set_defaults(func=listActiveGames)
+
+    online_parser = subparsers.add_parser(
+        "online", help="List all currently online players"
+    )
+    online_parser.set_defaults(func=listOnline)
 
     write_parser = subparsers.add_parser("write", help="Write a user a message")
     write_parser.add_argument("username")
