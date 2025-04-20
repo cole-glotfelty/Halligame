@@ -78,7 +78,8 @@ def new(args: Namespace) -> None:
     hostname = gethostname()
     gameID = f"{randint(0, 999999):06d}"
     server_node_name = f"{gameID}@{hostname}"
-    print(f"Game ID: {gameID[:3]}-{gameID[3:]}")
+    print("New game created.")
+    print(f"Run \"hg join {gameID[:3]}-{gameID[3:]}\" to join!")
 
     thisProc = psutil.Process(os.getpid())
     parentPid = next(p for p in thisProc.parents() if p.name() != "uv")
