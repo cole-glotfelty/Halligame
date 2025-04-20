@@ -67,17 +67,17 @@ class Server(ServerSuper):
         else:
             self.__comms.broadcastMessage(self.serializeState())
 
-    def addClient(self, clientPid):
+    def addClient(self, clientPid, username):
         with self.__stateLock:
             if (self.__numConnected >= 10):
-                self.__comms.confirmJoin(clientPid, "Game Full")
+                self.__comms.confirmJoin(clientPid, username, "Game Full")
             else:
                 clientDeck = [self.__game.dealCard() for i in range(7)]
                 print(clientDeck)
                 self.__clientPidsToClientIds[clientPid] = self.__numConnected
                 self.__clientIdsToClientPids[self.__numConnected] = clientPid
                 self.__userCardCounts.append([self.__numConnected, 7]) # this user has 7 cards
-                self.__comms.confirmJoin(clientPid, (self.__numConnected, clientDeck))
+                self.__comms.confirmJoin(clientPid, username, (self.__numConnected, clientDeck))
                 self.__comms.broadcastMessage(self.serializeState())
 
                 self.__numConnected += 1
