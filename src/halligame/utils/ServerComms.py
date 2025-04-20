@@ -63,7 +63,7 @@ class ServerCommunicate(Process):
 
     # wrapper for sending a message with correct formatting
     def __sendMessage(self, dest, msg):
-        # print(f"DEBUG: Sending Message from ServerComms to {dest}: {msg}")
+        print(f"DEBUG: Sending Message from ServerComms to {dest}: {msg}")
         node.send_nowait(sender = self.pid_,
                          receiver = dest,
                          message = msg)

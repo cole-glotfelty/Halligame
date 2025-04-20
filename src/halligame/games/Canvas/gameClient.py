@@ -4,9 +4,6 @@ from halligame.utils.screen import Screen
 from halligame.utils.gameState import GameState
 from halligame.utils.gameClientTemplate import ClientSuper
 import threading
-import pyfiglet
-
-import time
 
 class Client(ClientSuper):
     # comms is an instance of halligame.utils.ClientCommunicate 
