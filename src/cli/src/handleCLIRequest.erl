@@ -18,7 +18,7 @@ listActiveGames() ->
     FormatPlayer = fun({gameclient, Login, _Pid}) -> Login end,
     FormatPlayers = fun (Players) ->
         case Players of
-            [] -> "None.";
+            [] -> "none";
             _  -> io_lib:fwrite("~p", [lists:map(FormatPlayer, Players)])
         end
     end,

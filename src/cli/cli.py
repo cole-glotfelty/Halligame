@@ -209,6 +209,9 @@ if __name__ == "__main__":
     invite_parser.set_defaults(func=invite)
 
     parsed = parser.parse_args()
-    parsed.func(parsed)
-
-    os._exit(0)
+    if not parsed.subcommand:
+        parser.print_help()
+        exit(1)
+    else:
+        parsed.func(parsed)
+        exit(0)
