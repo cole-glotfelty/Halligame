@@ -3,6 +3,7 @@
 *.dtmp
 
 # why tho
+._*
 gmon.out
 
 # Python
