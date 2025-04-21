@@ -10,7 +10,7 @@ from random import randint
 from socket import gethostname
 
 import psutil
-from term import codec, Pid
+from term import Atom, codec
 
 import halligame.utils.ClientComms as ClientComms
 import halligame.utils.ServerComms as ServerComms
@@ -58,17 +58,18 @@ def join(args: Namespace) -> None:
     cmd.append("lookupGameServerID")
     cmd.append(inputGameID)
 
-    gameAndNode = (
-        subprocess.run(cmd, capture_output=True).stdout.decode().splitlines()
-    )
+    returned = subprocess.run(cmd, capture_output=True).stdout.splitlines()
 
-    if gameAndNode[0].strip() == "notfound":
-        print(f"Error: game with id {inputGameID} not found.")
-    else:
-        gameName = gameAndNode[0]
-        nodeName = gameAndNode[1]
-        nodePid  = codec.binary_to_term(gameAndNode[2])
-        ClientComms.start(nodeName, gameName, nodePid)
+    match returned:
+        case "notfound":
+            print(f"Error: game with id {inputGameID} not found.")
+        case gameName, nodeName, nodePid:
+            print(f"{nodePid[1:]}")
+            print(f"{codec.binary_to_term(nodePid[1:])}")
+            ClientComms.start(nodeName.decode(), gameName.decode(),
+                              codec.binary_to_term(nodePid[1:])[0])
+        case _:
+            print(f"Error: cli got bad response from broker: {returned}")
 
 
 def new(args: Namespace) -> None:
@@ -89,7 +90,6 @@ def new(args: Namespace) -> None:
     mp.Process(
         target=ServerComms.start,
         args=(args.game, server_node_name, parentPid.pid),
-        daemon=False,
     ).start()
 
 

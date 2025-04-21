@@ -51,7 +51,7 @@ class ServerCommunicate(Process):
             case "close":
                 self.shutdown()
                 exit(0)
-            case Atom("brokerPid"), brokerPid:
+            case "brokerPid", brokerPid:
                 self.__serverBroker = GenServerInterface(self, brokerPid)
                 self.__serverBroker.cast_nowait(
                     (
@@ -61,16 +61,16 @@ class ServerCommunicate(Process):
                         self.pid_,
                     )
                 )
-            case Atom("new_client"), clientPid, username:
+            case "new_client", clientPid, username:
                 self.__serverGameInstance.addClient(clientPid, username)
                 node.monitor_process(self.pid_, clientPid)
-            case Atom("remove_client"), clientPid, username:
+            case "remove_client", clientPid, username:
                 self.__sendMessage(clientPid, ("quit_confirm", self.pid_))
                 self.__connectedClients.discard((clientPid, username))
                 self.__serverGameInstance.removeClient(clientPid, username)
-            case Atom("message"), (clientPid, message):
+            case "message", (clientPid, message):
                 self.__serverGameInstance.gotClientMessage(clientPid, message)
-            case Atom("DOWN"), _ref, Atom("process"), fromPid, _reason:
+            case "DOWN", _ref, "process", fromPid, _reason:
                 for clientPid, username in self.__connectedClients:
                     if clientPid == fromPid:
                         self.__connectedClients.discard((clientPid, username))

@@ -8,7 +8,6 @@
 # Changelog:
 # Cole Glotfelty <2025-04-09> - Added documentation to functions
 
-from http import server
 import importlib  # allows us to import a module based on the name
 import socket
 import sys
@@ -50,15 +49,15 @@ class ClientCommunicate(Process):
         """
 
         match msg:
-            case Atom("close"):
+            case "close":
                 exit(0)
-            case Atom("state"), newState:
+            case "state", newState:
                 self.__clientGameInstance.updateState(newState)
-            case Atom("message"), messageContents:
+            case "message", messageContents:
                 self.__clientGameInstance.gotServerMessage(messageContents)
-            case Atom("confirmed_join"), messageContents:
+            case "confirmed_join", messageContents:
                 self.__clientGameInstance.joinConfirmed(messageContents)
-            case Atom("quit_confirm"):
+            case "quit_confirm":
                 # can continue quit process
                 self.__delayQuitUntilConfirmation.release()
             case _:
@@ -75,7 +74,7 @@ class ClientCommunicate(Process):
         """Send arbitrary messages to the game server."""
         node.send_nowait(
             sender=self.pid_,
-            receiver=(Atom(self.__serverPid), Atom("pyServer")),
+            receiver=self.__serverPid,
             message=msg,
         )
 
@@ -93,7 +92,7 @@ class ClientCommunicate(Process):
         sys.exit(0)
 
 
-def start(serverNodeName: str, gameName: str, serverPid = Pid) -> None:
+def start(serverNodeName: str, gameName: str, serverPid : Pid) -> None:
     """Start the client instance and its Pyrlang node."""
     global name, node
     name = f"{randint(0, 999999):06d}@{socket.gethostname()}"
