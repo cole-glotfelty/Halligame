@@ -53,12 +53,12 @@ def join(args: Namespace) -> None:
     ensure_epmd()
     inputGameID = str(args.gameID).replace("-", "")
 
-    cli = BASESCRIPT.copy()
-    cli.append("lookupGameServerID")
-    cli.append(inputGameID)
+    cmd = BASESCRIPT.copy()
+    cmd.append("lookupGameServerID")
+    cmd.append(inputGameID)
 
     gameAndNode = (
-        subprocess.run(cli, capture_output=True).stdout.decode().splitlines()
+        subprocess.run(cmd, capture_output=True).stdout.decode().splitlines()
     )
 
     if gameAndNode[0].strip() == "notfound":
@@ -100,16 +100,16 @@ def listGames(_) -> None:
 
 def listActiveGames(_) -> None:
     """List on stdout all active game sessions."""
-    cli = BASESCRIPT.copy()
-    cli.append("listActiveGames")
-    subprocess.run(cli)
+    cmd = BASESCRIPT.copy()
+    cmd.append("listActiveGames")
+    subprocess.run(cmd)
 
 
 def listOnline(_) -> None:
     """List on stdout all online users' names."""
-    cli = BASESCRIPT.copy()
-    cli.append("listOnline")
-    subprocess.run(cli)
+    cmd = BASESCRIPT.copy()
+    cmd.append("listOnline")
+    subprocess.run(cmd)
 
 
 def write(args: Namespace) -> None:
@@ -117,10 +117,10 @@ def write(args: Namespace) -> None:
     Send a message to the user whose username is stored in args.username.
     Prints a prompt to stdout and gets input from stdin.
     """
-    cli = BASESCRIPT.copy()
-    cli.append("sendMessage")
-    cli.append(whoami())
-    cli.append(args.username)
+    cmd = BASESCRIPT.copy()
+    cmd.append("sendMessage")
+    cmd.append(whoami())
+    cmd.append(args.username)
 
     try:
         message = input("Enter your message here: ")
@@ -128,8 +128,8 @@ def write(args: Namespace) -> None:
         message = ""
 
     if message != "":
-        cli.append(message)
-        subprocess.run(cli)
+        cmd.append(message)
+        subprocess.run(cmd)
 
 
 if __name__ == "__main__":
