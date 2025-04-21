@@ -20,6 +20,7 @@ class Client(ClientSuper):
 
         self.__currUsersTurn = 0 # the current users turn
         self.__myTurn = False # whether it's my turn or not
+        self.__gameOver = False
         self.__waitingCard = None
 
         self.__screen.clearScreen()
@@ -47,14 +48,30 @@ class Client(ClientSuper):
 
     def mouseInput(self, row, col, region, mouseEventType):
         with self.__stateLock:
-            if mouseEventType == "left_click" and self.__myTurn:
-                if type(region) == int and self.__game.cardPlacable(self.__topCard, self.__deck[region]):
+            if mouseEventType == "left_click":
+                if (self.__gameOver):
+                    self.__screen.displayFullScreenMessage("GAME OVER", 1.5, font="roman")
+                    self.__drawScreen()
+                elif (not self.__myTurn):
+                    self.__screen.displayFullScreenMessage("NOT YOUR\nTURN", 1.5, font="roman")
+                    self.__drawScreen()
+                elif type(region) == int:
                     # need to pick a card before it's a valid choice
-                    if (self.__game.type(self.__deck[region]) in ["wild", "+4"]):
+                    if (not self.__game.cardPlacable(self.__topCard, self.__deck[region])):
+                        self.__screen.displayFullScreenMessage("INVALID CARD", 1.5, font="roman")
+                        self.__drawScreen()
+                    elif (self.__game.type(self.__deck[region]) in ["wild", "+4"]):
                         self.__waitingCard = self.__deck.pop(region)
                         self.colorPicker()
                     else:
-                        self.__comms.sendMessage(("placeCard", self.__playerNum, self.__deck.pop(region), self.__deck))
+                        card = self.__deck.pop(region)
+                        self.__comms.sendMessage(("placeCard", self.__playerNum, card, self.__deck))
+
+                        self.__myTurn = False
+
+                        # do client insta update
+                        self.__topCard = card
+                        self.__drawScreen()
                 if region == "dealCard":
                     self.__comms.sendMessage(("dealCard", self.__playerNum))
                 elif (region in ["red", "yellow", "green", "blue"]): # respond to color picker
@@ -64,6 +81,10 @@ class Client(ClientSuper):
                         self.__comms.sendMessage(("placeCard", self.__playerNum, card, self.__deck))
 
                         self.__waitingCard = None
+
+                        # do insta update
+                        self.__topCard = card
+                        self.__drawScreen()
 
     def colorPicker(self):
         numRows = self.__screen.terminalHeight()
@@ -100,7 +121,8 @@ class Client(ClientSuper):
 
     def joinConfirmed(self, joinMsg):
         with self.__stateLock:
-            if (joinMsg == "Game Full"):
+            if (joinMsg == "GAME FULL" or joinMsg == "GAME STARTED"):
+                self.__screen.displayFullScreenMessage(joinMsg + "\n\nJOINING AS VIEWER", 3, font="roman")
                 # joining as viewer
                 self.__playerNum = -1
                 self.__deck = []
@@ -110,20 +132,29 @@ class Client(ClientSuper):
     def gotServerMessage(self, msg):
         with self.__stateLock:
             if (msg[0] == "Game Over"):
-                self.__screen.clearScreen()
-                text = pyfiglet.figlet_format(f"Game Over, Player {msg[1]} Won", font="red_phoenix")
-                self.__screen.write(self.__screen.getCenteredRow(text), self.__screen.getCenteredCol(text), text)
-                self.__screen.refresh()
+                self.__gameOver = True
+                self.__winner = msg[1]
+
+                self.__screen.displayFullScreenMessage(f"Game Over\n{self.__winner} Won!", 3, font="roman")
+                self.__updateState(msg[2][1])
             elif (msg[0] == "state"):
-                # unpack state
-                (self.__topCard, self.__opponentCardCounts, self.__playerUTLNs, self.__currUsersTurn) = msg[1]
-
-                self.__myTurn = self.__currUsersTurn == self.__playerNum
-
-                self.__drawScreen()
+                self.__updateState(msg[1])
             elif (msg[0] == "newCard"):
                 self.__deck.append(msg[1])
                 self.__drawScreen()
+
+    def __updateState(self, state):
+        # unpack state
+        (self.__topCard, self.__opponentCardCounts, self.__playerUTLNs, self.__currUsersTurn) = state
+
+        if (not self.__gameOver):
+            # just became your turn
+            if (not self.__myTurn and self.__currUsersTurn == self.__playerNum):
+                self.__screen.displayFullScreenMessage("YOUR TURN", 1, font="roman")
+
+            self.__myTurn = self.__currUsersTurn == self.__playerNum
+
+        self.__drawScreen()
 
     def __drawScreen(self):
         self.__screen.clearScreen()
@@ -141,7 +172,7 @@ class Client(ClientSuper):
         cardHeight = self.__game.cardHeight()
         cardWidth = self.__game.cardWidth()
 
-        col = 0
+        col = 1
         for playerNum in range(len(self.__opponentCardCounts)):
             count = self.__opponentCardCounts[playerNum]
             if (count == -1):
@@ -159,7 +190,7 @@ class Client(ClientSuper):
             self.__screen.write(cardHeight + 2, col + 1, f"Player: {self.__playerUTLNs[playerNum]}", colorPairId=colorPairId)
             self.__screen.write(cardHeight + 3, col + 1, f"Count: {count}", colorPairId=colorPairId)
     
-            col += cardWidth + 4
+            col += cardWidth + 2
 
     def __drawCardPile(self):
         centeredRow = (self.__screen.terminalHeight() // 2) - (self.__game.cardHeight() // 2)
@@ -169,33 +200,47 @@ class Client(ClientSuper):
 
     def __drawGameInfo(self):
         gameInfo = []
-        gameInfo.append(f"Current Player: {self.__playerUTLNs[self.__currUsersTurn]}")
+        if (self.__gameOver):
+            gameInfo.append(f"Game Over: {self.__winner} Won!")
+        else:
+            gameInfo.append(f"Current Player: {self.__playerUTLNs[self.__currUsersTurn]}")
+            if (self.__myTurn):
+                gameInfo.append(f"It's Your Turn")
 
-        numRows = self.__screen.terminalHeight()
-
-        printableInfo = "\n".join(gameInfo)
+        printableInfo = "\n\n".join(gameInfo)
         centeredRow = self.__screen.getCenteredRow(printableInfo)
-        self.__screen.write(centeredRow, 0, printableInfo)
+        self.__screen.write(centeredRow, 3, printableInfo)
 
     def __drawHand(self):
+        if (len(self.__deck) == 0): # nothing to draw
+            return
+
         numCols = self.__screen.terminalWidth()
         numRows = self.__screen.terminalHeight()
 
         cardTopRow = numRows - self.__game.cardHeight() - 1
+        cardCol = 1
 
         widthDiff = numCols // len(self.__deck)
-        widthDiff = max(6, widthDiff)
         widthDiff = min(self.__game.cardWidth() + 8, widthDiff)
 
-        col = 0
+        # Make sure within bound
+        while widthDiff  * (len(self.__deck) - 1) + self.__game.cardWidth() + cardCol >= numCols:
+            widthDiff -= 1
+
+        widthDiff = max(3, widthDiff)
+
         for i, card in enumerate(self.__deck):
-            self.__game.drawCard(cardTopRow, col, card, self.__screen)
+            self.__game.drawCard(cardTopRow, cardCol, card, self.__screen)
 
-            self.__screen.addClickableRegion(cardTopRow, col, self.__game.cardHeight(), self.__game.cardWidth(), i)
+            self.__screen.addClickableRegion(cardTopRow, cardCol, self.__game.cardHeight(), self.__game.cardWidth(), i)
 
-            col += widthDiff
+            cardCol += widthDiff
 
     def __drawButtons(self):
+        if (self.__playerNum == -1): # viewer
+            return
+
         buttons = []
         buttons.append(pyfiglet.figlet_format(f"DRAW", font="finalass"))
 

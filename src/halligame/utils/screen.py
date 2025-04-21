@@ -10,6 +10,8 @@ import threading
 import subprocess
 import sys
 
+import pyfiglet
+
 # INTERFACE:
 #   __init__():               initializes the class
 #   shutdown():               closes the curses window and restores the normal 
@@ -288,13 +290,30 @@ class Screen():
 
     def getCenteredRow(self, toPrint):
         with self.__lock:
-            return (self.__terminalHeight() // 2) - (len(str(toPrint).split("\n")) // 2)
+            row = (self.__terminalHeight() // 2) - (len(str(toPrint).split("\n")) // 2)
+            return max(0, row)
 
     def getCenteredCol(self, toPrint):
         with self.__lock:
             toPrintSplit = str(toPrint).split("\n")
 
             if (len(toPrintSplit) > 0):
-                return (self.__terminalWidth() // 2) - (len(toPrintSplit[0]) // 2)
+                col = (self.__terminalWidth() // 2) - (len(toPrintSplit[0]) // 2)
             else:
-                return (self.__terminalWidth() // 2)
+                col = (self.__terminalWidth() // 2)
+            
+            return max(0, col)
+
+    def displayFullScreenMessage(self, message, displayTime, font=None):
+        self.clearScreen()
+        
+        if (font != None):
+            message = pyfiglet.figlet_format(message, font=font, width=self.terminalWidth() - 10)
+        
+        row = self.getCenteredRow(message)
+        col = self.getCenteredCol(message)
+
+        self.write(row, col, message)
+        self.refresh()
+
+        time.sleep(displayTime)

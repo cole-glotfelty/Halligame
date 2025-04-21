@@ -49,11 +49,7 @@ class Client(ClientSuper):
     def gotServerMessage(self, msg: tuple[str, Any]) -> None:
         with self.__stateLock:
             toPrint = self.__formatter.renderText(msg[0])
-            self.__screen.clearScreen()
-            self.__screen.write(0, 15, toPrint)
-            self.__screen.refresh()
-
-            time.sleep(1.5)
+            self.__screen.displayFullScreenMessage(toPrint, 1.5)
 
             self.__updateState(msg[1])
 
@@ -125,6 +121,10 @@ class Client(ClientSuper):
         self, row: int, col: int, region: int | None, mouseEventType: str
     ) -> None:
         with self.__stateLock:  # draw it so it appears instantaneously
+            if (not self.__myTurn):
+                message = self.__formatter.renderText("Not Your Turn")
+                self.__screen.displayFullScreenMessage(message, 1.5)
+                self.__drawGame()
             if (
                 region is not None
                 and self.__myTurn
@@ -166,14 +166,9 @@ class Client(ClientSuper):
 
     def __drawGameOver(self) -> None:
         Message = self.__formatter.renderText(self.__state.getValue("gameOver"))
-        self.__screen.clearScreen()
-        self.__screen.write(15, 15, Message)
-        self.__screen.refresh()
+        self.__screen.displayFullScreenMessage(Message, 3)
 
-        time.sleep(3)
-        self.__screen.clearScreen()
-        self.__drawBoard()
-        self.__screen.refresh()
+        self.__drawGame()
 
     def __drawGame(self) -> None:
         self.__screen.clearScreen()
