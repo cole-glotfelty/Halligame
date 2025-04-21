@@ -33,6 +33,7 @@ listActiveGames() ->
     end,
     init:stop().
 
+% List all users who are online on stdout.
 -spec listOnline() -> no_return().
 listOnline() ->
     Reply = gen_server:call(?SERVERBROKER, {list_logins}),
@@ -52,6 +53,8 @@ sendInvite([FromUser, ToUser, GameName, JoinCommand]) ->
                     {invite_user, FromUser, ToUser, GameName, JoinCommand}),
     init:stop().
 
+% Looks up the game server with the given ID.
+% Prints to stdout the game name, node name, and pid, all seperated by newlines.
 -spec lookupGameServerID([string() | []]) -> no_return().
 lookupGameServerID([GameServerID]) ->
     case gen_server:call(?SERVERBROKER, {lookupGameServerID, GameServerID}) of
