@@ -5,9 +5,8 @@ Michael Daniels, 2025-04-19
 """
 
 import asyncio
-import io
-import os
 import socket
+import subprocess
 from argparse import ArgumentParser
 from random import randint
 from typing import Any, TypeAlias
@@ -26,13 +25,12 @@ DestType: TypeAlias = Atom | tuple[Atom, Atom] | Pid
 
 
 class UserBackground(Process):
-    def __init__(self, shellPid: str, username: str, ttyName: str) -> None:
+    def __init__(self, shellPid: str, username: str) -> None:
         super().__init__()
         node.register_name(self, Atom("backgroundProc"))
         self.__shellPid = shellPid
         self.__serverBroker = None
         self.__username = username
-        self.__ttyName = ttyName
 
         # print("DEBUG: Sending getBroker message")
 
@@ -50,38 +48,44 @@ class UserBackground(Process):
 
     def handle_one_inbox_message(self, msg: Any) -> None:
         # print(f"DEBUG: Got message {msg}")
-        if msg[0] == Atom("brokerPid"):
-            # print(f"DEBUG: pid is {msg[1]}")
-            self.__serverBroker = GenServerInterface(self, msg[1])
-            toSend = (
-                Atom("add_user"),
-                self.__username,
-                self.__shellPid,
-                self.pid_,
-            )
-            # print(f"Sending {toSend}")
-            self.__serverBroker.cast_nowait(toSend)
-        elif msg[0] == Atom("message"):
-            # Tuple is {'message', FromName, Message}
-            with openTty(self.__ttyName) as f:
-                print(
-                    f"Got message from {msg[1]}: {msg[2]}", file=f, flush=True
+        match msg:
+            case "brokerPid", brokerPid:
+                # print(f"DEBUG: pid is {msg[1]}")
+                self.__serverBroker = GenServerInterface(self, brokerPid)
+                toSend = (
+                    Atom("add_user"),
+                    self.__username,
+                    self.__shellPid,
+                    self.pid_,
                 )
-                print(
-                    f'Want to reply? Run "hg write {msg[1]}"!',
-                    file=f,
-                    flush=True,
+                # print(f"Sending {toSend}")
+                self.__serverBroker.cast_nowait(toSend)
+            case "message", fromUser, content:
+                # Tuple is {'message', FromName, Message}
+                fromUser = fromUser.decode()
+                content = content.decode()
+                subprocess.run(
+                    ["echo", f"Got message from {fromUser}: {content}"]
                 )
-                print("(Press enter now.)", file=f, flush=True)
-        elif msg[0] == Atom("invite"):
-            # Tuple is {'invite', GameName, InviterName, JoinCommand}
-            with openTty(self.__ttyName) as f:
-                print(
-                    f"You were invited to a game of {msg[1]} by {msg[2]}!",
-                    file=f,
-                    flush=True,
+                subprocess.run(
+                    ["echo", f'Want to reply? Run "hg write {fromUser}"!']
                 )
-                print(f"Run {msg[3]} to play!", file=f, flush=True)
+                subprocess.run(["echo", "(Press enter now.)"])
+            case "invite", gameName, inviterName, joinCommand:
+                # Tuple is {'invite', GameName, InviterName, JoinCommand}
+                # gameName = gameName
+                # inviterName = inviterName
+                # joinCommand = joinCommand.decode()
+                subprocess.run(
+                    [
+                        "echo",
+                        f"You were invited to a game of {gameName} "
+                        f"by {inviterName}!",
+                    ]
+                )
+                subprocess.run(["echo", f"Run {joinCommand} to play!"])
+            case _:
+                subprocess.run(["echo", f"Unrecognized message {msg}"])
 
     def __checkOSProcessAlive(self) -> None:
         """
@@ -111,32 +115,22 @@ class UserBackground(Process):
         node.destroy()
 
 
-def openTty(tty: str):  # noqa: ANN201
-    """
-    Open the TTY whose path is given for writing. The caller must close it.
-    """
-    return io.TextIOWrapper(
-        io.FileIO(os.open(tty, os.O_NOCTTY | os.O_RDWR), "w")
-    )
-
-
-def start(shellPid: str, tty: str) -> None:
+def start(shellPid: str) -> None:
     ensure_epmd()
 
-    UserBackground(shellPid, whoami(), tty)
+    UserBackground(shellPid, whoami())
     node.run()
 
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("ParentShellPid")
-    parser.add_argument("tty")
     args = parser.parse_args()
 
     hostname = socket.gethostname()
     node = Node(f"{randint(0, 999999):06d}@{hostname}", cookie="Sh4rKM3ld0n")
 
     try:
-        start(args.ParentShellPid, args.tty)
+        start(args.ParentShellPid)
     except KeyboardInterrupt:
         exit(0)

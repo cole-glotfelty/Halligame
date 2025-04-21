@@ -221,7 +221,11 @@ handle_cast({del_user, Login, LinuxPid}, State) ->
     end,
     {noreply, State#state{users = Users}};
 handle_cast({message_user, FromUser, ToUser, Message}, State) ->
-    message_user(FromUser, ToUser, Message, State#state.users),
+    message_user(ToUser, {message, FromUser, Message}, State#state.users),
+    {noreply, State};
+handle_cast({invite_user, FromUser, ToUser, GameName, JoinCommand}, State) ->
+    message_user(ToUser, {invite, GameName, FromUser, JoinCommand},
+                 State#state.users),
     {noreply, State};
 handle_cast(Catchall, State) ->
     io:fwrite("Unrecognized cast: ~p~n", [Catchall]),
@@ -313,17 +317,17 @@ format_status(Status) ->
 
 % Takes a message, its sender, its recipient, and a list of all users.
 % Sends the message to all sessions the recipient has.
-message_user(_FromUser, _ToUser, _Message, [])      ->
+message_user(_ToUser, _Message, [])      ->
     ok;
-message_user(FromUser, ToUser, Message, [H | T]) ->
-    Fun = fun (X) -> X#session.erlangpid ! {message, FromUser, Message} end,
+message_user(ToUser, Message, [H | T]) ->
+    Fun = fun (X) -> X#session.erlangpid ! Message end,
     case H#user.login of
         ToUser ->
             lists:map(Fun, H#user.sessions);
         _  ->
             ok
     end,
-    message_user(FromUser, ToUser, Message, T).
+    message_user(ToUser, Message, T).
 
 
 %%%===================================================================
