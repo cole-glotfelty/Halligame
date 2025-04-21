@@ -24,7 +24,9 @@ class Client(ClientSuper):
         """
         self.__comms = comms
         self.__playerID = None
-        pass
+        self.__ships = [["  " for y in range(9)] for x in range(9)]
+        self.__guesses = [["  " for y in range(9)] for x in range(9)]
+        self.__screen = Screen(self.userInput, self.mouseInput)
 
     def updateState(self, state: bytes) -> None:
         """
@@ -44,6 +46,7 @@ class Client(ClientSuper):
         (status, message) = msg
         if status == "error":
             print(message)
+            self.__comms.shutdown()
 
     def joinConfirmed(self, msg) -> None:
         """
@@ -51,3 +54,14 @@ class Client(ClientSuper):
         can be set in GameServer::addClient().
         """
         self.__playerID = msg
+        # TODO: Draw screen here?
+        self.__drawScreen()
+
+    def userInput(self, input):
+        pass
+
+    def mouseInput(self, row, col, region, mouseEventType):
+        pass
+
+    def self.__drawScreen(self):
+        pass
