@@ -47,8 +47,8 @@ sendMessage([FromUser, ToUser, Message]) ->
 -spec lookupGameServerID([string() | []]) -> no_return().
 lookupGameServerID([GameServerID]) ->
     case gen_server:call(?SERVERBROKER, {lookupGameServerID, GameServerID}) of
-        {GameName, NodeName} ->
-            io:fwrite("~s~n~s~n", [GameName, NodeName]);
+        {GameName, NodeName, PidBinary} ->
+            io:fwrite("~s~n~s~n~s~n", [GameName, NodeName, PidBinary]);
         notfound ->
             io:fwrite("notfound~n")
     end,
