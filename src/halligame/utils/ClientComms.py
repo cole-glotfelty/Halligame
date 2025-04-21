@@ -57,7 +57,7 @@ class ClientCommunicate(Process):
                 self.__clientGameInstance.gotServerMessage(messageContents)
             case "confirmed_join", messageContents:
                 self.__clientGameInstance.joinConfirmed(messageContents)
-            case "quit_confirm":
+            case "quit_confirm", _fromPid:
                 # can continue quit process
                 self.__delayQuitUntilConfirmation.release()
             case _:
