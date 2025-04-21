@@ -38,11 +38,9 @@ import sys
 
 class Screen():
     # gotInputFunc = the function to call when receiving input
-    def __init__(self, gotInputFunc: callable, gotMouseClickFunc: callable, width: int, height: int):
+    def __init__(self, gotInputFunc: callable, gotMouseClickFunc: callable):
         self.__gotInput = gotInputFunc
         self.__gotMouse = gotMouseClickFunc
-        self.__width = width
-        self.__height = height
 
         self.__lock = threading.Lock()
 
@@ -59,8 +57,8 @@ class Screen():
         self.__monitorInputThread.start()
 
         try:
-            self.__stdscr.move(self.__height - 1, 0) # set starting printing loc
-        except: # terminal window too small
+            self.__stdscr.move(self.__terminalHeight(), 0) # set starting printing loc
+        except: # terminal window is being weird
             pass
 
         self.__colors = {"black": curses.COLOR_BLACK,
@@ -173,7 +171,7 @@ class Screen():
     def clearScreen(self) -> None:
         with self.__lock:
             self.__stdscr.clear()
-            self.__stdscr.move(self.__height - 1, 0) # move cursor to bottom left
+            self.__stdscr.move(self.__terminalHeight() - 1, 0) # move cursor to bottom left
 
     # prints a string to the screen, starting at (row, col)
     def write(self, row: int, col: int, toPrint, colorPairId=None) -> None:
@@ -229,10 +227,10 @@ class Screen():
                 # move up one line, and reset cursor to bottom left
                 self.__stdscr.move(0, 0) # so deleteln deletes the top line
                 self.__stdscr.deleteln()
-                self.__stdscr.move(self.__height - 1, 0)
+                self.__stdscr.move(self.__terminalHeight() - 1, 0)
         except curses.error:
             # reset cursor position to correct loc
-            self.__stdscr.move(self.__height - 1, 0)
+            self.__stdscr.move(self.__terminalHeight() - 1, 0)
 
     # refreshes the window (sends updates to screen)
     def refresh(self) -> None:
@@ -283,3 +281,20 @@ class Screen():
                            height: int, width: int, id) -> None:
         with self.__lock:
             self.__clickableRegions.append((row, col, height, width, id))
+
+    def clearClickableRegions(self):
+        with self.__lock:
+            self.__clickableRegions = []
+
+    def getCenteredRow(self, toPrint):
+        with self.__lock:
+            return (self.__terminalHeight() // 2) - (len(str(toPrint).split("\n")) // 2)
+
+    def getCenteredCol(self, toPrint):
+        with self.__lock:
+            toPrintSplit = str(toPrint).split("\n")
+
+            if (len(toPrintSplit) > 0):
+                return (self.__terminalWidth() // 2) - (len(toPrintSplit[0]) // 2)
+            else:
+                return (self.__terminalWidth() // 2)

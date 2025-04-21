@@ -13,7 +13,7 @@ import pyfiglet
 class Client(ClientSuper):
     # comms is an instance of halligame.utils.ClientCommunicate 
     def __init__(self, comms):
-        self.__screen = Screen(self.userInput, self.mouseInput, width=50, height=25)
+        self.__screen = Screen(self.userInput, self.mouseInput)
         self.__stateLock = threading.Lock()
         self.__comms = comms
         self.__game = Uno()
@@ -109,18 +109,21 @@ class Client(ClientSuper):
 
                 self.__myTurn = self.__currUsersTurn == self.__userId
 
-                self.__screen.clearScreen()
                 self.__drawScreen(self.__topCard, opponentCardCounts)
-                self.__screen.refresh()
             elif (msg[0] == "newCard"):
                 self.__deck.append(msg[1])
 
     def __drawScreen(self, topCard, opponentCardCounts):
+        self.__screen.clearScreen()
+        self.__screen.clearClickableRegions()
+
         self.__drawOpponentCards(opponentCardCounts)
         self.__drawCardPile(topCard)
         self.__drawGameInfo()
         self.__drawHand()
         self.__drawButtons()
+
+        self.__screen.refresh()
 
     def __drawOpponentCards(self, opponentCardCounts):
         cardHeight = self.__game.cardHeight()

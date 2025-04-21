@@ -34,9 +34,7 @@ class Client(ClientSuper):
             myTurn
             done
         """
-        self.__screen = Screen(
-            self.userInput, self.mouseInput, width=50, height=25
-        )
+        self.__screen = Screen(self.userInput, self.mouseInput)
         self.__stateLock = threading.Lock()
         self.__comms = comms
         self.__state: GameState = GameState()
@@ -86,7 +84,7 @@ class Client(ClientSuper):
 
         for i in range(3):
             for j in range(3):
-                verticalOffset = (letterHeight + 2) * i
+                verticalOffset = (letterHeight + 1) * i
                 horizontalOffset = (letterWidth + 2) * j
                 self.__screen.addClickableRegion(
                     self.__topRow + verticalOffset,
@@ -136,9 +134,7 @@ class Client(ClientSuper):
                 playerSymbol = "X" if self.__playerID == 0 else "O"
                 newBoard[region // 3][region % 3] = playerSymbol
                 self.__state.setValue("board", newBoard)
-                self.__screen.clearScreen()
-                self.__drawBoard()
-                self.__screen.refresh()
+                self.__drawGame()
 
                 self.__comms.sendMessage((self.__playerID, region))
 
@@ -181,6 +177,7 @@ class Client(ClientSuper):
     def __drawGame(self) -> None:
         self.__screen.clearScreen()
         self.__drawBoard()
+        self.__drawGameInfo()
         self.__screen.refresh()
 
     def __drawBoard(self) -> None:
@@ -194,7 +191,7 @@ class Client(ClientSuper):
 
                 letter = self.__formatter.renderText(character)
 
-                verticalOffset = (letterHeight + 2) * i
+                verticalOffset = (letterHeight + 1) * i
                 horizontalOffset = (letterWidth + 2) * j
 
                 self.__screen.write(
@@ -208,8 +205,25 @@ class Client(ClientSuper):
             self.__screen.write(self.__topRow + i, letterWidth, "||")
             self.__screen.write(self.__topRow + i, (letterWidth * 2) + 2, "||")
 
-        for i in range(letterWidth * 3 + 4):
-            self.__screen.write(self.__topRow + letterHeight, i, "-\n-")
+        for i in range(letterWidth * 3 + 2):
+            self.__screen.write(self.__topRow + letterHeight, i, "=")
             self.__screen.write(
-                self.__topRow + (letterHeight * 2) + 2, i, "-\n-"
+                self.__topRow + (letterHeight * 2) + 2, i, "="
             )
+    
+    def __drawGameInfo(self):
+        letter = self.__formatter.renderText("X")
+        letterWidth = len(letter.split("\n")[0])
+
+        boardFarRightCol = letterWidth * 3 + 4
+        boardTopRow = self.__topRow
+
+
+
+        infoList = []
+        infoList.append("You Are Symbol " + ("X" if self.__playerID == 0 else "O"))
+        infoList.append("You Opponent is " + self.__state.getValue("playerNames")[(self.__playerID + 1) % 2])
+        infoList.append(self.__state.getValue("gameOver"))
+
+        for i, info in enumerate(infoList):
+            self.__screen.write(boardTopRow + (i * 2), boardFarRightCol + 5, info)
