@@ -10,6 +10,7 @@ from random import randint
 from socket import gethostname
 
 import psutil
+from term import codec, Pid
 
 import halligame.utils.ClientComms as ClientComms
 import halligame.utils.ServerComms as ServerComms
@@ -49,7 +50,7 @@ BASESCRIPT: list[str] = [
 
 
 def join(args: Namespace) -> None:
-    """Join the game with the ID stored in args.gameID."""
+    """Join the game with the ID stored in args.gameID, or print an error."""
     ensure_epmd()
     inputGameID = str(args.gameID).replace("-", "")
 
@@ -66,7 +67,8 @@ def join(args: Namespace) -> None:
     else:
         gameName = gameAndNode[0]
         nodeName = gameAndNode[1]
-        ClientComms.start(nodeName, gameName)
+        nodePid  = codec.binary_to_term(gameAndNode[2])
+        ClientComms.start(nodeName, gameName, nodePid)
 
 
 def new(args: Namespace) -> None:

@@ -114,7 +114,8 @@ handle_call({lookupGameServerID, ID}, _From, State) ->
     FilterFun = fun (GS) -> lists:prefix(ID, GS#gameserver.nodeName) end,
     case lists:filter(FilterFun, State#state.gameservers) of
         [TheGS] ->
-            {reply, {TheGS#gameserver.game, TheGS#gameserver.nodeName}, State};
+            {reply, {TheGS#gameserver.game, TheGS#gameserver.nodeName,
+                     term_to_binary(TheGS#gameserver.pid)}, State};
         [] ->
             {reply, notfound, State}
     end;
