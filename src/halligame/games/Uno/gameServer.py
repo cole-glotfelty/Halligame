@@ -14,10 +14,10 @@ class Server(ServerSuper):
 
         self.__game = Uno()
 
-        self.__numConnected = 0
-        self.__clientPidsToClientIds = {}
-        self.__clientIdsToClientPids = {}
-        self.__userCardCounts = []
+        self.__numJoined = 0
+        self.__playerClientPids = [-1] * 10
+        self.__playerUTLNs = [-1] * 10
+        self.__userCardCounts = [-1] * 10
 
         self.__currUsersTurn = 0
 
@@ -25,22 +25,23 @@ class Server(ServerSuper):
 
     def gotClientMessage(self, ClientPid, message):
         with self.__stateLock:
-            if (message[0] == "dealCard"):
-                if (message[1] == self.__currUsersTurn):
-                    self.__comms.sendClientMessage(ClientPid, ("newCard", self.__game.dealCard()))
-                    self.__userCardCounts[self.__clientPidsToClientIds[ClientPid]][1] += 1 # add 1 to the user cart counts
-                    self.__comms.broadcastMessage(self.serializeState())
-            elif (message[0] == "placeCard"):
-                (userId, card) = message[1]
-                if (self.__currUsersTurn == userId):
-                    self.__evaluatePlaceCard(userId, card)
+            messageType = message[0]
+            playerNum = message[1]
+            if (messageType == "dealCard"):
+                if (playerNum == self.__currUsersTurn):
+                    self.__dealPlayerCard(playerNum)
+            elif (messageType == "placeCard"):
+                card = message[2]
+                if (playerNum == self.__currUsersTurn):
+                    self.__evaluatePlaceCard(playerNum, card)
 
-    def __evaluatePlaceCard(self, userId, card):
+    def __evaluatePlaceCard(self, playerNum, card):
         self.__game.placeCard(card)
 
-        self.__userCardCounts[userId][1] -= 1 # take away a card
+        self.__userCardCounts[playerNum] -= 1 # take away a card
 
-        if (self.__game.type(card) == "skip"):
+        # decide the next player
+        if (self.__game.type(card) in ["skip", "+2", "+4"]):
             playerChange = 2
         else:
             playerChange = 1
@@ -50,37 +51,48 @@ class Server(ServerSuper):
 
         playerChange *= self.__turnChangeDelta
 
-        self.__currUsersTurn = (self.__currUsersTurn + playerChange) % self.__numConnected
+        self.__currUsersTurn = (self.__currUsersTurn + playerChange) % self.__numJoined
 
-        nextTurnPlayersClientId = self.__clientIdsToClientPids[self.__currUsersTurn]
+        # deal with dealing cards for +2 and +4
         if (self.__game.type(card) == "+2"):
-            self.__userCardCounts[self.__currUsersTurn][1] += 2
             for i in range(2):
-                self.__comms.sendClientMessage(nextTurnPlayersClientId, ("newCard", self.__game.dealCard()))
+                self.__dealPlayerCard(self.__currUsersTurn)
         elif (self.__game.type(card) == "+4"):
-            self.__userCardCounts[self.__currUsersTurn][1] += 4
             for i in range(4):
-                self.__comms.sendClientMessage(nextTurnPlayersClientId, ("newCard", self.__game.dealCard()))
+                self.__dealPlayerCard(self.__currUsersTurn)
 
-        if (self.__userCardCounts[userId][1] == 0):
-            self.__comms.broadcastMessage(("Game Over", str(userId)))
+        if (self.__userCardCounts[playerNum] == 0):
+            self.__comms.broadcastMessage(self.serializeState())
+            self.__comms.broadcastMessage((f"Game Over: {self.__playerUTLNs[playerNum]} Won!"))
         else:
             self.__comms.broadcastMessage(self.serializeState())
 
+
+    def __dealPlayerCard(self, playerNum):
+        self.__comms.sendClientMessage(self.__playerClientPids[playerNum], 
+                                       ("newCard", self.__game.dealCard()))
+        self.__userCardCounts[playerNum] += 1 # add 1 to the user cart counts
+        self.__comms.broadcastMessage(self.serializeState())
+
     def addClient(self, clientPid, username):
         with self.__stateLock:
-            if (self.__numConnected >= 10):
+            if (self.__numJoined >= 10):
                 self.__comms.confirmJoin(clientPid, username, "Game Full")
             else:
-                clientDeck = [self.__game.dealCard() for i in range(7)]
-                print(clientDeck)
-                self.__clientPidsToClientIds[clientPid] = self.__numConnected
-                self.__clientIdsToClientPids[self.__numConnected] = clientPid
-                self.__userCardCounts.append([self.__numConnected, 7]) # this user has 7 cards
-                self.__comms.confirmJoin(clientPid, username, (self.__numConnected, clientDeck))
-                self.__comms.broadcastMessage(self.serializeState())
+                if (username not in self.__playerUTLNs):
+                    clientDeck = [self.__game.dealCard() for i in range(7)]
+                    print(clientDeck)
+                    playerNum = self.__numJoined
+                    self.__playerClientPids[playerNum] = clientPid
+                    self.__playerUTLNs[playerNum] = username
 
-                self.__numConnected += 1
+                    self.__userCardCounts[playerNum] = 7 # this user has 7 cards
+                    self.__comms.confirmJoin(clientPid, username, (self.__numJoined, clientDeck))
+                    self.__comms.broadcastMessage(self.serializeState())
+
+                    self.__numJoined += 1
+                else:
+                    self.__comms.broadcastMessage(self.serializeState())
 
     def serializeState(self):
-        return ("state", (self.__game.getTopCard(), self.__userCardCounts, self.__currUsersTurn))
+        return ("state", (self.__game.getTopCard(), self.__userCardCounts, self.__playerUTLNs, self.__currUsersTurn))

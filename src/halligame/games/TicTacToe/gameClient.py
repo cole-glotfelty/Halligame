@@ -230,4 +230,4 @@ class Client(ClientSuper):
             infoList.append(f"It's {self.__state.getValue("playerNames")[self.__state.getValue("currentPlayer")]}'s Turn")
 
         for i, info in enumerate(infoList):
-            self.__screen.write(boardTopRow + (i * 2), boardFarRightCol + 5, info)
+            self.__screen.write(boardTopRow + 6 + (i * 2), boardFarRightCol + 7, info)

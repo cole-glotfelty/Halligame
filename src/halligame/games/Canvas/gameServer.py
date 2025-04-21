@@ -21,6 +21,8 @@ class Server(ServerSuper):
 
         self.__state: GameState = GameState()
 
+        self.__players = set()
+
         board = [
             ["white" for _ in range(self.__boardWidth)]
             for _ in range(self.__boardHeight)
@@ -39,3 +41,11 @@ class Server(ServerSuper):
         with self.__stateLock:
             self.__comms.confirmJoin(clientPid, username,
                                      self.__state.serialize())
+            
+            self.__players.add(username)
+            self.__comms.broadcastMessage(("players", list(self.__players)))
+
+    def removeClient(self, clientPID, username):
+        self.__players.discard(username)
+
+        self.__comms.broadcastMessage(("players", list(self.__players)))

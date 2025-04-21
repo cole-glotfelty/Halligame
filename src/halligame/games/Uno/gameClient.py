@@ -45,52 +45,58 @@ class Client(ClientSuper):
     def mouseInput(self, row, col, region, mouseEventType):
         with self.__stateLock:
             if mouseEventType == "left_click" and self.__myTurn:
-                if type(region) == int and self.__game.cardPlacable(self.__topCard, self.__deck[region]): # this is a deck index - TODO: add a confirm button
+                if type(region) == int and self.__game.cardPlacable(self.__topCard, self.__deck[region]):
                     # need to pick a card before it's a valid choice
                     if (self.__game.type(self.__deck[region]) in ["wild", "+4"]):
                         self.__waitingCard = self.__deck.pop(region)
                         self.colorPicker()
                     else:
-                        self.__comms.sendMessage(("placeCard", (self.__userId, self.__deck.pop(region))))
+                        self.__comms.sendMessage(("placeCard", self.__userId, self.__deck.pop(region)))
                 if region == "dealCard":
                     self.__comms.sendMessage(("dealCard", self.__userId))
-                elif (region in ["red", "yellow", "green", "blue"]):
+                elif (region in ["red", "yellow", "green", "blue"]): # respond to color picker
                     if (self.__waitingCard != None):
                         card = self.__game.setColor(self.__waitingCard, region)
 
-                        self.__comms.sendMessage(("placeCard", (self.__userId, card)))
+                        self.__comms.sendMessage(("placeCard", self.__userId, card))
 
                         self.__waitingCard = None
 
     def colorPicker(self):
-        menuText = pyfiglet.figlet_format(f"Pick a Color", font="finalass")
+        menuText = pyfiglet.figlet_format(f"COLOR", font="finalass")
         numRows = self.__screen.terminalHeight()
         numCols = self.__screen.terminalWidth()
 
         self.__screen.clearScreen()
         self.__screen.write(int(numRows * 0.2), 15, menuText)
 
-        red = pyfiglet.figlet_format(f"RED", font="finalass")
-        yellow = pyfiglet.figlet_format(f"YELLOW", font="finalass")
-        green = pyfiglet.figlet_format(f"GREEN", font="finalass")
-        blue = pyfiglet.figlet_format(f"BLUE", font="finalass")
+        colors = ["RED", "YELLOW", "GREEN", "BLUE"]
+        colorTexts = []
+        for color in colors:
+            colorTexts.append(pyfiglet.figlet_format(color.lower(), font="finalass"))
 
-        self.__screen.write(5, 100, red, "red")
-        self.__screen.write(15, 100, yellow, "yellow")
-        self.__screen.write(25, 100, green, "green")
-        self.__screen.write(35, 100, blue, "blue")
+        textHeight = len(colors[0].split("\n"))
+        textGap = max(1, (numRows - (4 * textHeight)) // 5)
+        for i in range(len(colors)):
+            colorText = colorTexts[i]
+            color = colors[i]
 
-        self.__screen.addClickableRegion(5, 100, len(red.split("\n")), len(red.split("\n")[0]), "red")
-        self.__screen.addClickableRegion(15, 100, len(yellow.split("\n")), len(yellow.split("\n")[0]), "yellow")
-        self.__screen.addClickableRegion(25, 100, len(green.split("\n")), len(green.split("\n")[0]), "green")
-        self.__screen.addClickableRegion(35, 100, len(blue.split("\n")), len(blue.split("\n")[0]), "blue")
+            row = i * textHeight + ((i + 1) * textGap)
+            col = 100
+
+            self.__screen.write(row, col, colorText, color.lower())
+
+            textWidth = colorText.split("\n")[0]
+            self.__screen.addClickableRegion(row, col, textHeight, textWidth, color.lower())
 
         self.__screen.refresh()
 
     def joinConfirmed(self, joinMsg):
         with self.__stateLock:
             if (joinMsg == "Game Full"):
-                todo: crash
+                # joining as viewer
+                self.__userId = -1
+                self.__deck = []
             else:
                 (self.__userId, self.__deck) = joinMsg
                 self.__game.drawCard(0, 0, self.__deck[0], self.__screen)
@@ -105,13 +111,14 @@ class Client(ClientSuper):
                 self.__screen.refresh()
             elif (msg[0] == "state"):
                 self.__screen.clearScreen()
-                (self.__topCard, opponentCardCounts, self.__currUsersTurn) = msg[1]
+                (self.__topCard, opponentCardCounts, self.__playerUTLNs, self.__currUsersTurn) = msg[1]
 
                 self.__myTurn = self.__currUsersTurn == self.__userId
 
                 self.__drawScreen(self.__topCard, opponentCardCounts)
             elif (msg[0] == "newCard"):
                 self.__deck.append(msg[1])
+                self.__drawScreen(self.__topCard, opponentCardCounts)
 
     def __drawScreen(self, topCard, opponentCardCounts):
         self.__screen.clearScreen()
