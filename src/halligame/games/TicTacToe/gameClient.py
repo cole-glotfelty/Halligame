@@ -78,6 +78,7 @@ class Client(ClientSuper):
         # self.__screen.setStyle("white_random")
 
     def defineClickableRegions(self) -> None:
+        # Getting the dimensions of the rendered 'X'
         letter = self.__formatter.renderText("X")
         letterHeight = len(letter.split("\n"))
         letterWidth = len(letter.split("\n")[0])

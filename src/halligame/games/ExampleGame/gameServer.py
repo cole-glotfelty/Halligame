@@ -47,7 +47,7 @@ class Server(ServerSuper):
             self.__comms.sendClientMessage(clientPID, ("error", "Error: Invalid Move"))
         pass
 
-    def addClient(self, clientPID) -> None:
+    def addClient(self, clientPID, username) -> None:
         """
         Callback function for when a client joins the game. This should also
         call `confirmJoin` to send a message to the client about a new player
@@ -55,17 +55,19 @@ class Server(ServerSuper):
 
         Arguemnts;
             clientPID - PID of the client that joined the game
+            username - exposes username/UTLN to game
         """
         self.__usersConnected += 1
         msg = "You've joined!"
         self.__comms.confirmJoin(clientPID, msg)
         pass
 
-    def removeClient(self, clientPID) -> None:
+    def removeClient(self, clientPID, username) -> None:
         """
         Callback function for when a client leaves the game. 
 
         Arguemnts;
             clientPID - PID of the client that left the game
+            username - exposes username/UTLN to game
         """
         pass

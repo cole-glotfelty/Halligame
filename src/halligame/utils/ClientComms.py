@@ -27,7 +27,7 @@ name: str  # Placeholder for mypy
 
 
 class ClientCommunicate(Process):
-    def __init__(self, gameName: str, serverPid: Pid) -> None:
+    def __init__(self, gameName: str, serverPid : Pid) -> None:
         super().__init__()
         node.register_name(self, "pyClient")
 
@@ -45,58 +45,58 @@ class ClientCommunicate(Process):
         function when it receives a known message, other wise, informs the user
         there has been some sort of error and we've received an unknown message
 
-        msg : message received
+        msg: the message that wasreceived
         """
-        if msg == "close":
-            exit(0)
 
-        messageContents = msg[1]
-
-        if msg[0] == "state":
-            self.__clientGameInstance.updateState(messageContents)
-        elif msg[0] == "message":
-            self.__clientGameInstance.gotServerMessage(messageContents)
-        elif msg[0] == "confirmed_join":
-            self.__clientGameInstance.joinConfirmed(messageContents)
-        elif msg[0] == "quit_confirm":
-            # can continue quit process
-            self.__delayQuitUntilConfirmation.release()
-        else:
-            raise ValueError(
-                "ClientComms Received an unknown message" + str(msg)
-            )
+        match msg:
+            case "close":
+                exit(0)
+            case "state", newState:
+                self.__clientGameInstance.updateState(newState)
+            case "message", messageContents:
+                self.__clientGameInstance.gotServerMessage(messageContents)
+            case "confirmed_join", messageContents:
+                self.__clientGameInstance.joinConfirmed(messageContents)
+            case "quit_confirm", _fromPid:
+                # can continue quit process
+                self.__delayQuitUntilConfirmation.release()
+            case _:
+                raise ValueError(
+                    "ClientComms Received an unknown message" + str(msg)
+                )
 
     def sendMessage(self, msg: Any) -> None:
-        """
-        Given a message (msg) send it to the server
+        """Send a message to the game server"""
 
-        msg : message to send
-        """
-
-        self.__backendSendMessage(("message", (self.pid_, msg)))
+        self.__backendSendMessage((Atom("message"), (self.pid_, msg)))
 
     def __backendSendMessage(self, msg: Any) -> None:
+        """Send arbitrary messages to the game server."""
         node.send_nowait(
             sender=self.pid_,
-            receiver=(Atom(self.__serverPid), Atom("pyServer")),
+            receiver=self.__serverPid,
             message=msg,
         )
 
     def shutdown(self) -> None:
+        """
+        Shut down this Pyrlang node.
+
+        Waits for confirmation from the game server, to avoid the condition
+        where telling the server we quit doesn't go through."""
         self.__backendSendMessage(("remove_client", self.pid_, self.__thisUser))
 
-        # the following will block until receiving a confirmation message from
-        # the server
         self.__delayQuitUntilConfirmation.acquire()
 
         node.destroy()
         sys.exit(0)
 
 
-def start(commServerName: str, gameName: str) -> None:
+def start(serverNodeName: str, gameName: str, serverPid : Pid) -> None:
+    """Start the client instance and its Pyrlang node."""
     global name, node
     name = f"{randint(0, 999999):06d}@{socket.gethostname()}"
     print("DEBUG: ClientComms NodeName: ", name)
     node = Node(node_name=name, cookie="Sh4rKM3ld0n")
-    ClientCommunicate(gameName, commServerName)
+    ClientCommunicate(gameName, serverPid)
     node.run()
