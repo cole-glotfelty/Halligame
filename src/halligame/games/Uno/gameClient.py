@@ -32,9 +32,12 @@ class Client(ClientSuper):
         self.__colors = ["black", "blue", "cyan", "green", "magenta", "red", 
                          "white", "yellow"]
         for color in self.__colors:
-            self.__screen.addColorPair(color, "white", color)
+            self.__screen.addColorPair(color, "black", color)
+        
+        # redefine blue to be cyan for printing
+        self.__screen.addColorPair("cyan", "black", "blue")
 
-        self.__screen.addColorPair("black", "white", "background")
+        self.__screen.addColorPair("white", "black", "background")
         self.__screen.setStyle("background") # set background to black
 
     def userInput(self, input):
@@ -51,43 +54,47 @@ class Client(ClientSuper):
                         self.__waitingCard = self.__deck.pop(region)
                         self.colorPicker()
                     else:
-                        self.__comms.sendMessage(("placeCard", self.__userId, self.__deck.pop(region)))
+                        self.__comms.sendMessage(("placeCard", self.__playerNum, self.__deck.pop(region), self.__deck))
                 if region == "dealCard":
-                    self.__comms.sendMessage(("dealCard", self.__userId))
+                    self.__comms.sendMessage(("dealCard", self.__playerNum))
                 elif (region in ["red", "yellow", "green", "blue"]): # respond to color picker
                     if (self.__waitingCard != None):
                         card = self.__game.setColor(self.__waitingCard, region)
 
-                        self.__comms.sendMessage(("placeCard", self.__userId, card))
+                        self.__comms.sendMessage(("placeCard", self.__playerNum, card, self.__deck))
 
                         self.__waitingCard = None
 
     def colorPicker(self):
-        menuText = pyfiglet.figlet_format(f"COLOR", font="finalass")
         numRows = self.__screen.terminalHeight()
         numCols = self.__screen.terminalWidth()
-
         self.__screen.clearScreen()
-        self.__screen.write(int(numRows * 0.2), 15, menuText)
+
+        # purposefully designed to be length 4
+        menuTexts = [pyfiglet.figlet_format(f"PICK", font="finalass"),
+                     pyfiglet.figlet_format(self.__game.type(self.__waitingCard).upper(), font="finalass"),
+                     pyfiglet.figlet_format(f"CARD", font="finalass"),
+                     pyfiglet.figlet_format(f"COLOR", font="finalass")]
 
         colors = ["RED", "YELLOW", "GREEN", "BLUE"]
         colorTexts = []
         for color in colors:
-            colorTexts.append(pyfiglet.figlet_format(color.lower(), font="finalass"))
+            colorTexts.append(pyfiglet.figlet_format(color, font="finalass"))
 
-        textHeight = len(colors[0].split("\n"))
+        textHeight = len(colorTexts[0].split("\n"))
         textGap = max(1, (numRows - (4 * textHeight)) // 5)
         for i in range(len(colors)):
             colorText = colorTexts[i]
+            menuText = menuTexts[i]
             color = colors[i]
 
-            row = i * textHeight + ((i + 1) * textGap)
-            col = 100
+            row = (i * textHeight) + ((i + 1) * textGap)
 
-            self.__screen.write(row, col, colorText, color.lower())
+            self.__screen.write(row, 15, menuText)
 
-            textWidth = colorText.split("\n")[0]
-            self.__screen.addClickableRegion(row, col, textHeight, textWidth, color.lower())
+            self.__screen.write(row, 100, colorText, color.lower())
+            textWidth = len(colorText.split("\n")[0])
+            self.__screen.addClickableRegion(row, 100, textHeight, textWidth, color.lower())
 
         self.__screen.refresh()
 
@@ -95,82 +102,80 @@ class Client(ClientSuper):
         with self.__stateLock:
             if (joinMsg == "Game Full"):
                 # joining as viewer
-                self.__userId = -1
+                self.__playerNum = -1
                 self.__deck = []
             else:
-                (self.__userId, self.__deck) = joinMsg
-                self.__game.drawCard(0, 0, self.__deck[0], self.__screen)
-                self.__screen.refresh()
+                (self.__playerNum, self.__deck) = joinMsg
 
     def gotServerMessage(self, msg):
         with self.__stateLock:
             if (msg[0] == "Game Over"):
                 self.__screen.clearScreen()
                 text = pyfiglet.figlet_format(f"Game Over, Player {msg[1]} Won", font="red_phoenix")
-                self.__screen.write(15, 15, text) # TODO: don't use constants
+                self.__screen.write(self.__screen.getCenteredRow(text), self.__screen.getCenteredCol(text), text)
                 self.__screen.refresh()
             elif (msg[0] == "state"):
-                self.__screen.clearScreen()
-                (self.__topCard, opponentCardCounts, self.__playerUTLNs, self.__currUsersTurn) = msg[1]
+                # unpack state
+                (self.__topCard, self.__opponentCardCounts, self.__playerUTLNs, self.__currUsersTurn) = msg[1]
 
-                self.__myTurn = self.__currUsersTurn == self.__userId
+                self.__myTurn = self.__currUsersTurn == self.__playerNum
 
-                self.__drawScreen(self.__topCard, opponentCardCounts)
+                self.__drawScreen()
             elif (msg[0] == "newCard"):
                 self.__deck.append(msg[1])
-                self.__drawScreen(self.__topCard, opponentCardCounts)
+                self.__drawScreen()
 
-    def __drawScreen(self, topCard, opponentCardCounts):
+    def __drawScreen(self):
         self.__screen.clearScreen()
         self.__screen.clearClickableRegions()
 
-        self.__drawOpponentCards(opponentCardCounts)
-        self.__drawCardPile(topCard)
+        self.__drawOpponentCards()
         self.__drawGameInfo()
-        self.__drawHand()
         self.__drawButtons()
+        self.__drawCardPile()
+        self.__drawHand()
 
         self.__screen.refresh()
 
-    def __drawOpponentCards(self, opponentCardCounts):
+    def __drawOpponentCards(self):
         cardHeight = self.__game.cardHeight()
         cardWidth = self.__game.cardWidth()
 
         col = 0
-        for (userId, Count) in opponentCardCounts:
+        for playerNum in range(len(self.__opponentCardCounts)):
+            count = self.__opponentCardCounts[playerNum]
+            if (count == -1):
+                continue
+
+
             self.__game.drawCard(0, col, "blank", self.__screen)
 
             # highlight the current user
-            if (userId == self.__currUsersTurn):
+            if (playerNum == self.__currUsersTurn):
                 colorPairId = "yellow"
             else:
                 colorPairId = None
 
-            self.__screen.write(cardHeight + 2, col + 3, f"Player: {userId}", colorPairId=colorPairId)
-            self.__screen.write(cardHeight + 3, col + 3, f"Count: {Count}", colorPairId=colorPairId)
+            self.__screen.write(cardHeight + 2, col + 1, f"Player: {self.__playerUTLNs[playerNum]}", colorPairId=colorPairId)
+            self.__screen.write(cardHeight + 3, col + 1, f"Count: {count}", colorPairId=colorPairId)
     
-            col += cardWidth
+            col += cardWidth + 4
 
-    def __drawCardPile(self, topCard):
-        row = (self.__screen.terminalHeight() // 2) - (self.__game.cardHeight() // 2)
-        col = (self.__screen.terminalWidth() // 2) - (self.__game.cardWidth() // 2)
+    def __drawCardPile(self):
+        centeredRow = (self.__screen.terminalHeight() // 2) - (self.__game.cardHeight() // 2)
+        centeredCol = (self.__screen.terminalWidth() // 2) - (self.__game.cardWidth() // 2)
 
-        if (topCard == None):
-            topCard = "blank"
-
-        self.__game.drawCard(row, col, topCard, self.__screen)
+        self.__game.drawCard(centeredRow, centeredCol, self.__topCard, self.__screen)
 
     def __drawGameInfo(self):
         gameInfo = []
-        gameInfo.append(f"Current Player: {self.__currUsersTurn}")
-        gameInfo.append(f"Your Player Name: {self.__userId}")
+        gameInfo.append(f"Current Player: {self.__playerUTLNs[self.__currUsersTurn]}")
 
         numRows = self.__screen.terminalHeight()
 
-        row = (numRows // 2) - (len(gameInfo) // 2)
-        for infoPiece in gameInfo:
-            self.__screen.write(row, 0, infoPiece)
-            row += 1
+        printableInfo = "\n".join(gameInfo)
+        centeredRow = self.__screen.getCenteredRow(printableInfo)
+        self.__screen.write(centeredRow, 0, printableInfo)
 
     def __drawHand(self):
         numCols = self.__screen.terminalWidth()
@@ -178,10 +183,9 @@ class Client(ClientSuper):
 
         cardTopRow = numRows - self.__game.cardHeight() - 1
 
-        widthDiff = max(4, numCols // len(self.__deck))
-
-        # reset previous regions
-        self.__screen.addClickableRegion(cardTopRow, 0, self.__game.cardHeight(), numCols, None)
+        widthDiff = numCols // len(self.__deck)
+        widthDiff = max(6, widthDiff)
+        widthDiff = min(self.__game.cardWidth() + 8, widthDiff)
 
         col = 0
         for i, card in enumerate(self.__deck):
@@ -192,18 +196,26 @@ class Client(ClientSuper):
             col += widthDiff
 
     def __drawButtons(self):
-        self.__defineDrawCardButton()
+        buttons = []
+        buttons.append(pyfiglet.figlet_format(f"DRAW", font="finalass"))
 
-    def __defineDrawCardButton(self):
-        drawButton = pyfiglet.figlet_format(f"DRAW", font="finalass")
-        drawButtonHeight = len(drawButton.split("\n"))
-        drawButtonWidth = len(drawButton.split("\n")[0])
+        self.__defineAndDrawButtons(buttons)
 
-        drawRow = self.__screen.terminalHeight() - self.__game.cardHeight() - (drawButtonHeight + 2)
-        drawCol = self.__screen.terminalWidth() - (drawButtonWidth + 4)
+    def __defineAndDrawButtons(self, buttons):
+        startingDrawRow = self.__screen.terminalHeight() - self.__game.cardHeight() - 1
+        startingDrawCol = self.__screen.terminalWidth()
+        for button in buttons:
+            drawButtonHeight = len(button.split("\n"))
+            drawButtonWidth = len(button.split("\n")[0])
 
-        drawBorder = (("*" * (drawButtonWidth + 2)) + "\n")  * (drawButtonHeight + 1)
-        self.__screen.write(drawRow, drawCol, drawBorder)
-        self.__screen.write(drawRow + 1, drawCol + 1, drawButton)
+            drawRow = startingDrawRow - drawButtonHeight
+            drawCol = startingDrawCol - (drawButtonWidth + 2)
 
-        self.__screen.addClickableRegion(drawRow, drawCol, drawButtonHeight + 2, drawButtonWidth + 2, "dealCard")
+            border = (("*" * (drawButtonWidth + 2)) + "\n")  * (drawButtonHeight + 1)
+
+            self.__screen.write(drawRow - 1, drawCol - 1, border)
+            self.__screen.write(drawRow, drawCol, button)
+
+            self.__screen.addClickableRegion(drawRow - 1, drawCol - 1, drawButtonHeight + 2, drawButtonWidth + 2, "dealCard")
+
+            startingDrawRow = drawRow

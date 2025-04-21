@@ -2,18 +2,18 @@ import random
 import pyfiglet
 from halligame.utils.screen import Screen
 
-BLANK_CARD = [  '   ____________  ',
-                '  /            \\ ',
-                ' |              |',
-                ' |              |',
-                ' |              |',
-                ' |              |',
-                ' |              |',
-                ' |              |',
-                ' |              |',
-                ' |              |',
-                ' |              |',
-              '  \\____________/ '
+BLANK_CARD = [  '  ____________  ',
+                ' /            \\ ',
+                '|              |',
+                '|              |',
+                '|              |',
+                '|              |',
+                '|              |',
+                '|              |',
+                '|              |',
+                '|              |',
+                '|              |',
+              ' \\____________/ '
              ]
 
 class Uno():
@@ -23,7 +23,7 @@ class Uno():
         self.__discards = []
         self.__topCard = self.dealCard()
 
-        self.__valueformatter = pyfiglet.Figlet(font='mcg_____')
+        self.__valueformatter = pyfiglet.Figlet(font='future_7')
     
     def __createDeck(self):
         deck = []
@@ -51,7 +51,7 @@ class Uno():
 
 
     def cardPlacable(self, onPile, toPlace) -> bool:
-        if (onPile == "blank"): # first card
+        if (onPile == "blank"):
             return True
         elif (self.type(toPlace) in ["wild", "+4"]): # always placeable
             return True
@@ -102,22 +102,25 @@ class Uno():
         Screen.write(topLeftRow, topLeftCol, "\n".join(BLANK_CARD), self.color(card))
         if (type(self.type(card)) == int):
             cardValue = self.__valueformatter.renderText(str(self.type(card)))
-            Screen.write(topLeftRow + 3, topLeftCol + 4, cardValue, self.color(card))
+            Screen.write(topLeftRow + 3, topLeftCol + 5, cardValue, self.color(card))
         elif (self.type(card) == "skip"):
-            Screen.write(topLeftRow + 2, topLeftCol + 4, "S\nK\nI\nP", self.color(card))
+            self.cornerCardDraw(topLeftRow, topLeftCol, "S\nK\nI\nP", Screen, self.color(card))
         elif (self.type(card) == "reverse"):
-            Screen.write(topLeftRow + 2, topLeftCol + 4, "->\n<-", self.color(card))
+            self.cornerCardDraw(topLeftRow, topLeftCol, "->\n<-", Screen, self.color(card))
             Screen.write(topLeftRow + 9, topLeftCol + 12, "->\n<-", self.color(card))
         elif (self.type(card) == "+2"):
-            Screen.write(topLeftRow + 2, topLeftCol + 4, "+2", self.color(card))
+            self.cornerCardDraw(topLeftRow, topLeftCol, "+2", Screen, self.color(card))
         elif (self.type(card) == "wild"):
-            Screen.write(topLeftRow + 2, topLeftCol + 4, "W\nI\nL\nD", self.color(card))
+            self.cornerCardDraw(topLeftRow, topLeftCol, "WILD", Screen, self.color(card))
         elif (self.type(card) == "+4"):
-            Screen.write(topLeftRow + 2, topLeftCol + 4, "+4", self.color(card))
+            self.cornerCardDraw(topLeftRow, topLeftCol, "+4", Screen, self.color(card))
         elif (self.type(card) == "blank"):
             Screen.write(topLeftRow + 5, topLeftCol + 8, "U\nN\nO", self.color(card))
         else:
             Screen.write(topLeftRow + 20, topLeftCol + 20, "Unknown Card" + str(card), self.color(card))
+
+    def cornerCardDraw(self, cardTopLeftRow, cardTopLeftCol, toWrite, Screen, color):
+            Screen.write(cardTopLeftRow + 2, cardTopLeftCol + 4, toWrite, color)
 
     def cardHeight(self):
         return len(BLANK_CARD)
