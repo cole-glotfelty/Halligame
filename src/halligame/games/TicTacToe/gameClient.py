@@ -222,8 +222,12 @@ class Client(ClientSuper):
 
         infoList = []
         infoList.append("You Are Symbol " + ("X" if self.__playerID == 0 else "O"))
-        infoList.append("You Opponent is " + self.__state.getValue("playerNames")[(self.__playerID + 1) % 2])
-        infoList.append(self.__state.getValue("gameOver"))
+        infoList.append("Your Opponent is " + self.__state.getValue("playerNames")[(self.__playerID + 1) % 2])
+        
+        if (self.__state.getValue("gameOver") != ""):
+            infoList.append(self.__state.getValue("gameOver"))
+        else:
+            infoList.append(f"It's {self.__state.getValue("playerNames")[self.__state.getValue("currentPlayer")]}'s Turn")
 
         for i, info in enumerate(infoList):
             self.__screen.write(boardTopRow + (i * 2), boardFarRightCol + 5, info)
