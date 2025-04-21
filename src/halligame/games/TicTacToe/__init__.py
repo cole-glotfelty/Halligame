@@ -3,4 +3,4 @@
 from halligame.games.TicTacToe.gameClient import Client
 from halligame.games.TicTacToe.gameServer import Server
 
-__all__ = ['Client', 'Server']
+__all__ = ["Client", "Server"]

@@ -2,28 +2,40 @@
 %% Class: Concurrent Programming, Spring 2025
 %% Handles certain requests coming from the "hg" command line tool.
 
-%% One weird thing to note is that every function needs to end with 
+%% One weird thing to note is that every function needs to end with
 %% "init:stop()" to terminate the process.
 
 -module(handleCLIRequest).
--export([listGames/0, listActiveGames/0, sendMessage/1]).
+-export([listActiveGames/0, sendMessage/1, lookupGameServerID/1, listOnline/0]).
 
 -define(SERVERBROKER, {serverbroker, 'serverbroker@vm-projectweb3'}).
-
-%% List on stdout all of the potential games that the user could start a
-%% room for and play.
--spec listGames() -> no_return().
-listGames() ->
-    Games = gen_server:call(?SERVERBROKER, {list_games}),
-    io:format("Available Games:~n"),
-    lists:map(fun (Game) -> io:format("\t~p~n", [Game]) end, Games),
-    init:stop().
 
 %% List the active rooms on stdout.
 -spec listActiveGames() -> no_return().
 listActiveGames() ->
     Reply = gen_server:call(?SERVERBROKER, {list_gameservers}),
-    io:format("~p~n", [Reply]),
+    FormatPlayer = fun({gameclient, Login, _Pid}) -> Login end,
+    FormatPlayers = fun (Players) ->
+        case Players of
+            [] -> "None.";
+            _  -> io_lib:fwrite("~p", [lists:map(FormatPlayer, Players)])
+        end
+    end,
+    PrintFun = fun ({gameserver, GameName, _Pid, Players, NodeName}) ->
+        {ID, _} = lists:split(6, NodeName),
+        io:fwrite("Game: ~p; ID: ~p; Players: ~s~n",
+                  [GameName, ID, FormatPlayers(Players)])
+    end,
+    case Reply of
+        [] -> io:fwrite("No games are active currently.~n");
+        _  -> lists:foreach(PrintFun, Reply)
+    end,
+    init:stop().
+
+-spec listOnline() -> no_return().
+listOnline() ->
+    Reply = gen_server:call(?SERVERBROKER, {list_logins}),
+    lists:foreach(fun (X) -> io:fwrite("~s~n", [X]) end, Reply),
     init:stop().
 
 % Send a user a message.
@@ -31,7 +43,17 @@ listActiveGames() ->
 sendMessage([FromUser, ToUser, Message]) ->
     gen_server:cast(?SERVERBROKER, {message_user, FromUser, ToUser, Message}),
     init:stop().
-    
+
+-spec lookupGameServerID([string() | []]) -> no_return().
+lookupGameServerID([GameServerID]) ->
+    case gen_server:call(?SERVERBROKER, {lookupGameServerID, GameServerID}) of
+        {GameName, NodeName} ->
+            io:fwrite("~s~n~s~n", [GameName, NodeName]);
+        notfound ->
+            io:fwrite("notfound~n")
+    end,
+    init:stop().
+
 % TODO: implement?
 % addFriend(FriendID) ->
 %     init:stop().

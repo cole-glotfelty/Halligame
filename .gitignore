@@ -15,6 +15,11 @@ __pycache__
 *.egg-info
 *.egg
 .ruff_cache
+dist
+.mypy_cache
+
+# pdoc
+html
 
 # Devenv
 .devenv*
@@ -47,3 +52,5 @@ logs
 *.iml
 rebar3.crashdump
 *~
+erlang_ls.config
+doc

@@ -1,25 +1,32 @@
-# background.py
-#
+"""
+background.py allows for erlang messages to be sent and recieved from the
+server broker, in the background.
+Michael Daniels, 2025-04-19
+"""
 
 import asyncio
 import io
 import os
 import socket
-import subprocess
 from argparse import ArgumentParser
 from random import randint
+from typing import Any, TypeAlias
 
-import psutil
+from psutil import pid_exists
 from pyrlang import Node
 from pyrlang.gen.server import GenServerInterface
 from pyrlang.process import Process
-from term import Atom
+from term import Atom, Pid
+
+from halligame.utils.common import ensure_epmd, whoami
 
 WAIT_TIME_SEC = 30
 
+DestType: TypeAlias = Atom | tuple[Atom, Atom] | Pid
+
 
 class UserBackground(Process):
-    def __init__(self, shellPid: str, username: str, ttyName: str):
+    def __init__(self, shellPid: str, username: str, ttyName: str) -> None:
         super().__init__()
         node.register_name(self, Atom("backgroundProc"))
         self.__shellPid = shellPid
@@ -34,14 +41,14 @@ class UserBackground(Process):
             (Atom("serverbroker@vm-projectweb3"), Atom("serverbroker")),
             (Atom("getBrokerPid"), self.pid_),
         )
-        self.__serverBroker = None
+        self.__serverBroker = GenServerInterface(self, None)
 
         # print("DEBUG: Sent getBroker message")
 
         event_loop = asyncio.get_event_loop()
-        event_loop.call_soon(self.checkOSProcessAlive)
+        event_loop.call_soon(self.__checkOSProcessAlive)
 
-    def handle_one_inbox_message(self, msg):
+    def handle_one_inbox_message(self, msg: Any) -> None:
         # print(f"DEBUG: Got message {msg}")
         if msg[0] == Atom("brokerPid"):
             # print(f"DEBUG: pid is {msg[1]}")
@@ -76,47 +83,48 @@ class UserBackground(Process):
                 )
                 print(f"Run {msg[3]} to play!", file=f, flush=True)
 
-    def checkOSProcessAlive(self):
-        if not psutil.pid_exists(int(self.__shellPid)):
+    def __checkOSProcessAlive(self) -> None:
+        """
+        Checks whether the OS process whose ID is stored in self.__shellPid
+        is alive. If not, shutdown. If so, check again in WAIT_TIME_SEC seconds.
+        """
+        if not pid_exists(int(self.__shellPid)):
             self.shutdown()
             exit(0)
         event_loop = asyncio.get_event_loop()
-        event_loop.call_later(WAIT_TIME_SEC, self.checkOSProcessAlive)
+        event_loop.call_later(WAIT_TIME_SEC, self.__checkOSProcessAlive)
 
-    # wrapper for sending a message with correct formatting
-    def __sendMessage(self, dest, msg):
+    #
+    def __sendMessage(self, dest: DestType, msg: Any) -> None:
+        """
+        wrapper for sending a message with correct formatting
+        dest is either:
+            * an Atom(local registered name),
+            * a tuple (Atom(node name), Atom(registered name))
+              (note that this backwards from Erlang), or
+            * a Pid.
+        """
         # print(f"DEBUG: Sending Message from Background to {dest}: {msg}")
         node.send_nowait(sender=self.pid_, receiver=dest, message=msg)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         node.destroy()
 
 
-def openTty(tty):
+def openTty(tty: str):  # noqa: ANN201
+    """
+    Open the TTY whose path is given for writing. The caller must close it.
+    """
     return io.TextIOWrapper(
-        io.FileIO(os.open(tty, os.O_NOCTTY | os.O_RDWR), "r+")
+        io.FileIO(os.open(tty, os.O_NOCTTY | os.O_RDWR), "w")
     )
 
 
-def start(shellPid: str, tty: str):
+def start(shellPid: str, tty: str) -> None:
     ensure_epmd()
-    global node
-    hostname = socket.gethostname()
-    node = Node(f"{randint(0, 999999):06d}@{hostname}", cookie="Sh4rKM3ld0n")
-    username = subprocess.run(["whoami"], capture_output=True).stdout
-    UserBackground(shellPid, username.decode().strip(), tty)
+
+    UserBackground(shellPid, whoami(), tty)
     node.run()
-
-
-# TOOD: put in a utils thing, copied from cli.py
-def ensure_epmd():
-    epmd_running = False
-    for proc in psutil.process_iter(["pid", "name"]):
-        if proc.info["name"] == "epmd":
-            epmd_running = True
-            break
-    if not epmd_running:
-        subprocess.Popen(["epmd", "-daemon"])
 
 
 if __name__ == "__main__":
@@ -124,6 +132,9 @@ if __name__ == "__main__":
     parser.add_argument("ParentShellPid")
     parser.add_argument("tty")
     args = parser.parse_args()
+
+    hostname = socket.gethostname()
+    node = Node(f"{randint(0, 999999):06d}@{hostname}", cookie="Sh4rKM3ld0n")
 
     try:
         start(args.ParentShellPid, args.tty)
