@@ -211,7 +211,7 @@ if __name__ == "__main__":
     parsed = parser.parse_args()
     if not parsed.subcommand:
         parser.print_help()
-        exit(1)
+        os._exit(1)
     else:
         parsed.func(parsed)
-        exit(0)
+        os._exit(0)
