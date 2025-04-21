@@ -50,15 +50,18 @@ class Client(ClientSuper):
         with self.__stateLock:
             if mouseEventType == "left_click":
                 if (self.__gameOver):
-                    self.__screen.displayFullScreenMessage("GAME OVER", 1.5, font="roman")
+                    self.__screen.displayFullScreenMessage("GAME OVER", font="roman")
+                    time.sleep(1.5)
                     self.__drawScreen()
                 elif (not self.__myTurn):
-                    self.__screen.displayFullScreenMessage("NOT YOUR\nTURN", 1.5, font="roman")
+                    self.__screen.displayFullScreenMessage("NOT YOUR\nTURN", font="roman")
+                    time.sleep(1.5)
                     self.__drawScreen()
                 elif type(region) == int:
                     # need to pick a card before it's a valid choice
                     if (not self.__game.cardPlacable(self.__topCard, self.__deck[region])):
-                        self.__screen.displayFullScreenMessage("INVALID CARD", 1.5, font="roman")
+                        self.__screen.displayFullScreenMessage("INVALID CARD", font="roman")
+                        time.sleep(1.5)
                         self.__drawScreen()
                     elif (self.__game.type(self.__deck[region]) in ["wild", "+4"]):
                         self.__waitingCard = self.__deck.pop(region)
@@ -122,7 +125,8 @@ class Client(ClientSuper):
     def joinConfirmed(self, joinMsg):
         with self.__stateLock:
             if (joinMsg == "GAME FULL" or joinMsg == "GAME STARTED"):
-                self.__screen.displayFullScreenMessage(joinMsg + "\n\nJOINING AS VIEWER", 3, font="roman")
+                self.__screen.displayFullScreenMessage(joinMsg + "\n\nJOINING AS VIEWER", font="roman")
+                time.sleep(3)
                 # joining as viewer
                 self.__playerNum = -1
                 self.__deck = []
@@ -135,7 +139,8 @@ class Client(ClientSuper):
                 self.__gameOver = True
                 self.__winner = msg[1]
 
-                self.__screen.displayFullScreenMessage(f"Game Over\n{self.__winner} Won!", 3, font="roman")
+                self.__screen.displayFullScreenMessage(f"Game Over\n{self.__winner} Won!", font="roman")
+                time.sleep(3)
                 self.__updateState(msg[2][1])
             elif (msg[0] == "state"):
                 self.__updateState(msg[1])
@@ -150,7 +155,8 @@ class Client(ClientSuper):
         if (not self.__gameOver):
             # just became your turn
             if (not self.__myTurn and self.__currUsersTurn == self.__playerNum):
-                self.__screen.displayFullScreenMessage("YOUR TURN", 1, font="roman")
+                self.__screen.displayFullScreenMessage("YOUR TURN", font="roman")
+                time.sleep(1)
 
             self.__myTurn = self.__currUsersTurn == self.__playerNum
 

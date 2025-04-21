@@ -15,6 +15,7 @@ class Server(ServerSuper):
         self.__game = Uno()
 
         self.__numJoined = 0
+        self.__numOnline = 0
         self.__playerClientPids = [-1] * 10
         self.__playerUTLNs = [-1] * 10
         self.__userCardCounts = [-1] * 10
@@ -22,6 +23,7 @@ class Server(ServerSuper):
 
         self.__currUsersTurn = 0
         self.__gameStarted = False
+        self.__gameOver = False
 
         self.__turnChangeDelta = 1 # deal with reverse
 
@@ -63,7 +65,7 @@ class Server(ServerSuper):
 
         if (self.__userCardCounts[playerNum] == 0):
             self.__comms.broadcastMessage(("Game Over", self.__playerUTLNs[playerNum], self.serializeState()))
-            self.__comms.shutdown() # the game is over, so shut down
+            self.__gameOver = True
         else:
             self.__comms.broadcastMessage(self.serializeState())
 
@@ -82,6 +84,7 @@ class Server(ServerSuper):
 
     def addClient(self, clientPid, username):
         with self.__stateLock:
+            self.__numOnline += 1
             if (self.__numJoined >= 10 or self.__gameStarted):
                 if (self.__gameStarted):
                     message = "GAME STARTED"
@@ -96,9 +99,9 @@ class Server(ServerSuper):
                     self.__playerClientPids[playerNum] = clientPid
                     self.__playerUTLNs[playerNum] = username
 
-                    self.__clientDecks[playerNum] = [self.__game.dealCard() for i in range(1)]
+                    self.__clientDecks[playerNum] = [self.__game.dealCard() for i in range(7)]
 
-                    self.__userCardCounts[playerNum] = 1 # this user has 7 cards
+                    self.__userCardCounts[playerNum] = 7 # this user has 7 cards
                     self.__comms.confirmJoin(clientPid, username, (playerNum, self.__clientDecks[playerNum]))
                     self.__comms.broadcastMessage(self.serializeState())
 
@@ -110,6 +113,12 @@ class Server(ServerSuper):
                     self.__comms.confirmJoin(clientPid, username, (playerNum, self.__clientDecks[playerNum]))
                     self.__comms.sendClientMessage(clientPid, self.serializeState())
                     # self.__comms.broadcastMessage(self.serializeState())
+
+    def removeClient(self, clientPID : Pid, username : str):
+        self.__numOnline -= 1
+        if (self.__gameOver):
+            self.__comms.shutdown() # the game is over, so shut down
+
 
     def serializeState(self):
         return ("state", (self.__game.getTopCard(), self.__userCardCounts, self.__playerUTLNs, self.__currUsersTurn))

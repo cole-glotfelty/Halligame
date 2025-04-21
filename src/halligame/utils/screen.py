@@ -304,7 +304,7 @@ class Screen():
             
             return max(0, col)
 
-    def displayFullScreenMessage(self, message, displayTime, font=None):
+    def displayFullScreenMessage(self, message, font=None):
         self.clearScreen()
         
         if (font != None):
@@ -315,5 +315,3 @@ class Screen():
 
         self.write(row, col, message)
         self.refresh()
-
-        time.sleep(displayTime)
