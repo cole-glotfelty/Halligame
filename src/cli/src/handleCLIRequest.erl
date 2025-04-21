@@ -6,7 +6,8 @@
 %% "init:stop()" to terminate the process.
 
 -module(handleCLIRequest).
--export([listActiveGames/0, sendMessage/1, lookupGameServerID/1, listOnline/0]).
+-export([listActiveGames/0, sendMessage/1, lookupGameServerID/1, listOnline/0,
+         sendInvite/1]).
 
 -define(SERVERBROKER, {serverbroker, 'serverbroker@vm-projectweb3'}).
 
@@ -17,7 +18,7 @@ listActiveGames() ->
     FormatPlayer = fun({gameclient, Login, _Pid}) -> Login end,
     FormatPlayers = fun (Players) ->
         case Players of
-            [] -> "None.";
+            [] -> "none";
             _  -> io_lib:fwrite("~p", [lists:map(FormatPlayer, Players)])
         end
     end,
@@ -32,6 +33,7 @@ listActiveGames() ->
     end,
     init:stop().
 
+% List all users who are online on stdout.
 -spec listOnline() -> no_return().
 listOnline() ->
     Reply = gen_server:call(?SERVERBROKER, {list_logins}),
@@ -39,11 +41,20 @@ listOnline() ->
     init:stop().
 
 % Send a user a message.
--spec sendMessage([string() | [string() | string() | []]]) -> no_return().
+-spec sendMessage([string() | [string() | [string() | []]]]) -> no_return().
 sendMessage([FromUser, ToUser, Message]) ->
     gen_server:cast(?SERVERBROKER, {message_user, FromUser, ToUser, Message}),
     init:stop().
 
+% Invite a user to a game.
+-spec sendInvite([string() | [string() | [string() | []]]]) -> no_return().
+sendInvite([FromUser, ToUser, GameName, JoinCommand]) ->
+    gen_server:cast(?SERVERBROKER,
+                    {invite_user, FromUser, ToUser, GameName, JoinCommand}),
+    init:stop().
+
+% Looks up the game server with the given ID.
+% Prints to stdout the game name, node name, and pid, all seperated by newlines.
 -spec lookupGameServerID([string() | []]) -> no_return().
 lookupGameServerID([GameServerID]) ->
     case gen_server:call(?SERVERBROKER, {lookupGameServerID, GameServerID}) of

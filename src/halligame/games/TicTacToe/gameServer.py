@@ -27,7 +27,7 @@ class Server(ServerSuper):
         self.__state.setValue("gameOver", "")
 
         self.__playersSymbol = ["X", "O"]
-        self.__playersNames = ["nobody", "nobody"]
+        self.__state.setValue("playerNames", ["nobody", "nobody"])
 
         # print(f"GameState objects: {self.__state.objects}")
         # "Private" Members for internal use only
@@ -113,12 +113,13 @@ class Server(ServerSuper):
 
     def addClient(self, clientPid: Pid, username: str) -> None:
         for i in range(2):
-            if self.__playersNames[i] == "nobody":
+            if self.__state.getValue("playerNames")[i] == "nobody":
                 self.__numConnected += 1
-                self.__playersNames[i] = username
+                self.__state.getValue("playerNames")[i] = username
                 self.__comms.confirmJoin(
                     clientPid, username, (i, self.__state.serialize())
                 )
+                self.__comms.broadcastState(self.__state)
                 break
         else:
             self.__comms.sendClientMessage(

@@ -11,9 +11,7 @@ from halligame.utils.screen import Screen
 class Client(ClientSuper):
     # comms is an instance of halligame.utils.ClientCommunicate
     def __init__(self, comms) -> None:  # noqa: ANN001
-        self.__screen = Screen(
-            self.userInput, self.mouseInput, width=50, height=25
-        )
+        self.__screen = Screen(self.userInput, self.mouseInput)
         self.__stateLock = threading.Lock()
         self.__comms = comms
         self.__state: GameState = GameState()
@@ -179,12 +177,6 @@ class Client(ClientSuper):
 
         self.__currColor = color
 
-    def __drawPixel(self, pixelToDraw: tuple[int, int, str]) -> None:
-        (row, col, color) = pixelToDraw
-        self.__screen.write(
-            row + self.__boardVOffset, col + self.__boardHOffset, " ", color
-        )
-        self.__screen.refresh()
 
     def joinConfirmed(self, newState: bytes) -> None:
         with self.__stateLock:
@@ -195,6 +187,10 @@ class Client(ClientSuper):
         if msg[0] == "state_diff":
             with self.__stateLock:
                 self.__drawPixel(msg[1])
+        elif msg[0] == "players":
+            with self.__stateLock:
+                self.__drawPlayers(msg[1])
+                self.__screen.refresh()
 
     def __drawBoard(self) -> None:
         board = self.__state.getValue("board")
@@ -207,3 +203,18 @@ class Client(ClientSuper):
                     board[row][col],
                 )
         self.__screen.refresh()
+
+    def __drawPixel(self, pixelToDraw: tuple[int, int, str]) -> None:
+        (row, col, color) = pixelToDraw
+        self.__screen.write(
+            row + self.__boardVOffset, col + self.__boardHOffset, " ", color
+        )
+        self.__screen.refresh()
+    
+    def __drawPlayers(self, players):
+        col = self.__boardHOffset + self.__boardWidth + 20
+        players.sort()
+
+        self.__screen.write(self.__boardVOffset + 2, col, "Active Players:")
+        for i, player in enumerate(players):
+            self.__screen.write(self.__boardVOffset + 3 + (i * 2), col + 2, player)

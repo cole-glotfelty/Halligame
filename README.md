@@ -45,7 +45,7 @@ to work on the Halligame framework
 - `sendMessage(Message)` : Sends a message to the server, with `gotClientMessage(ClientPid, Message)` being called when the server receives the message
 - `shutdown()` : Should be called when the client leaves (or the game is over)
 
-### Screen (halligame.utils.screen)**
+### Screen (halligame.utils.screen)
 - `Screen(gotInputFunc, gotMouseClickFunc)` : 
     Initializes the screen class. Takes a callback function gotInputFunc that 
     has signature `gotInputFunc(input)` where input is the input from the user. 
@@ -66,10 +66,26 @@ to work on the Halligame framework
     bottom left corner as if it were a normal terminal. end is appended to the 
     end of toPrint before printing. toPrint must be convertible to string. 
     Updates made when refresh is called.
+- `displayFullScreenMessage(message, font=None)` : Displays the contents of 
+    message centered vertically and horizontall in the terminal window. 
+    Clears and refreshes the screen.
 - `clearScreen()` : Removes everything from the screen. Updates made when 
     refresh is called.
 - `refresh()` : Refreshes the screen, making all pending changes visible to the 
     user
+
+- `terminalHeight()` : get the height of the terminal in pixels
+- `terminalWidth()` : get the width of the terminal in pixels
+- `getCenteredRow(toPrint)` : Takes toPrint, which must either be a string or 
+    something convertible to a string. Returns the row number where if you 
+    called write(toPrint), it would be centered vertically in the screen. 
+    If the contents is taller than the screen, returns 0.
+- `getCenteredCol(toPrint)` : Similar to getCenteredRow. Takes toPrint, which 
+    must either be a string or something convertible to a string. Returns the 
+    column number where if you called write(toPrint), it would be centered 
+    horizontally in the screen. If the contents is wider than the screen, 
+    returns 0.
+
 - `addColor(r, g, b, colorId)` : Add a new color to the palette, where 
     r, g, and b are integers between 0 and 256 referring to the intensity of 
     the color. Predefined colors are black, blue, cyan, green, magenta, red, white, yellow
@@ -87,6 +103,8 @@ to work on the Halligame framework
     gotMouseClickFunc, if the click is within this region, then the region 
     argument is set to id. Clicks in overlapping regions are decided based on 
     which region was defined more recently.
+- `clearClickableRegions()` : Remove all clickable regions from the screen
+
 - `shutdown()` : Must be called when the client is finished displaying to the 
     terminal. Closes the virtual window and restores the terminal appearance 
     to its normal state

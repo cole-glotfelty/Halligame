@@ -34,9 +34,7 @@ class Client(ClientSuper):
             myTurn
             done
         """
-        self.__screen = Screen(
-            self.userInput, self.mouseInput, width=50, height=25
-        )
+        self.__screen = Screen(self.userInput, self.mouseInput)
         self.__stateLock = threading.Lock()
         self.__comms = comms
         self.__state: GameState = GameState()
@@ -51,10 +49,7 @@ class Client(ClientSuper):
     def gotServerMessage(self, msg: tuple[str, Any]) -> None:
         with self.__stateLock:
             toPrint = self.__formatter.renderText(msg[0])
-            self.__screen.clearScreen()
-            self.__screen.write(0, 15, toPrint)
-            self.__screen.refresh()
-
+            self.__screen.displayFullScreenMessage(toPrint)
             time.sleep(1.5)
 
             self.__updateState(msg[1])
@@ -87,7 +82,7 @@ class Client(ClientSuper):
 
         for i in range(3):
             for j in range(3):
-                verticalOffset = (letterHeight + 2) * i
+                verticalOffset = (letterHeight + 1) * i
                 horizontalOffset = (letterWidth + 2) * j
                 self.__screen.addClickableRegion(
                     self.__topRow + verticalOffset,
@@ -127,6 +122,11 @@ class Client(ClientSuper):
         self, row: int, col: int, region: int | None, mouseEventType: str
     ) -> None:
         with self.__stateLock:  # draw it so it appears instantaneously
+            if (not self.__myTurn):
+                message = self.__formatter.renderText("Not Your Turn")
+                self.__screen.displayFullScreenMessage(message)
+                time.sleep(1.5)
+                self.__drawGame()
             if (
                 region is not None
                 and self.__myTurn
@@ -137,9 +137,7 @@ class Client(ClientSuper):
                 playerSymbol = "X" if self.__playerID == 0 else "O"
                 newBoard[region // 3][region % 3] = playerSymbol
                 self.__state.setValue("board", newBoard)
-                self.__screen.clearScreen()
-                self.__drawBoard()
-                self.__screen.refresh()
+                self.__drawGame()
 
                 self.__comms.sendMessage((self.__playerID, region))
 
@@ -170,18 +168,15 @@ class Client(ClientSuper):
 
     def __drawGameOver(self) -> None:
         Message = self.__formatter.renderText(self.__state.getValue("gameOver"))
-        self.__screen.clearScreen()
-        self.__screen.write(15, 15, Message)
-        self.__screen.refresh()
-
+        self.__screen.displayFullScreenMessage(Message)
         time.sleep(3)
-        self.__screen.clearScreen()
-        self.__drawBoard()
-        self.__screen.refresh()
+
+        self.__drawGame()
 
     def __drawGame(self) -> None:
         self.__screen.clearScreen()
         self.__drawBoard()
+        self.__drawGameInfo()
         self.__screen.refresh()
 
     def __drawBoard(self) -> None:
@@ -195,7 +190,7 @@ class Client(ClientSuper):
 
                 letter = self.__formatter.renderText(character)
 
-                verticalOffset = (letterHeight + 2) * i
+                verticalOffset = (letterHeight + 1) * i
                 horizontalOffset = (letterWidth + 2) * j
 
                 self.__screen.write(
@@ -209,8 +204,29 @@ class Client(ClientSuper):
             self.__screen.write(self.__topRow + i, letterWidth, "||")
             self.__screen.write(self.__topRow + i, (letterWidth * 2) + 2, "||")
 
-        for i in range(letterWidth * 3 + 4):
-            self.__screen.write(self.__topRow + letterHeight, i, "-\n-")
+        for i in range(letterWidth * 3 + 2):
+            self.__screen.write(self.__topRow + letterHeight, i, "=")
             self.__screen.write(
-                self.__topRow + (letterHeight * 2) + 2, i, "-\n-"
+                self.__topRow + (letterHeight * 2) + 2, i, "="
             )
+    
+    def __drawGameInfo(self):
+        letter = self.__formatter.renderText("X")
+        letterWidth = len(letter.split("\n")[0])
+
+        boardFarRightCol = letterWidth * 3 + 4
+        boardTopRow = self.__topRow
+
+
+
+        infoList = []
+        infoList.append("You Are Symbol " + ("X" if self.__playerID == 0 else "O"))
+        infoList.append("Your Opponent is " + self.__state.getValue("playerNames")[(self.__playerID + 1) % 2])
+        
+        if (self.__state.getValue("gameOver") != ""):
+            infoList.append(self.__state.getValue("gameOver"))
+        else:
+            infoList.append(f"It's {self.__state.getValue("playerNames")[self.__state.getValue("currentPlayer")]}'s Turn")
+
+        for i, info in enumerate(infoList):
+            self.__screen.write(boardTopRow + 6 + (i * 2), boardFarRightCol + 7, info)

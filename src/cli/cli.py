@@ -10,7 +10,7 @@ from random import randint
 from socket import gethostname
 
 import psutil
-from term import Atom, codec
+from term import codec
 
 import halligame.utils.ClientComms as ClientComms
 import halligame.utils.ServerComms as ServerComms
@@ -61,13 +61,14 @@ def join(args: Namespace) -> None:
     returned = subprocess.run(cmd, capture_output=True).stdout.splitlines()
 
     match returned:
-        case "notfound":
+        case [b"notfound"]:
             print(f"Error: game with id {inputGameID} not found.")
-        case gameName, nodeName, nodePid:
-            print(f"{nodePid[1:]}")
-            print(f"{codec.binary_to_term(nodePid[1:])}")
-            ClientComms.start(nodeName.decode(), gameName.decode(),
-                              codec.binary_to_term(nodePid[1:])[0])
+        case [gameName, nodeName, nodePid]:
+            ClientComms.start(
+                nodeName.decode(),
+                gameName.decode(),
+                codec.binary_to_term(nodePid[1:])[0],
+            )
         case _:
             print(f"Error: cli got bad response from broker: {returned}")
 
@@ -82,7 +83,7 @@ def new(args: Namespace) -> None:
     gameID = f"{randint(0, 999999):06d}"
     server_node_name = f"{gameID}@{hostname}"
     print("New game created.")
-    print(f"Run \"hg join {gameID[:3]}-{gameID[3:]}\" to join!")
+    print(f'Run "hg join {gameID[:3]}-{gameID[3:]}" to join!')
 
     thisProc = psutil.Process(os.getpid())
     parentPid = next(p for p in thisProc.parents() if p.name() != "uv")
@@ -134,10 +135,44 @@ def write(args: Namespace) -> None:
         subprocess.run(cmd)
 
 
+def invite(args: Namespace) -> None:
+    """Invite a user to a game."""
+    ensure_epmd()
+    inputGameID = str(args.gameID).replace("-", "")
+
+    cmd = BASESCRIPT.copy()
+    cmd.append("lookupGameServerID")
+    cmd.append(inputGameID)
+
+    returned = subprocess.run(cmd, capture_output=True).stdout.splitlines()
+
+    match returned:
+        case [b"notfound"]:
+            print(f"Error: game with id {inputGameID} not found.")
+        case [gameName, nodeName, _nodePid]:
+            sendInvite(args.username, gameName.decode(), nodeName.decode()[:6])
+            print("Invited!")
+        case _:
+            print(f"Error: cli got bad response from broker: {returned}")
+
+
+def sendInvite(toUser: str, gameName: str, gameID: str) -> None:
+    """Helper function for invite(), actually sends the message.
+    gameID is a string of six numbers."""
+    cmd = BASESCRIPT.copy()
+    cmd.append("sendInvite")
+    cmd.append(whoami())
+    cmd.append(toUser)
+    cmd.append(gameName)
+    cmd.append(f"hg join {gameID[:3]}-{gameID[3:]}")
+    print(f"cmd = {cmd}")
+    subprocess.run(cmd)
+
+
 if __name__ == "__main__":
     mp.set_start_method("forkserver")
-    parser = ArgumentParser()
-    subparsers = parser.add_subparsers(required=True)
+    parser = ArgumentParser(prog="hg")
+    subparsers = parser.add_subparsers(dest="subcommand")
 
     join_parser = subparsers.add_parser("join", help="Join an existing game")
     join_parser.add_argument("gameID")
@@ -164,7 +199,19 @@ if __name__ == "__main__":
     write_parser.add_argument("username")
     write_parser.set_defaults(func=write)
 
-    parsed = parser.parse_args()
-    parsed.func(parsed)
+    invite_parser = subparsers.add_parser(
+        "invite", help="Invite someone to a game"
+    )
+    invite_parser.add_argument("username")
+    invite_parser.add_argument(
+        "gameID", help="six digits, optionally dash-seperated"
+    )
+    invite_parser.set_defaults(func=invite)
 
-    os._exit(0)
+    parsed = parser.parse_args()
+    if not parsed.subcommand:
+        parser.print_help()
+        os._exit(1)
+    else:
+        parsed.func(parsed)
+        os._exit(0)
