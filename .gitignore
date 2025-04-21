@@ -49,3 +49,4 @@ logs
 rebar3.crashdump
 *~
 erlang_ls.config
+doc
