@@ -231,7 +231,9 @@ class Client(ClientSuper):
         if (self.__state.getValue("gameOver") != ""):
             infoList.append(self.__state.getValue("gameOver"))
         else:
-            infoList.append(f"It's {self.__state.getValue("playerNames")[self.__state.getValue("currentPlayer")]}'s Turn")
+            playerNames = self.__state.getValue("playerNames")
+            currentPlayer = self.__state.getValue("currentPlayer")
+            infoList.append(f"It's {playerNames[currentPlayer]}'s Turn")
 
         for i, info in enumerate(infoList):
             self.__screen.write(boardTopRow + 6 + (i * 2), boardFarRightCol + 7, info)
