@@ -176,7 +176,7 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest="subcommand")
 
     join_parser = subparsers.add_parser("join", help="Join an existing game")
-    join_parser.add_argument("gameID")
+    join_parser.add_argument("gameID", help="6 digits, optionally with a dash.")
     join_parser.set_defaults(func=join)
 
     new_parser = subparsers.add_parser("new", help="Create a new game")
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     )
     invite_parser.add_argument("username")
     invite_parser.add_argument(
-        "gameID", help="six digits, optionally dash-seperated"
+        "gameID", help="6 digits, optionally with a dash."
     )
     invite_parser.set_defaults(func=invite)
 
