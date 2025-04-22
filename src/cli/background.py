@@ -62,8 +62,6 @@ class UserBackground(Process):
                 self.__serverBroker.cast_nowait(toSend)
             case "message", fromUser, content:
                 # Tuple is {'message', FromName, Message}
-                fromUser = fromUser.decode()
-                content = content.decode()
                 subprocess.run(
                     ["echo", f"Got message from {fromUser}: {content}"]
                 )
