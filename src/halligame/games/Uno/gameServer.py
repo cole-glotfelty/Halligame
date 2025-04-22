@@ -117,9 +117,9 @@ class Server(ServerSuper):
                     self.__playerClientPids[playerNum] = clientPid
                     self.__playerUTLNs[playerNum] = username
 
-                    self.__clientDecks[playerNum] = [self.__game.dealCard() for i in range(2)]
+                    self.__clientDecks[playerNum] = [self.__game.dealCard() for i in range(7)]
 
-                    self.__userCardCounts[playerNum] = 2 # this user has 7 cards
+                    self.__userCardCounts[playerNum] = 7 # this user has 7 cards
                     self.__comms.confirmJoin(clientPid, username, (playerNum, self.__clientDecks[playerNum]))
                     self.__comms.broadcastMessage(self.serializeState())
 
