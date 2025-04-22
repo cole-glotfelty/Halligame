@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.13
 # cli.py is the command-line interface for Halligame.
 # Created by:  Michael Daniels, 2025-04-14
 # Last edited: Michael Daniels, 2025-04-19
