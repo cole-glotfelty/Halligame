@@ -114,7 +114,7 @@ class Server(ServerSuper):
                     self.__comms.sendClientMessage(clientPid, self.serializeState())
                     # self.__comms.broadcastMessage(self.serializeState())
 
-    def removeClient(self, clientPID : Pid, username : str):
+    def removeClient(self, clientPID, username : str):
         self.__numOnline -= 1
         if (self.__gameOver):
             self.__comms.shutdown() # the game is over, so shut down

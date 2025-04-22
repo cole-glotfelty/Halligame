@@ -65,8 +65,7 @@ class Server(ServerSuper):
             self.__comms.sendClientMessage(clientPID, ("error", "Error: Invalid Move"))
         pass
 
-    # FIX: also add UTLN as second argument
-    def addClient(self, clientPID) -> None:
+    def addClient(self, clientPID, username) -> None:
         """
         Callback function for when a client joins the game. This should also
         call `confirmJoin` to send a message to the client about a new player
@@ -82,10 +81,9 @@ class Server(ServerSuper):
             if self.__usersConnected > 2:
                 self.__comms.sendClientMessage(clientPID, ("error", "Error: Room Full"))
             playerId = 0 if self.__usersConnected == 1 else 1
-            self.__comms.confirmJoin(clientPID, playerId) 
+            self.__comms.confirmJoin(clientPID, username, playerId) 
 
-    # FIX: also add UTLN as second argument
-    def removeClient(self, clientPID) -> None:
+    def removeClient(self, clientPID, username) -> None:
         """
         Callback function for when a client leaves the game. 
 
