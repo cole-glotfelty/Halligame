@@ -1,10 +1,13 @@
 # GameServer.py
 
-from halligame.utils.ServerComms import ServerCommunicate
-from halligame.utils.gameState import GameState
-from halligame.utils.gameServerTemplate import ServerSuper
-
 import threading
+
+from term import Pid
+
+from halligame.utils.gameServerTemplate import ServerSuper
+from halligame.utils.gameState import GameState
+from halligame.utils.ServerComms import ServerCommunicate
+
 from .Uno import Uno
 
 
@@ -31,7 +34,7 @@ class Server(ServerSuper):
 
         self.__turnChangeDelta = 1  # deal with reverse
 
-    def gotClientMessage(self, ClientPid, message):
+    def gotClientMessage(self, clientPid: Pid, message) -> None:
         with self.__stateLock:
             messageType = message[0]
             playerNum = message[1]
@@ -62,7 +65,7 @@ class Server(ServerSuper):
                     self.__clientDecks[playerNum] = newDeck
                     self.__evaluatePlaceCard(playerNum, card)
 
-    def __evaluatePlaceCard(self, playerNum, card):
+    def __evaluatePlaceCard(self, playerNum: int, card) -> None:
         self.__game.placeCard(card)
         self.__userCardCounts[playerNum] -= 1  # take away a card
 
@@ -97,12 +100,12 @@ class Server(ServerSuper):
         else:
             self.__comms.broadcastMessage(self.serializeState())
 
-    def __nextPlayer(self):
+    def __nextPlayer(self) -> int:
         return (
             self.__currUsersTurn + self.__turnChangeDelta
         ) % self.__numJoined
 
-    def __dealPlayerCard(self, playerNum):
+    def __dealPlayerCard(self, playerNum: int) -> None:
         newCard = self.__game.dealCard()
         self.__comms.sendClientMessage(
             self.__playerClientPids[playerNum], ("newCard", newCard)
@@ -113,7 +116,7 @@ class Server(ServerSuper):
 
         self.__comms.broadcastMessage(self.serializeState())
 
-    def addClient(self, clientPid, username):
+    def addClient(self, clientPid: Pid, username: str) -> None:
         with self.__stateLock:
             self.__numOnline += 1
             if username not in self.__playerUTLNs and (
@@ -161,7 +164,7 @@ class Server(ServerSuper):
                     )
                     # self.__comms.broadcastMessage(self.serializeState())
 
-    def removeClient(self, clientPID, username: str):
+    def removeClient(self, clientPID: Pid, username: str) -> None:
         self.__numOnline -= 1
         if self.__gameOver and self.__numOnline == 0:
             self.__comms.shutdown()  # the game is over, so shut down

@@ -213,7 +213,7 @@ class Client(ClientSuper):
             self.__screen.write(self.__topRow + letterHeight, i, "=")
             self.__screen.write(self.__topRow + (letterHeight * 2) + 2, i, "=")
 
-    def __drawGameInfo(self):
+    def __drawGameInfo(self) -> None:
         letter = self.__formatter.renderText("X")
         letterWidth = len(letter.split("\n")[0])
 

@@ -5,10 +5,10 @@
 # TODO: Will pls do todos/add docstrings to functions :)
 
 import curses
-import time
-import threading
 import subprocess
 import sys
+import threading
+import time
 
 import pyfiglet
 
@@ -41,7 +41,7 @@ import pyfiglet
 
 class Screen:
     # gotInputFunc = the function to call when receiving input
-    def __init__(self, gotInputFunc: callable, gotMouseClickFunc: callable):
+    def __init__(self, gotInputFunc: callable, gotMouseClickFunc: callable) -> None:
         self.__gotInput = gotInputFunc
         self.__gotMouse = gotMouseClickFunc
 
@@ -182,11 +182,11 @@ class Screen:
         with self.__lock:
             return self.__terminalWidth()
 
-    def __terminalHeight(self):
+    def __terminalHeight(self) -> int:
         rows, cols = self.__stdscr.getmaxyx()
         return rows
 
-    def __terminalWidth(self):
+    def __terminalWidth(self) -> int:
         rows, cols = self.__stdscr.getmaxyx()
         return cols
 
@@ -282,7 +282,7 @@ class Screen:
             self.__nextColorID += 1
 
     # scales a color from between 0 and 256 to between 0 and 1000
-    def __scaleColor(self, color):
+    def __scaleColor(self, color) -> int:
         return min(max(int(color * (1000.0 / 256.0)), 0), 1000)
 
     def addColorPair(self, foreground, background, pairId) -> None:
@@ -312,18 +312,18 @@ class Screen:
         with self.__lock:
             self.__clickableRegions.append((row, col, height, width, id))
 
-    def clearClickableRegions(self):
+    def clearClickableRegions(self) -> None:
         with self.__lock:
             self.__clickableRegions = []
 
-    def getCenteredRow(self, toPrint):
+    def getCenteredRow(self, toPrint) -> int:
         with self.__lock:
             row = (self.__terminalHeight() // 2) - (
                 len(str(toPrint).split("\n")) // 2
             )
             return max(0, row)
 
-    def getCenteredCol(self, toPrint):
+    def getCenteredCol(self, toPrint) -> int:
         with self.__lock:
             toPrintSplit = str(toPrint).split("\n")
 
@@ -336,7 +336,7 @@ class Screen:
 
             return max(0, col)
 
-    def displayFullScreenMessage(self, message, font=None):
+    def displayFullScreenMessage(self, message, font=None) -> None:
         self.clearScreen()
 
         if font != None:

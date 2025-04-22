@@ -1,19 +1,20 @@
 # gameClient.py
 
-from halligame.utils.screen import Screen
-from halligame.utils.gameState import GameState
-from halligame.utils.gameClientTemplate import ClientSuper
-
 import threading
-from .Uno import Uno
-
 import time
+
 import pyfiglet
+
+from halligame.utils.gameClientTemplate import ClientSuper
+from halligame.utils.gameState import GameState
+from halligame.utils.screen import Screen
+
+from .Uno import Uno
 
 
 class Client(ClientSuper):
     # comms is an instance of halligame.utils.ClientCommunicate
-    def __init__(self, comms):
+    def __init__(self, comms) -> None:  # noqa: ANN001
         self.__screen = Screen(self.userInput, self.mouseInput)
         self.__stateLock = threading.Lock()
         self.__comms = comms
@@ -32,7 +33,7 @@ class Client(ClientSuper):
 
         self.__screen.refresh()
 
-    def __initColors(self):
+    def __initColors(self) -> None:
         self.__colors = [
             "black",
             "blue",
@@ -52,12 +53,12 @@ class Client(ClientSuper):
         self.__screen.addColorPair("white", "black", "background")
         self.__screen.setStyle("background")  # set background to black
 
-    def userInput(self, input):
+    def userInput(self, input) -> None:
         if input == "q":
             self.__screen.shutdown()
             self.__comms.shutdown()
 
-    def mouseInput(self, row, col, region, mouseEventType):
+    def mouseInput(self, row, col, region, mouseEventType) -> None:
         with self.__stateLock:
             if mouseEventType == "left_click":
                 if self.__gameOver:
@@ -138,7 +139,7 @@ class Client(ClientSuper):
                         if self.__unoPossibility:
                             time.sleep(3)
 
-    def colorPicker(self):
+    def colorPicker(self) -> None:
         numRows = self.__screen.terminalHeight()
         numCols = self.__screen.terminalWidth()
         self.__screen.clearScreen()
@@ -177,7 +178,7 @@ class Client(ClientSuper):
 
         self.__screen.refresh()
 
-    def joinConfirmed(self, joinMsg):
+    def joinConfirmed(self, joinMsg) -> None:
         with self.__stateLock:
             if joinMsg == "GAME FULL" or joinMsg == "GAME STARTED":
                 self.__screen.displayFullScreenMessage(
@@ -190,7 +191,7 @@ class Client(ClientSuper):
             else:
                 (self.__playerNum, self.__deck) = joinMsg
 
-    def gotServerMessage(self, msg):
+    def gotServerMessage(self, msg) -> None:
         with self.__stateLock:
             if msg[0] == "Game Over":
                 self.__gameOver = True
@@ -213,7 +214,7 @@ class Client(ClientSuper):
                 time.sleep(1.5)
                 self.__drawScreen()
 
-    def __updateState(self, state):
+    def __updateState(self, state) -> None:
         # unpack state
         (
             self.__topCard,
@@ -240,7 +241,7 @@ class Client(ClientSuper):
 
         self.__drawScreen()
 
-    def __drawScreen(self):
+    def __drawScreen(self) -> None:
         self.__screen.clearScreen()
         self.__screen.clearClickableRegions()
 
@@ -252,7 +253,7 @@ class Client(ClientSuper):
 
         self.__screen.refresh()
 
-    def __drawOpponentCards(self):
+    def __drawOpponentCards(self) -> None:
         cardHeight = self.__game.cardHeight()
         cardWidth = self.__game.cardWidth()
 
@@ -285,7 +286,7 @@ class Client(ClientSuper):
 
             col += cardWidth + 2
 
-    def __drawCardPile(self):
+    def __drawCardPile(self) -> None:
         centeredRow = (self.__screen.terminalHeight() // 2) - (
             self.__game.cardHeight() // 2
         )
@@ -297,7 +298,7 @@ class Client(ClientSuper):
             centeredRow, centeredCol, self.__topCard, self.__screen
         )
 
-    def __drawGameInfo(self):
+    def __drawGameInfo(self) -> None:
         gameInfo = []
         if self.__gameOver:
             gameInfo.append(f"Game Over: {self.__winner} Won!")
@@ -312,7 +313,7 @@ class Client(ClientSuper):
         centeredRow = self.__screen.getCenteredRow(printableInfo)
         self.__screen.write(centeredRow, 3, printableInfo)
 
-    def __drawHand(self):
+    def __drawHand(self) -> None:
         if len(self.__deck) == 0:  # nothing to draw
             return
 
@@ -349,7 +350,7 @@ class Client(ClientSuper):
 
             cardCol += widthDiff
 
-    def __drawButtons(self):
+    def __drawButtons(self) -> None:
         if self.__playerNum == -1:  # viewer
             return
 
@@ -363,7 +364,7 @@ class Client(ClientSuper):
         self.__defineAndDrawButtons(buttons)
 
     # format of buttons is [(messageToDisplay, regionId), ...]
-    def __defineAndDrawButtons(self, buttons):
+    def __defineAndDrawButtons(self, buttons) -> None:
         startingDrawRow = (
             self.__screen.terminalHeight() - self.__game.cardHeight() - 1
         )

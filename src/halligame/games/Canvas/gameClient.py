@@ -210,7 +210,8 @@ class Client(ClientSuper):
         )
         self.__screen.refresh()
 
-    def __drawPlayers(self, players):
+    # TODO: need type annotation for players
+    def __drawPlayers(self, players) -> None:
         col = self.__boardHOffset + self.__boardWidth + 20
         players.sort()
 

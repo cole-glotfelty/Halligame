@@ -5,9 +5,10 @@
 # available for use when creating halligame games. This also includes some
 # typical patterns
 
+from typing import Any
+
 from halligame.utils.gameClientTemplate import ClientSuper
 from halligame.utils.gameState import GameState
-from typing import Any
 
 
 class Client(ClientSuper):
@@ -36,7 +37,7 @@ class Client(ClientSuper):
         self.__state.deserialize(state)
         pass
 
-    def gotServerMessage(self, msg) -> None:
+    def gotServerMessage(self, msg: Any) -> None:
         """
         Callback function for when a message is received from the server. One
         could deconstruct the msg like below and then discriminate based on
@@ -47,7 +48,7 @@ class Client(ClientSuper):
             print(message)
         pass
 
-    def joinConfirmed(self, msg) -> None:
+    def joinConfirmed(self, msg: Any) -> None:
         """
         Callback function for when the player joins the server. This message
         can be set in GameServer::addClient().

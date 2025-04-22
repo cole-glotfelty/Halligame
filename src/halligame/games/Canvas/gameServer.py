@@ -46,7 +46,7 @@ class Server(ServerSuper):
             self.__players.add(username)
             self.__comms.broadcastMessage(("players", list(self.__players)))
 
-    def removeClient(self, clientPID, username):
+    def removeClient(self, clientPID: Pid, username: str) -> None:
         self.__players.discard(username)
 
         self.__comms.broadcastMessage(("players", list(self.__players)))

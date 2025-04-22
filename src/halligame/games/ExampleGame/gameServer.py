@@ -5,9 +5,13 @@
 # available for use when creating halligame games. This also includes some
 # typical patterns
 
+from typing import Any
+
+from term import Pid
+
 from halligame.utils.gameServerTemplate import ServerSuper
-from halligame.utils.ServerComms import ServerCommunicate
 from halligame.utils.gameState import GameState
+from halligame.utils.ServerComms import ServerCommunicate
 
 
 class Server(ServerSuper):
@@ -28,7 +32,7 @@ class Server(ServerSuper):
         self.__state = GameState()
         pass
 
-    def gotClientMessage(self, event, clientPID) -> None:
+    def gotClientMessage(self, event: Any, clientPID: Pid) -> None:
         """
         The is where your game logic should go. You'll receive an events from
         the client and should validate them here. (You'll probably want to use
@@ -42,6 +46,7 @@ class Server(ServerSuper):
             clientPID - this is the PID of the client that's responsible for the
             event.
         """
+        valid = False # Set by your logic
         if valid:
             self.__comms.broadcastState(self.__state)
         else:
@@ -50,7 +55,7 @@ class Server(ServerSuper):
             )
         pass
 
-    def addClient(self, clientPID, username) -> None:
+    def addClient(self, clientPID: Pid, username: str) -> None:
         """
         Callback function for when a client joins the game. This should also
         call `confirmJoin` to send a message to the client about a new player
@@ -65,7 +70,7 @@ class Server(ServerSuper):
         self.__comms.confirmJoin(clientPID, msg)
         pass
 
-    def removeClient(self, clientPID, username) -> None:
+    def removeClient(self, clientPID: Pid, username: str) -> None:
         """
         Callback function for when a client leaves the game.
 
