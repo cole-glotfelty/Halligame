@@ -26,8 +26,8 @@ class Client(ClientSuper):
         """
         self.__comms = comms
         self.__playerID = None
-        self.__ships = [["  " for y in range(9)] for x in range(9)]
-        self.__guesses = [["  " for y in range(9)] for x in range(9)]
+        self.__ships = [["" for y in range(9)] for x in range(9)]
+        self.__guesses = [["" for y in range(9)] for x in range(9)]
 
         # Screen Printing
         self.__screen = Screen(self.userInput, self.mouseInput)
@@ -70,12 +70,57 @@ class Client(ClientSuper):
             self.__comms.shutdown()
 
     def mouseInput(self, row, col, region, mouseEventType):
-        pass
+        if mouseEventType == "left_click":
+            match region:
+                case ('button', "HITS"):
+                    self.__view = "hits"
+                case ('button', "CONTINUE"):
+                    self.__view = "hits"
+                case ('button', "SHIPS"):
+                    self.__view = "ships"
+                # FIX: add something to indicate hit
+                case ('grid', index):
+                    if self.__view == "hits":
+                        self.__guesses[index // 9][index % 9] = "X"
+                        self.__comms.sendMessage(('gridMove', self.__playerID, index))
+                    else:
+                        return
+                case _:
+                    return
 
+        # screen drawing after mouse clicks
+        self.__drawScreen()
+
+    def gotServerMessage(self, msg):
+        self.__screen.write(10, 200, "test")
+        match msg:
+            case ('gridMove', playerID, move):
+                if playerID != self.__playerID:
+                    self.__ships[move // 9][move % 9] = "X"
+                    self.__drawScreen()
+
+
+        
+    ## Screen Drawing ##
     def __drawScreen(self):
-        self.__drawGrid()
-        self.__screen.write(self.__top, 100, "YOUR TURN")
-        self.__drawButton(40, 100, "HITS | SHIPS")
+        self.__screen.clearClickableRegions()
+        self.__screen.clearScreen()
+
+        if self.__view == "select":
+            self.__drawGrid()
+            self.__screen.write(self.__top + 2, 100, "PLACE YOUR SHIPS")
+            self.__drawButton(40, 100, "CONTINUE")
+        elif self.__view == "hits":
+            self.__drawGrid()
+            self.__screen.write(self.__top + 2, 100, "YOUR TURN")
+            self.__drawButton(40, 100, "HITS")
+            self.__drawButton(40, 110, "ships")
+        elif self.__view == "ships":
+            self.__drawGrid()
+            self.__screen.write(self.__top + 2, 100, "YOUR TURN")
+            self.__drawButton(40, 100, "hits")
+            self.__drawButton(40, 110, "SHIPS")
+
         self.__screen.refresh()
 
     def __drawGrid(self, scale: int = 2):
@@ -87,6 +132,21 @@ class Client(ClientSuper):
                 else:
                     if col % (4 * scale) == 0:
                         self.__screen.write(self.__top + row, self.__left + col, "|")
+
+        for row in range(9):
+            for col in range(9):
+                center_row = self.__top + (row * 2 * scale) + scale
+                center_col = self.__left + (col * 4 * scale) + (2 * scale)
+                cell_value = ""
+                
+                if self.__view == "hits":
+                    cell_value = self.__guesses[row][col]
+                elif self.__view == "ships":
+                    cell_value = self.__ships[row][col]
+                
+                self.__screen.write(center_row, center_col, cell_value)
+
+        self.__defineGridClickableRegions()
 
     def __drawButton(self, row: int, col: int, toPrint: str):
         for i in range(len(toPrint)):
@@ -104,3 +164,27 @@ class Client(ClientSuper):
         self.__screen.write(row, col + len(toPrint) + 1, "|")
 
         self.__screen.write(row, col, toPrint)
+
+        self.__screen.addClickableRegion(
+            row - 1, col - 2, 3, len(toPrint) + 4, ("button", toPrint.upper())
+        )
+
+    ## Mouse Regions ##
+    def __defineGridClickableRegions(self, scale: int = 2):
+        for row in range(9):
+            for col in range(9):
+                # Calculate starting positions based on scale
+                start_row = self.__top + (row * 2 * scale) + 1
+                start_col = self.__left + (col * 4 * scale) + 1
+
+                # Define the region with appropriate size
+                self.__screen.addClickableRegion(
+                    start_row,
+                    start_col,
+                    (2 * scale) - 1,
+                    (4 * scale) - 1,
+                    (
+                        "grid",
+                        (row * 9) + col,
+                    ),
+                )

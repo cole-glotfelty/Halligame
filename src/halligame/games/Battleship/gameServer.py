@@ -11,21 +11,6 @@ from halligame.utils.gameState import GameState
 
 from threading import Lock
 
-class Player:
-    """
-    (Sort of a stuct) Holds the ships per player and allows access to how many
-    are remaining.
-    """
-    def __init__ (self):
-        self.ships = [[] for x in range(4)]
-        self.__shipsRemaining = 4
-
-    def shipsRemaining(self):
-        remShips = len(list(filter(lambda x: x == [], ships)))
-        shipsRemaining = remShips
-        return self.__shipsRemaining
-
-
 class Server(ServerSuper):
     def __init__(self, comms: ServerCommunicate) -> None:
         """
@@ -40,7 +25,7 @@ class Server(ServerSuper):
         your game. (We do this for serialization and server communication)
         """
         self.__comms = comms
-        self.__players = [Player, Player]
+        self.__playerShips = [[], []] # index playerID for the ships
         self.__userLock = Lock()
         self.__usersConnected = 0
         pass
@@ -59,11 +44,9 @@ class Server(ServerSuper):
             clientPID - this is the PID of the client that's responsible for the
             event.
         """
-        if valid:
-            self.__comms.broadcastState(self.__state)
-        else:
-            self.__comms.sendClientMessage(clientPID, ("error", "Error: Invalid Move"))
-        pass
+        match event:
+            case ('gridMove', playerID, move):
+                self.__comms.broadcastMessage(event)
 
     def addClient(self, clientPID, username) -> None:
         """
