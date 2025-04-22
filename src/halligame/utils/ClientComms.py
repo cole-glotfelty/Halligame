@@ -27,7 +27,7 @@ name: str  # Placeholder for mypy
 
 
 class ClientCommunicate(Process):
-    def __init__(self, gameName: str, serverPid : Pid) -> None:
+    def __init__(self, gameName: str, serverPid: Pid) -> None:
         super().__init__()
         node.register_name(self, "pyClient")
 
@@ -73,9 +73,7 @@ class ClientCommunicate(Process):
     def __backendSendMessage(self, msg: Any) -> None:
         """Send arbitrary messages to the game server."""
         node.send_nowait(
-            sender=self.pid_,
-            receiver=self.__serverPid,
-            message=msg,
+            sender=self.pid_, receiver=self.__serverPid, message=msg
         )
 
     def shutdown(self) -> None:
@@ -92,7 +90,7 @@ class ClientCommunicate(Process):
         sys.exit(0)
 
 
-def start(serverNodeName: str, gameName: str, serverPid : Pid) -> None:
+def start(serverNodeName: str, gameName: str, serverPid: Pid) -> None:
     """Start the client instance and its Pyrlang node."""
     global name, node
     name = f"{randint(0, 999999):06d}@{socket.gethostname()}"

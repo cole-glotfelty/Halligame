@@ -177,7 +177,6 @@ class Client(ClientSuper):
 
         self.__currColor = color
 
-
     def joinConfirmed(self, newState: bytes) -> None:
         with self.__stateLock:
             self.__state.deserialize(newState)
@@ -210,11 +209,13 @@ class Client(ClientSuper):
             row + self.__boardVOffset, col + self.__boardHOffset, " ", color
         )
         self.__screen.refresh()
-    
+
     def __drawPlayers(self, players):
         col = self.__boardHOffset + self.__boardWidth + 20
         players.sort()
 
         self.__screen.write(self.__boardVOffset + 2, col, "Active Players:")
         for i, player in enumerate(players):
-            self.__screen.write(self.__boardVOffset + 3 + (i * 2), col + 2, player)
+            self.__screen.write(
+                self.__boardVOffset + 3 + (i * 2), col + 2, player
+            )

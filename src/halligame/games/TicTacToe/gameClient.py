@@ -127,7 +127,7 @@ class Client(ClientSuper):
                 self.__screen.displayFullScreenMessage(message)
                 time.sleep(1)
                 self.__drawGame()
-            elif (not self.__myTurn):
+            elif not self.__myTurn:
                 message = self.__formatter.renderText("Not Your Turn")
                 self.__screen.displayFullScreenMessage(message)
                 time.sleep(1.5)
@@ -211,10 +211,8 @@ class Client(ClientSuper):
 
         for i in range(letterWidth * 3 + 2):
             self.__screen.write(self.__topRow + letterHeight, i, "=")
-            self.__screen.write(
-                self.__topRow + (letterHeight * 2) + 2, i, "="
-            )
-    
+            self.__screen.write(self.__topRow + (letterHeight * 2) + 2, i, "=")
+
     def __drawGameInfo(self):
         letter = self.__formatter.renderText("X")
         letterWidth = len(letter.split("\n")[0])
@@ -222,13 +220,16 @@ class Client(ClientSuper):
         boardFarRightCol = letterWidth * 3 + 4
         boardTopRow = self.__topRow
 
-
-
         infoList = []
-        infoList.append("You Are Symbol " + ("X" if self.__playerID == 0 else "O"))
-        infoList.append("Your Opponent is " + self.__state.getValue("playerNames")[(self.__playerID + 1) % 2])
-        
-        if (self.__state.getValue("gameOver") != ""):
+        infoList.append(
+            "You Are Symbol " + ("X" if self.__playerID == 0 else "O")
+        )
+        infoList.append(
+            "Your Opponent is "
+            + self.__state.getValue("playerNames")[(self.__playerID + 1) % 2]
+        )
+
+        if self.__state.getValue("gameOver") != "":
             infoList.append(self.__state.getValue("gameOver"))
         else:
             playerNames = self.__state.getValue("playerNames")
@@ -236,4 +237,6 @@ class Client(ClientSuper):
             infoList.append(f"It's {playerNames[currentPlayer]}'s Turn")
 
         for i, info in enumerate(infoList):
-            self.__screen.write(boardTopRow + 6 + (i * 2), boardFarRightCol + 7, info)
+            self.__screen.write(
+                boardTopRow + 6 + (i * 2), boardFarRightCol + 7, info
+            )

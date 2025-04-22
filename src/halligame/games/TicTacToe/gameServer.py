@@ -125,10 +125,10 @@ class Server(ServerSuper):
             self.__comms.sendClientMessage(
                 clientPid, ("Error: Too Many Players", self.__state.serialize())
             )
-    
-    def removeClient(self, clientPID, username : str) -> None:
+
+    def removeClient(self, clientPID, username: str) -> None:
         # print(f"removing client {clientPID} ({username}); "
-            #   f"numConnected = {self.__numConnected}")
+        #   f"numConnected = {self.__numConnected}")
         # Stop when room is empty
         self.__numConnected -= 1
         if self.__numConnected == 0:
