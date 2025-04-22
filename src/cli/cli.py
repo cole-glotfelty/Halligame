@@ -166,7 +166,6 @@ def sendInvite(toUser: str, gameName: str, gameID: str) -> None:
     cmd.append(toUser)
     cmd.append(gameName)
     cmd.append(f"hg join {gameID[:3]}-{gameID[3:]}")
-    print(f"cmd = {cmd}")
     subprocess.run(cmd)
 
 

@@ -82,6 +82,7 @@ class UserBackground(Process):
                     ]
                 )
                 subprocess.run(["echo", f"Run {joinCommand} to play!"])
+                subprocess.run(["echo", "(Press enter now.)"])
             case _:
                 subprocess.run(["echo", f"Unrecognized message {msg}"])
 
