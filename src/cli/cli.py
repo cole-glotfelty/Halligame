@@ -28,6 +28,7 @@ GAMES: list[str] = list(
             os.path.isdir(os.path.join(GAMES_DIR, elem))
             and elem != "__pycache__"
             and elem != "ExampleGame"
+            and elem != "Battleship"
         ),
         os.listdir(GAMES_DIR),
     )
