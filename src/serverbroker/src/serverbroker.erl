@@ -1,10 +1,9 @@
 %%%-------------------------------------------------------------------
-%%% @author 
 %%% @doc
-%%%
+%%% TODO
 %%% @end
 %%% Created : 22 Mar 2025
-%%% Last edited: Michael Daniels, 16 April 2025
+%%% Last edited: Michael Daniels, 19 April 2025
 %%%-------------------------------------------------------------------
 -module(serverbroker).
 -include_lib("eunit/include/eunit.hrl").
@@ -18,20 +17,20 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
      terminate/2, code_change/3, format_status/1]).
 
--define(SERVER, ?MODULE).
+-export([add_list_del_list/1]).
 
--record(game, {name :: string(), min_players :: pos_integer(),
-               max_players :: pos_integer() | inf}).
+-define(SERVER, ?MODULE).
 
 -record(session, {linuxpid = "" :: string(), erlangpid :: pid()}).
 -record(user, {login :: string(), sessions = [] :: [#session{}],
-               playing = [] :: [#game{}]}).
+               playing = [] :: [{string(), pid()}]}).
 
 -record(gameclient, {login :: string(), pid :: pid()}).
 
 -record(gameserver, {game :: string(), pid :: pid(),
-                     players = [] :: [#gameclient{}]}).
-                    
+                     players = [] :: [#gameclient{}],
+                     nodeName :: string()}).
+
 -record(state, {users = [] :: [#user{}],
                 gameservers = [] :: [#gameserver{}]}).
 
@@ -94,7 +93,8 @@ init([]) ->
 %% Handling call messages
 %% @end
 %%--------------------------------------------------------------------
--spec handle_call(Request :: term(), From :: {pid(), term()}, State :: term()) ->
+-spec handle_call(Request :: term(), From :: {pid(), term()},
+                  State :: term()) ->
       {reply, Reply :: term(), NewState :: term()} |
       {reply, Reply :: term(), NewState :: term(), Timeout :: timeout()} |
       {reply, Reply :: term(), NewState :: term(), hibernate} |
@@ -105,10 +105,22 @@ init([]) ->
       {stop, Reason :: term(), NewState :: term()}.
 handle_call({list_users}, _From, State) ->
     {reply, State#state.users, State};
+handle_call({list_logins}, _From, State) ->
+    {reply, lists:map(fun (X) -> X#user.login end, State#state.users), State};
 handle_call({list_gameservers}, _From, State) ->
     {reply, State#state.gameservers, State};
+handle_call({lookupGameServerID, ID}, _From, State) ->
+    % ID is a list of six digits.
+    FilterFun = fun (GS) -> lists:prefix(ID, GS#gameserver.nodeName) end,
+    case lists:filter(FilterFun, State#state.gameservers) of
+        [TheGS] ->
+            {reply, {TheGS#gameserver.game, TheGS#gameserver.nodeName,
+                     term_to_binary(TheGS#gameserver.pid)}, State};
+        [] ->
+            {reply, notfound, State}
+    end;
 handle_call(Catchall, From, State) ->
-    io:format("Unrecognized call ~p from ~p~n", [Catchall, From]),
+    io:fwrite("Unrecognized call ~p from ~p~n", [Catchall, From]),
     {reply, error, State}.
 
 
@@ -123,44 +135,65 @@ handle_call(Catchall, From, State) ->
       {noreply, NewState :: term(), Timeout :: timeout()} |
       {noreply, NewState :: term(), hibernate} |
       {stop, Reason :: term(), NewState :: term()}.
-handle_cast({register_gameserver, GameName, ServerPid}, State) ->
+handle_cast({register_gameserver, GameName, NodeName, ServerPid}, State) ->
     % Must be called by the game server, not a client.
-    % TODO: monitor?
     CurrGS   = State#state.gameservers,
-    NewGS    = #gameserver{game = GameName, pid = ServerPid},
+    NewGS    = #gameserver{game = GameName, pid = ServerPid,
+                           nodeName = NodeName},
     monitor(process, ServerPid),
     {noreply, State#state{gameservers = [NewGS | CurrGS]}};
 handle_cast({unregister_gameserver, ServerPid}, State) ->
     % Must be called by the game server, not a client.
-    CurrGS   = State#state.gameservers,
-    IsRegistered = fun (X) -> ServerPid == X#gameserver.pid end,
-    Filtered = lists:filter(IsRegistered, CurrGS),
+    CurrGS     = State#state.gameservers,
+    NotThisPid = fun (X) -> ServerPid =/= X#gameserver.pid end,
+    Filtered   = lists:filter(NotThisPid, CurrGS),
     {noreply, State#state{gameservers = Filtered}};
 handle_cast({joined_gameserver, JoinedLogin, JoinedPid, ServerPid}, State) ->
     % Must be called by the game server, not a client.
-    % TODO: update user's currently playing games too.
-    % TODO: monitor?
     CurrGS         = State#state.gameservers,
-    IsRegistered   = fun (X) -> ServerPid == X#gameserver.pid end,
-    {ThisGS, Rest} = lists:partition(IsRegistered, CurrGS),
+    HasThisPid     = fun (X) -> ServerPid == X#gameserver.pid end,
+    {[ThisGS], Rest} = lists:partition(HasThisPid, CurrGS),
     OldGCs         = ThisGS#gameserver.players,
     NewGC          = #gameclient{login = JoinedLogin, pid = JoinedPid},
     NewGS          = ThisGS#gameserver{players = [NewGC | OldGCs]},
-    {noreply, State#state{gameservers = [NewGS | Rest]}};
+
+    FilterUser = fun (Usr) -> Usr#user.login == JoinedLogin end,
+    {Matching, OtherUsers} = lists:partition(FilterUser, State#state.users),
+    case Matching of
+        [] ->
+            NewUsers = OtherUsers;
+        [ThisUser] ->
+            NewPlaying = [{ThisGS#gameserver.game, JoinedPid}
+                           | ThisUser#user.playing],
+            NewUsers = [ThisUser#user{playing = NewPlaying} | OtherUsers]
+    end,
+    monitor(process, JoinedPid),
+    {noreply, State#state{gameservers = [NewGS | Rest],
+                          users = NewUsers}};
 handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
     % Must be called by the game server, not a client.
     % TODO: update user's currently playing games too.
     CurrGS         = State#state.gameservers,
-    IsRegistered   = fun (X) -> ServerPid == X#gameserver.pid end,
-    {ThisGS, Rest} = lists:partition(IsRegistered, CurrGS),
+    HasThisPid     = fun (X) -> ServerPid == X#gameserver.pid end,
+    {[ThisGS], Rest} = lists:partition(HasThisPid, CurrGS),
     OldGCs         = ThisGS#gameserver.players,
-    NewGCs         = lists:filter(neq(#gameclient{login = LeftLogin,
-                                                    pid = LeftPid}),
-                                    OldGCs),
+    FilterFun      = fun (GC) -> ((GC#gameclient.login == LeftLogin) and
+                                  (GC#gameclient.pid == LeftPid)) end,
+    NewGCs         = lists:filter(FilterFun, OldGCs),
     NewGS          = ThisGS#gameserver{players = NewGCs},
-    {noreply, State#state{gameservers = [NewGS | Rest]}};
+
+    FilterUser = fun (Usr) -> Usr#user.login == LeftLogin end,
+    {[ThisUser], OtherUsers} = lists:partition(FilterUser, State#state.users),
+    FilterPlaying = fun ({GameName, Pid}) ->
+                            ((GameName =/= CurrGS#gameserver.game) and
+                            (Pid =/= LeftPid)) end,
+    UpdatedUser = ThisUser#user{playing = lists:filter(FilterPlaying,
+                                                       ThisUser#user.playing)},
+    {noreply, State#state{gameservers = [NewGS | Rest],
+                          users = [UpdatedUser | OtherUsers]}};
 handle_cast({add_user, Login, LinuxPid, ErlangPid}, State) ->
-    {ThisUser, Rest} = lists:partition(fun (Usr) -> Usr#user.login == Login end, State#state.users),
+    {ThisUser, Rest} = lists:partition(fun (Usr) -> Usr#user.login == Login end,
+                                       State#state.users),
     NewSession = #session{erlangpid = ErlangPid, linuxpid = LinuxPid},
     monitor(process, ErlangPid),
     case ThisUser of
@@ -173,33 +206,29 @@ handle_cast({add_user, Login, LinuxPid, ErlangPid}, State) ->
     end,
     {noreply, State#state{users = [User | Rest]}};
 handle_cast({del_user, Login, LinuxPid}, State) ->
-    Fun      = fun (X) -> Login == X#user.login end,
+    Fun      = fun (Usr) -> Login == Usr#user.login end,
     {ThisUser, Rest} = lists:partition(Fun, State#state.users),
     case ThisUser of
         [] ->
             % User not found.
             Users = Rest;
-        [#user{login = Login, sessions = [], playing = []}] ->
-            % The user has no pid, so just keep the user.
-            Users = [ThisUser | Rest];
-        [#user{login = Login, sessions = [#session{linuxpid = LinuxPid}]}] ->
-            % The user has only this pid, so delete it.
-            Users = [#user{login = Login}, Rest];
-        [#user{login = Login, sessions = [_Other]}] ->
-            % This pid wasn't found, so ignore.
-            Users = State#state.users;
-        [#user{login = Login, sessions = Sessions, playing = Playing}] ->
-            % User has 2+ pids, delete only this pid, keep the user.
+        [#user{login = Login, sessions = Sessions}] ->
+            % Remove this session.
             Filter = fun (X) -> X#session.linuxpid =/= LinuxPid end,
             FilteredSessions = lists:filter(Filter, Sessions),
-            User  = #user{login   = Login,
-                            sessions = FilteredSessions,
-                            playing = Playing},
-            Users = [User | Rest]
+            [SingleUser] = ThisUser,
+            Users = [SingleUser#user{sessions = FilteredSessions} | Rest]
     end,
     {noreply, State#state{users = Users}};
+handle_cast({message_user, FromUser, ToUser, Message}, State) ->
+    message_user(ToUser, {message, FromUser, Message}, State#state.users),
+    {noreply, State};
+handle_cast({invite_user, FromUser, ToUser, GameName, JoinCommand}, State) ->
+    message_user(ToUser, {invite, GameName, FromUser, JoinCommand},
+                 State#state.users),
+    {noreply, State};
 handle_cast(Catchall, State) ->
-    io:format("Unrecognized cast: ~p~n", [Catchall]),
+    io:fwrite("Unrecognized cast: ~p~n", [Catchall]),
     {noreply, State}.
 
 
@@ -215,21 +244,31 @@ handle_cast(Catchall, State) ->
       {noreply, NewState :: term(), hibernate} |
       {stop, Reason :: normal | term(), NewState :: term()}.
 handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
-    io:format("Current state ~p~n", [State]),
-    io:format("Got down message for process ~p~n", [ErlangPid]),
+    io:fwrite("Current state ~p~n", [State]),
+    io:fwrite("Got down message for process ~p~n", [ErlangPid]),
     FilterSession = fun (Ses) -> Ses#session.erlangpid =/= ErlangPid end,
-    MapFun = fun (Usr) -> Usr#user{sessions = lists:filter(FilterSession, Usr#user.sessions)} end,
-    NewUsers = lists:map(MapFun, State#state.users),
+    FilterPlaying = fun ({_GameName, Pid}) -> (Pid =/= ErlangPid) end,
+    UsrMapFun = fun (Usr) ->
+        Usr#user{sessions = lists:filter(FilterSession, Usr#user.sessions),
+                 playing = lists:filter(FilterPlaying, Usr#user.playing)} end,
+    NewUsers = lists:map(UsrMapFun, State#state.users),
 
     FilterGameServer = fun (GS) -> GS#gameserver.pid =/= ErlangPid end,
-    NewGSs = lists:filter(FilterGameServer, State#state.gameservers),
-    {noreply, State#state{users = NewUsers, gameservers = NewGSs}};
+    FilteredGSs = lists:filter(FilterGameServer, State#state.gameservers),
+    io:fwrite("Filtered GSs: ~p~n", [FilteredGSs]),
+    FilterPlayers = fun (P) -> P#gameclient.pid =/= ErlangPid end,
+    PlayerMapFun = fun (GS) ->
+        GS#gameserver{players =
+                        lists:filter(FilterPlayers, GS#gameserver.players)} end,
+    FinalGSs = lists:map(PlayerMapFun, FilteredGSs),
+    io:fwrite("Final GSs: ~p~n", [FinalGSs]),
+    {noreply, State#state{users = NewUsers, gameservers = FinalGSs}};
 handle_info({getBrokerPid, FromPid}, State) ->
-    io:format("Got info: ~p~n", [{getBrokerPid, FromPid}]),
+    io:fwrite("Got info: ~p~n", [{getBrokerPid, FromPid}]),
     FromPid ! {brokerPid, self()},
     {noreply, State};
 handle_info(Info, State) ->
-    io:format("Unrecognized info: ~p~n", [Info]),
+    io:fwrite("Unrecognized info: ~p~n", [Info]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -276,19 +315,26 @@ format_status(Status) ->
 %%% Internal functions
 %%%===================================================================
 
-% eq/1, a utility higher-order function, takes a term A and returns a fun.
-% That fun takes one argument, B, and returns whether A == B.
-eq(A) ->
-    fun (B) -> A == B end.
+% Takes a message, its sender, its recipient, and a list of all users.
+% Sends the message to all sessions the recipient has.
+message_user(_ToUser, _Message, [])      ->
+    ok;
+message_user(ToUser, Message, [H | T]) ->
+    Fun = fun (X) -> X#session.erlangpid ! Message end,
+    case H#user.login of
+        ToUser ->
+            lists:map(Fun, H#user.sessions);
+        _  ->
+            ok
+    end,
+    message_user(ToUser, Message, T).
 
-% neq/1, a utility higher-order function, takes a term A and returns a fun.
-% That fun takes one argument, B, and returns whether A =/= B.
-neq(A) ->
-    fun (B) -> A =/= B end.
 
+%%%===================================================================
+%%% Tests
+%%%===================================================================
 
-% Tests
-
+% Credit:
 % https://lookonmyworks.co.uk/2015/01/25/testing-a-gen_server-with-eunit/
 server_broker_test_() ->
     {foreach, fun setup/0, fun cleanup/1, [
@@ -312,16 +358,20 @@ server_is_alive(Pid) ->
 
 add_list_user_1(Pid) ->
     fun () ->
-        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09", "123"})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09",
+                                               "123", self()})),
         ?assertMatch([#user{login = "mdanie09"}],
                      gen_server:call(Pid, {list_users}))
     end.
 
 add_list_user_2(Pid) ->
     fun () ->
-        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "wcordr01", "111"})),
-        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09", "222"})),
-        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "cglotf01", "333"})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "wcordr01",
+                                              "111", self()})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09",
+                                               "222", self()})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "cglotf01",
+                                               "333", self()})),
         ?assertMatch([#user{login = "cglotf01"}, #user{login = "mdanie09"},
                       #user{login = "wcordr01"}],
                      lists:sort(gen_server:call(Pid, {list_users})))
@@ -329,13 +379,23 @@ add_list_user_2(Pid) ->
 
 add_list_del_list(Pid) ->
     fun () ->
-        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "wcordr01", "111"})),
-        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09", "222"})),
-        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "cglotf01", "333"})),
+        Self = self(),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "wcordr01",
+                                               "111", Self})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09",
+                                               "222", self()})),
+        ?assertEqual(ok, gen_server:cast(Pid, {add_user, "cglotf01",
+                                               "333", self()})),
         ?assertMatch([#user{login = "cglotf01"}, #user{login = "mdanie09"},
                       #user{login = "wcordr01"}],
                      lists:sort(gen_server:call(Pid, {list_users}))),
         ?assertEqual(ok, gen_server:cast(Pid, {del_user, "mdanie09", "222"})),
-        ?assertMatch([#user{login = "cglotf01"}, #user{login = "wcordr01"}],
+        ?assertMatch([#user{login = "cglotf01",
+                            sessions = [#session{erlangpid = Self,
+                                                 linuxpid = "333"}]},
+                      #user{login = "mdanie09", sessions = []},
+                      #user{login = "wcordr01",
+                            sessions = [#session{erlangpid = Self,
+                                                 linuxpid = "111"}]}],
                      lists:sort(gen_server:call(Pid, {list_users})))
     end.

@@ -1,80 +1,218 @@
 #!/usr/bin/env python
-from argparse import ArgumentParser
+# cli.py is the command-line interface for Halligame.
+# Created by:  Michael Daniels, 2025-04-14
+# Last edited: Michael Daniels, 2025-04-19
+import multiprocessing as mp
+import os
+import subprocess
+from argparse import ArgumentParser, Namespace
+from random import randint
+from socket import gethostname
+
+import psutil
+from term import codec
+
 import halligame.utils.ClientComms as ClientComms
 import halligame.utils.ServerComms as ServerComms
-from random import randint
-import subprocess
-import socket
-import psutil
-import sys
-import os
+from halligame.utils.common import ensure_epmd, whoami
 
-GAMES_DIR = os.path.join(os.environ['HG_ROOT'], "src", 
-                                "halligame", "games")
+#: The directory in which all games are contained.
+GAMES_DIR: str = os.path.join(
+    os.environ["HG_ROOT"], "src", "halligame", "games"
+)
 
-GAMES = os.listdir(GAMES_DIR)
-# TODO: fix - GAMES = filter(lambda elem: os.path.isdir(os.path.join(GAMES_DIR, elem)), GAMES)
+#: A list of all playable games.
+GAMES: list[str] = list(
+    filter(
+        lambda elem: (
+            os.path.isdir(os.path.join(GAMES_DIR, elem))
+            and elem != "__pycache__"
+            and elem != "ExampleGame"
+            and elem != "Battleship"
+        ),
+        os.listdir(GAMES_DIR),
+    )
+)
 
-SCRIPT = ['erl', '-noshell', '-sname', f'cli{randint(0, 999999):06d}',
-                    '-setcookie', 'Sh4rKM3ld0n', '-eval', 'handleCLIRequest:']
+#: The command to use for Erlang calls. The module handleCLIRequest is
+#: pre-specified, but the function and any arguments need to be appended.
+BASESCRIPT: list[str] = [
+    "env",
+    f"ERL_LIBS={os.environ['HG_ROOT']}/src/cli/_build/default/lib",
+    "erl",
+    "-noshell",
+    "-sname",
+    f"cli{randint(0, 999999):06d}",
+    "-setcookie",
+    "Sh4rKM3ld0n",
+    "-run",
+    "handleCLIRequest",
+]
 
-def ensure_epmd():
-    epmd_running = False
-    for proc in psutil.process_iter(['pid', 'name']):
-        if proc.info['name'] == 'epmd':
-            epmd_running = True
-            break
-    if not epmd_running:
-        subprocess.Popen(['epmd', '-daemon'])
-    
-def join(args) -> None:
+
+def join(args: Namespace) -> None:
+    """Join the game with the ID stored in args.gameID, or print an error."""
     ensure_epmd()
-    ClientComms.start(args.commServer, args.game)
+    inputGameID = str(args.gameID).replace("-", "")
 
-def new(args) -> None:
+    cmd = BASESCRIPT.copy()
+    cmd.append("lookupGameServerID")
+    cmd.append(inputGameID)
+
+    returned = subprocess.run(cmd, capture_output=True).stdout.splitlines()
+
+    match returned:
+        case [b"notfound"]:
+            print(f"Error: game with id {inputGameID} not found.")
+        case [gameName, nodeName, nodePid]:
+            ClientComms.start(
+                nodeName.decode(),
+                gameName.decode(),
+                codec.binary_to_term(nodePid[1:])[0],
+            )
+        case _:
+            print(f"Error: cli got bad response from broker: {returned}")
+
+
+def new(args: Namespace) -> None:
+    """
+    Create a new game of the game whose name is stored in args.game.
+    Outputs the game ID to stdout.
+    """
     ensure_epmd()
-    hostname = socket.gethostname()
-    server_node_name = f'{randint(0, 999999):06d}@{hostname}'
-    # cli = SCRIPT.copy()
-    # cli[-1] += f'newGame(\'{args.game}\', \'{server_node_name}\').'
-    # env = os.environ
-    # env["ERL_LIBS"] = f"{env['HG_ROOT']}/src/cli/_build/default/lib"
-    print(f"RoomName: {server_node_name}") # TODO: this is a hack because I cannot change the gameserver. Plz remove
+    hostname = gethostname()
+    gameID = f"{randint(0, 999999):06d}"
+    server_node_name = f"{gameID}@{hostname}"
+    print("New game created.")
+    print(f'Run "hg join {gameID[:3]}-{gameID[3:]}" to join!')
 
-    # subprocess.run(cli, stdout = sys.stdout, stderr = sys.stderr, env = env)
-    try:
-        ServerComms.start(args.game, server_node_name)
-    except KeyboardInterrupt:
-        exit(0)
+    thisProc = psutil.Process(os.getpid())
+    parentPid = next(p for p in thisProc.parents() if p.name() != "uv")
+
+    mp.Process(
+        target=ServerComms.start,
+        args=(args.game, server_node_name, parentPid.pid),
+    ).start()
+
 
 def listGames(_) -> None:
-    # TODO: insufficently pretty?
-    print(GAMES)
+    """List on stdout all games that can be played."""
+    print("Games available:")
+    for game in GAMES:
+        print("    * " + game)
+
 
 def listActiveGames(_) -> None:
-    cli = SCRIPT.copy()
-    cli[-1] += 'listActiveGames()'
-    subprocess.run(cli)
+    """List on stdout all active game sessions."""
+    cmd = BASESCRIPT.copy()
+    cmd.append("listActiveGames")
+    subprocess.run(cmd)
 
-if __name__ == '__main__':
-    parser = ArgumentParser()
-    subparsers = parser.add_subparsers(required = True)
 
-    join_parser = subparsers.add_parser('join')
-    join_parser.add_argument('-g', '--game', choices=GAMES, required = True)
-    join_parser.add_argument('-s', '--commServer', required = True)
-    join_parser.set_defaults(func = join)
+def listOnline(_) -> None:
+    """List on stdout all online users' names."""
+    cmd = BASESCRIPT.copy()
+    cmd.append("listOnline")
+    subprocess.run(cmd)
 
-    new_parser = subparsers.add_parser('new')
-    new_parser.add_argument('-g', '--game', choices = GAMES, required = True)
-    new_parser.set_defaults(func = new)
 
-    games_parser = subparsers.add_parser('games')
-    games_parser.set_defaults(func = listGames)
+def write(args: Namespace) -> None:
+    """
+    Send a message to the user whose username is stored in args.username.
+    Prints a prompt to stdout and gets input from stdin.
+    """
+    cmd = BASESCRIPT.copy()
+    cmd.append("sendMessage")
+    cmd.append(whoami())
+    cmd.append(args.username)
 
-    active_games_parser = subparsers.add_parser('availableGames')
-    active_games_parser.set_defaults(func = listActiveGames)
+    try:
+        message = input("Enter your message here: ")
+    except EOFError:
+        message = ""
 
-    # the_args = parser.parse_args()    
+    if message != "":
+        cmd.append(message)
+        subprocess.run(cmd)
+
+
+def invite(args: Namespace) -> None:
+    """Invite a user to a game."""
+    ensure_epmd()
+    inputGameID = str(args.gameID).replace("-", "")
+
+    cmd = BASESCRIPT.copy()
+    cmd.append("lookupGameServerID")
+    cmd.append(inputGameID)
+
+    returned = subprocess.run(cmd, capture_output=True).stdout.splitlines()
+
+    match returned:
+        case [b"notfound"]:
+            print(f"Error: game with id {inputGameID} not found.")
+        case [gameName, nodeName, _nodePid]:
+            sendInvite(args.username, gameName.decode(), nodeName.decode()[:6])
+            print("Invited!")
+        case _:
+            print(f"Error: cli got bad response from broker: {returned}")
+
+
+def sendInvite(toUser: str, gameName: str, gameID: str) -> None:
+    """Helper function for invite(), actually sends the message.
+    gameID is a string of six numbers."""
+    cmd = BASESCRIPT.copy()
+    cmd.append("sendInvite")
+    cmd.append(whoami())
+    cmd.append(toUser)
+    cmd.append(gameName)
+    cmd.append(f"hg join {gameID[:3]}-{gameID[3:]}")
+    print(f"cmd = {cmd}")
+    subprocess.run(cmd)
+
+
+if __name__ == "__main__":
+    mp.set_start_method("forkserver")
+    parser = ArgumentParser(prog="hg")
+    subparsers = parser.add_subparsers(dest="subcommand")
+
+    join_parser = subparsers.add_parser("join", help="Join an existing game")
+    join_parser.add_argument("gameID")
+    join_parser.set_defaults(func=join)
+
+    new_parser = subparsers.add_parser("new", help="Create a new game")
+    new_parser.add_argument("game", choices=GAMES)
+    new_parser.set_defaults(func=new)
+
+    games_parser = subparsers.add_parser("games", help="List all games")
+    games_parser.set_defaults(func=listGames)
+
+    active_games_parser = subparsers.add_parser(
+        "active", help="List all current game sessions"
+    )
+    active_games_parser.set_defaults(func=listActiveGames)
+
+    online_parser = subparsers.add_parser(
+        "online", help="List all currently online players"
+    )
+    online_parser.set_defaults(func=listOnline)
+
+    write_parser = subparsers.add_parser("write", help="Write a user a message")
+    write_parser.add_argument("username")
+    write_parser.set_defaults(func=write)
+
+    invite_parser = subparsers.add_parser(
+        "invite", help="Invite someone to a game"
+    )
+    invite_parser.add_argument("username")
+    invite_parser.add_argument(
+        "gameID", help="six digits, optionally dash-seperated"
+    )
+    invite_parser.set_defaults(func=invite)
+
     parsed = parser.parse_args()
-    parsed.func(parsed)
+    if not parsed.subcommand:
+        parser.print_help()
+        os._exit(1)
+    else:
+        parsed.func(parsed)
+        os._exit(0)

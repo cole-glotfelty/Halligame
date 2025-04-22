@@ -1,106 +1,136 @@
-# background.py
-# 
+"""
+background.py allows for erlang messages to be sent and recieved from the
+server broker, in the background.
+Michael Daniels, 2025-04-19
+"""
 
-from pyrlang import Node
-from pyrlang.process import Process
-from pyrlang.gen.server import GenServerInterface
-from term import Atom
-from random import randint
-from argparse import ArgumentParser
-import subprocess
 import asyncio
-import psutil
 import socket
-import os, io
+import subprocess
+from argparse import ArgumentParser
+from random import randint
+from typing import Any, TypeAlias
+
+from psutil import pid_exists
+from pyrlang import Node
+from pyrlang.gen.server import GenServerInterface
+from pyrlang.process import Process
+from term import Atom, Pid
+
+from halligame.utils.common import ensure_epmd, whoami
 
 WAIT_TIME_SEC = 30
 
+DestType: TypeAlias = Atom | tuple[Atom, Atom] | Pid
+
+
 class UserBackground(Process):
-    def __init__(self, shellPid : str, username : str, ttyName : str):
+    def __init__(self, shellPid: str, username: str) -> None:
         super().__init__()
         node.register_name(self, Atom("backgroundProc"))
         self.__shellPid = shellPid
         self.__serverBroker = None
         self.__username = username
-        self.__ttyName = ttyName
 
         # print("DEBUG: Sending getBroker message")
-    
+
         # Pyrlang has node name and registered name backwards
-        self.__sendMessage((Atom("serverbroker@vm-projectweb3"), 
-                            Atom("serverbroker")),
-                           (Atom("getBrokerPid"), self.pid_))
-        self.__serverBroker = None
-        
+        self.__sendMessage(
+            (Atom("serverbroker@vm-projectweb3"), Atom("serverbroker")),
+            (Atom("getBrokerPid"), self.pid_),
+        )
+        self.__serverBroker = GenServerInterface(self, None)
+
         # print("DEBUG: Sent getBroker message")
 
         event_loop = asyncio.get_event_loop()
-        event_loop.call_soon(self.checkOSProcessAlive)
-        
-    def handle_one_inbox_message(self, msg):
-        # print(f"DEBUG: Got message {msg}")
-        if msg[0] == Atom("brokerPid"):
-            # print(f"DEBUG: pid is {msg[1]}")
-            self.__serverBroker = GenServerInterface(self, msg[1])
-            toSend = (Atom("add_user"), self.__username,
-                      self.__shellPid, self.pid_)
-            # print(f"Sending {toSend}")
-            self.__serverBroker.cast_nowait(toSend)
-        elif msg[0] == Atom("message"):
-            with openTty(self.__ttyName) as f:
-                print(f"Got message {msg}", file = f, flush = True)
-                print("Reply? Press enter when done.", file = f, flush = True)
-                f.readline()
+        event_loop.call_soon(self.__checkOSProcessAlive)
 
-    def checkOSProcessAlive(self):
-        if not psutil.pid_exists(int(self.__shellPid)):
+    def handle_one_inbox_message(self, msg: Any) -> None:
+        # print(f"DEBUG: Got message {msg}")
+        match msg:
+            case "brokerPid", brokerPid:
+                # print(f"DEBUG: pid is {msg[1]}")
+                self.__serverBroker = GenServerInterface(self, brokerPid)
+                toSend = (
+                    Atom("add_user"),
+                    self.__username,
+                    self.__shellPid,
+                    self.pid_,
+                )
+                # print(f"Sending {toSend}")
+                self.__serverBroker.cast_nowait(toSend)
+            case "message", fromUser, content:
+                # Tuple is {'message', FromName, Message}
+                fromUser = fromUser.decode()
+                content = content.decode()
+                subprocess.run(
+                    ["echo", f"Got message from {fromUser}: {content}"]
+                )
+                subprocess.run(
+                    ["echo", f'Want to reply? Run "hg write {fromUser}"!']
+                )
+                subprocess.run(["echo", "(Press enter now.)"])
+            case "invite", gameName, inviterName, joinCommand:
+                # Tuple is {'invite', GameName, InviterName, JoinCommand}
+                # gameName = gameName
+                # inviterName = inviterName
+                # joinCommand = joinCommand.decode()
+                subprocess.run(
+                    [
+                        "echo",
+                        f"You were invited to a game of {gameName} "
+                        f"by {inviterName}!",
+                    ]
+                )
+                subprocess.run(["echo", f"Run {joinCommand} to play!"])
+            case _:
+                subprocess.run(["echo", f"Unrecognized message {msg}"])
+
+    def __checkOSProcessAlive(self) -> None:
+        """
+        Checks whether the OS process whose ID is stored in self.__shellPid
+        is alive. If not, shutdown. If so, check again in WAIT_TIME_SEC seconds.
+        """
+        if not pid_exists(int(self.__shellPid)):
             self.shutdown()
             exit(0)
         event_loop = asyncio.get_event_loop()
-        event_loop.call_later(WAIT_TIME_SEC, self.checkOSProcessAlive)
+        event_loop.call_later(WAIT_TIME_SEC, self.__checkOSProcessAlive)
 
-    # wrapper for sending a message with correct formatting
-    def __sendMessage(self, dest, msg):
+    #
+    def __sendMessage(self, dest: DestType, msg: Any) -> None:
+        """
+        wrapper for sending a message with correct formatting
+        dest is either:
+            * an Atom(local registered name),
+            * a tuple (Atom(node name), Atom(registered name))
+              (note that this backwards from Erlang), or
+            * a Pid.
+        """
         # print(f"DEBUG: Sending Message from Background to {dest}: {msg}")
-        node.send_nowait(sender = self.pid_,
-                         receiver = dest,
-                         message = msg)
-    
-    def shutdown(self):
+        node.send_nowait(sender=self.pid_, receiver=dest, message=msg)
+
+    def shutdown(self) -> None:
         node.destroy()
 
-def openTty(tty):
-    return io.TextIOWrapper(io.FileIO(os.open(tty, os.O_NOCTTY | os.O_RDWR),
-                                      "r+"))
 
-def start(shellPid : str, tty : str):
+def start(shellPid: str) -> None:
     ensure_epmd()
-    global node
-    hostname = socket.gethostname()
-    node = Node(f"{randint(0, 999999):06d}@{hostname}", cookie = "Sh4rKM3ld0n")
-    username = subprocess.run(["whoami"], capture_output=True).stdout
-    UserBackground(shellPid, username, tty)
+
+    UserBackground(shellPid, whoami())
     node.run()
 
-# TOOD: put in a utils thing, copied from cli.py
-def ensure_epmd():
-    epmd_running = False
-    for proc in psutil.process_iter(['pid', 'name']):
-        if proc.info['name'] == 'epmd':
-            epmd_running = True
-            break
-    if not epmd_running:
-        subprocess.Popen(['epmd', '-daemon'])
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('ParentShellPid')
-    parser.add_argument('tty')
+    parser.add_argument("ParentShellPid")
     args = parser.parse_args()
-    
+
+    hostname = socket.gethostname()
+    node = Node(f"{randint(0, 999999):06d}@{hostname}", cookie="Sh4rKM3ld0n")
+
     try:
-        start(args.ParentShellPid, args.tty)
+        start(args.ParentShellPid)
     except KeyboardInterrupt:
         exit(0)
-
-    

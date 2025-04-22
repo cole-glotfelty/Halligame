@@ -1,14 +1,15 @@
-# Example Game Client / Game Client Super Class
+# Example Game Client
 # Written by Cole Glotfelty <2025-04-14>
 
 # A barebones game client explaining what needs to be implemented and what's
 # available for use when creating halligame games. This also includes some 
 # typical patterns 
 
+from halligame.utils.gameClientTemplate import ClientSuper
 from halligame.utils.gameState import GameState
 from typing import Any
 
-class ClientSuper:
+class Client(ClientSuper):
     def __init__(self, comms: callable) -> None:
         """
         Constructor for the Client (you should initalize stuff here)
@@ -22,8 +23,10 @@ class ClientSuper:
         your game. (We do this for serialization and server communication)
         """
         self.__comms = comms
-        self.__state = GameState()
-        pass
+        self.__playerID = None
+        self.__ships = [["  " for y in range(9)] for x in range(9)]
+        self.__guesses = [["  " for y in range(9)] for x in range(9)]
+        self.__screen = Screen(self.userInput, self.mouseInput)
 
     def updateState(self, state: bytes) -> None:
         """
@@ -36,12 +39,29 @@ class ClientSuper:
 
     def gotServerMessage(self, msg) -> None:
         """
-        Callback function 
+        Callback function for when a message is received from the server. One
+        could deconstruct the msg like below and then discriminate based on 
+        the status or message text.
         """
         (status, message) = msg
         if status == "error":
             print(message)
-        pass
+            self.__comms.shutdown()
 
     def joinConfirmed(self, msg) -> None:
+        """
+        Callback function for when the player joins the server. This message
+        can be set in GameServer::addClient().
+        """
+        self.__playerID = msg
+        # TODO: Draw screen here?
+        self.__drawScreen()
+
+    def userInput(self, input):
+        pass
+
+    def mouseInput(self, row, col, region, mouseEventType):
+        pass
+
+    def self.__drawScreen(self):
         pass

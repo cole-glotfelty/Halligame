@@ -13,7 +13,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "mypy>=1.15.0",
+    "pdoc3>=0.11.6",
     "ruff>=0.11.6",
+    "types-psutil>=7.0.0.20250401",
 ]
 
 [build-system]
@@ -41,18 +44,32 @@ exclude = [
     "_build",
     "build",
     "dist",
-    "venv",
     "vendor",
 ]
 
 [tool.ruff.lint]
 extend-select = [
-    "E501", # line too long
     "UP",  # pyupgrade
+    "I",   # Import sorting
+    "E",   # pycodestyle
+    "F",   # Pyflakes
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "ANN0", "ANN2", # flake8-annotations
 ]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+split-on-trailing-comma = false
+
+[tool.ruff.lint.flake8-annotations]
+suppress-dummy-args = true
 
 [tool.ruff.format]
 indent-style = "space"
 line-ending = "lf"
+skip-magic-trailing-comma = true
 
-
+[[tool.mypy.overrides]]
+module = ["pyrlang.*", "term.*", "pyfiglet.*"]
+ignore_missing_imports = true
