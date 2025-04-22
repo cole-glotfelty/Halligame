@@ -278,8 +278,8 @@ class Client(ClientSuper):
 
         buttons = []
         buttons.append((pyfiglet.figlet_format(f"DRAW", font="finalass"), "dealCard"))
-        if (self.__unoPossibility):
-            buttons.append((pyfiglet.figlet_format(f"UNO", font="finalass"), "uno"))
+        # if (self.__unoPossibility):
+            # buttons.append((pyfiglet.figlet_format(f"UNO", font="finalass"), "uno"))
 
         self.__defineAndDrawButtons(buttons)
 
