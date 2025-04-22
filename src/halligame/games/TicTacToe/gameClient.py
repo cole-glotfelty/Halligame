@@ -122,7 +122,12 @@ class Client(ClientSuper):
         self, row: int, col: int, region: int | None, mouseEventType: str
     ) -> None:
         with self.__stateLock:  # draw it so it appears instantaneously
-            if (not self.__myTurn):
+            if self.__state.getValue("gameOver") != "":
+                message = self.__formatter.renderText("Game Over")
+                self.__screen.displayFullScreenMessage(message)
+                time.sleep(1)
+                self.__drawGame()
+            elif (not self.__myTurn):
                 message = self.__formatter.renderText("Not Your Turn")
                 self.__screen.displayFullScreenMessage(message)
                 time.sleep(1.5)

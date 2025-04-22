@@ -23,6 +23,8 @@ class Client(ClientSuper):
         self.__gameOver = False
         self.__waitingCard = None
 
+        self.__unoPossibility = False
+
         self.__screen.clearScreen()
 
         self.__initColors()
@@ -53,6 +55,8 @@ class Client(ClientSuper):
                     self.__screen.displayFullScreenMessage("GAME OVER", font="roman")
                     time.sleep(1.5)
                     self.__drawScreen()
+                elif region == "uno":
+                    self.__comms.sendMessage(("uno", self.__playerNum))
                 elif (not self.__myTurn):
                     self.__screen.displayFullScreenMessage("NOT YOUR\nTURN", font="roman")
                     time.sleep(1.5)
@@ -68,18 +72,29 @@ class Client(ClientSuper):
                         self.colorPicker()
                     else:
                         card = self.__deck.pop(region)
-                        self.__comms.sendMessage(("placeCard", self.__playerNum, card, self.__deck))
 
                         self.__myTurn = False
 
                         # do client insta update
                         self.__topCard = card
+                        self.__unoPossibility = len(self.__deck) == 1
                         self.__drawScreen()
-                if region == "dealCard":
+
+                        self.__comms.sendMessage(("placeCard", self.__playerNum, card, self.__deck))
+
+                        # prevent screen refreshes to give them a chance to 
+                        # click uno
+                        if (self.__unoPossibility):
+                            time.sleep(3)
+                elif region == "dealCard":
                     self.__comms.sendMessage(("dealCard", self.__playerNum))
                 elif (region in ["red", "yellow", "green", "blue"]): # respond to color picker
                     if (self.__waitingCard != None):
                         card = self.__game.setColor(self.__waitingCard, region)
+
+                        self.__myTurn = False
+                        self.__unoPossibility = len(self.__deck) == 1
+                        self.__drawScreen()
 
                         self.__comms.sendMessage(("placeCard", self.__playerNum, card, self.__deck))
 
@@ -88,6 +103,11 @@ class Client(ClientSuper):
                         # do insta update
                         self.__topCard = card
                         self.__drawScreen()
+
+                        # prevent screen refreshes to give them a chance to 
+                        # click uno
+                        if (self.__unoPossibility):
+                            time.sleep(3)
 
     def colorPicker(self):
         numRows = self.__screen.terminalHeight()
@@ -147,10 +167,19 @@ class Client(ClientSuper):
             elif (msg[0] == "newCard"):
                 self.__deck.append(msg[1])
                 self.__drawScreen()
+            elif (msg[0] == "uno_loss"): # you lost the uno race
+                self.__screen.displayFullScreenMessage(f"YOU DIDN'T\nSAY UNO!", font="roman")
+                time.sleep(1.5)
+                self.__drawScreen()
 
     def __updateState(self, state):
         # unpack state
-        (self.__topCard, self.__opponentCardCounts, self.__playerUTLNs, self.__currUsersTurn) = state
+        (self.__topCard, self.__opponentCardCounts, self.__playerUTLNs, self.__currUsersTurn, unoPlayerNum) = state
+
+        if (unoPlayerNum != None):
+            self.__unoPossibility = True
+        else:
+            self.__unoPossibility = False
 
         if (not self.__gameOver):
             # just became your turn
@@ -248,14 +277,17 @@ class Client(ClientSuper):
             return
 
         buttons = []
-        buttons.append(pyfiglet.figlet_format(f"DRAW", font="finalass"))
+        buttons.append((pyfiglet.figlet_format(f"DRAW", font="finalass"), "dealCard"))
+        if (self.__unoPossibility):
+            buttons.append((pyfiglet.figlet_format(f"UNO", font="finalass"), "uno"))
 
         self.__defineAndDrawButtons(buttons)
 
+    # format of buttons is [(messageToDisplay, regionId), ...]
     def __defineAndDrawButtons(self, buttons):
         startingDrawRow = self.__screen.terminalHeight() - self.__game.cardHeight() - 1
         startingDrawCol = self.__screen.terminalWidth()
-        for button in buttons:
+        for button, regionId in buttons:
             drawButtonHeight = len(button.split("\n"))
             drawButtonWidth = len(button.split("\n")[0])
 
@@ -267,6 +299,6 @@ class Client(ClientSuper):
             self.__screen.write(drawRow - 1, drawCol - 1, border)
             self.__screen.write(drawRow, drawCol, button)
 
-            self.__screen.addClickableRegion(drawRow - 1, drawCol - 1, drawButtonHeight + 2, drawButtonWidth + 2, "dealCard")
+            self.__screen.addClickableRegion(drawRow - 1, drawCol - 1, drawButtonHeight + 2, drawButtonWidth + 2, regionId)
 
-            startingDrawRow = drawRow
+            startingDrawRow = drawRow - 3
