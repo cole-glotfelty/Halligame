@@ -185,7 +185,7 @@ class Client(ClientSuper):
             # just became your turn
             if (not self.__myTurn and self.__currUsersTurn == self.__playerNum):
                 self.__screen.displayFullScreenMessage("YOUR TURN", font="roman")
-                time.sleep(1)
+                time.sleep(0.5)
 
             self.__myTurn = self.__currUsersTurn == self.__playerNum
 
