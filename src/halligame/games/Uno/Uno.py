@@ -70,7 +70,8 @@ class Uno():
     def dealCard(self):
         if len(self.__deck) == 0:
             if (len(self.__discards) > 0):
-                self.__deck = random.shuffle(self.__discards)
+                random.shuffle(self.__discards)
+                self.__deck = self.__discards
                 self.__discards = []
             else:
                 self.__deck = self.__createDeck()

@@ -16,6 +16,10 @@ serverbroker:
 wheel: pyproject
 	uv build
 
+public: all
+	find . -type d | xargs chmod a+rx
+	chmod --recursive a+r .
+
 docs: pydocs erldocs
 erldocs: cli-erldocs serverbroker-erldocs
 
