@@ -10,7 +10,7 @@ cli:
 	cd src/cli && rebar3 compile
 
 serverbroker:
-	cd src/cli && rebar3 compile
+	cd src/serverbroker && rebar3 compile
 
 # Slow, and potentially not needed.
 wheel: pyproject
