@@ -134,7 +134,7 @@ class Server(ServerSuper):
 
     def removeClient(self, clientPID, username : str):
         self.__numOnline -= 1
-        if (self.__gameOver):
+        if (self.__gameOver and self.__numOnline == 0):
             self.__comms.shutdown() # the game is over, so shut down
 
 
