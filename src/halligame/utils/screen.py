@@ -41,7 +41,9 @@ import pyfiglet
 
 class Screen:
     # gotInputFunc = the function to call when receiving input
-    def __init__(self, gotInputFunc: callable, gotMouseClickFunc: callable) -> None:
+    def __init__(
+        self, gotInputFunc: callable, gotMouseClickFunc: callable
+    ) -> None:
         self.__gotInput = gotInputFunc
         self.__gotMouse = gotMouseClickFunc
 
@@ -261,8 +263,8 @@ class Screen:
             # reset cursor position to correct loc
             self.__stdscr.move(self.__terminalHeight() - 1, 0)
 
-    # refreshes the window (sends updates to screen)
     def refresh(self) -> None:
+        """Refreshes the window (sends updates to screen)."""
         with self.__lock:
             if self.__stdscr.is_wintouched():  # only refresh if touched
                 self.__stdscr.refresh()

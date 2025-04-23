@@ -1,11 +1,11 @@
-# ServerComms.py
+"""Communication from the game server to the client.
 
-# Communication from the game server to the communication server/client
-# Written by: Will Cordray & Michael Daniels
+Written by: Will Cordray & Michael Daniels
+"""
 
 import asyncio
 import importlib
-from typing import Any, TypeAlias
+from typing import Any
 
 from psutil import pid_exists
 from pyrlang import Node
@@ -17,24 +17,32 @@ from halligame.games import *  # noqa: F403
 from halligame.utils.gameState import GameState
 
 node: Node  # Placeholder for mypy
-DestType: TypeAlias = Atom | tuple[Atom, Atom] | Pid
 
 WAIT_TIME_SEC = 30
+"""How long we should wait between checks that the parent hasn't died."""
 
 
 class ServerCommunicate(Process):
+    """Used by one game server to communicate with its clients & the broker."""
+
     def __init__(self, gameName: str, nodeName: str, shellPid: int) -> None:
+        """Set up this instance."""
         super().__init__()
         node.register_name(self, Atom("pyServer"))
-        self.__gameName = gameName
-        self.__nodeName = nodeName
-        self.__serverBroker: GenServerInterface
-        #: __connectedClients is the tuple (clientPid, username)
-        self.__connectedClients: set[Pid, str] = set()
-        self.__shellPid = shellPid
-
         gameModule = importlib.import_module("halligame.games." + gameName)
+
+        self.__gameName: str = gameName
+        """The name of the game to join."""
+        self.__nodeName: str = nodeName
+        """The name of this node."""
+        self.__serverBroker: GenServerInterface
+        """Used to communicate with the server broker."""
+        self.__connectedClients: set[tuple[Pid, str]] = set()
+        """__connectedClients is the tuple (clientPid, username)"""
+        self.__shellPid: int = shellPid
+        """The linux PID of the parent shell."""
         self.__serverGameInstance = gameModule.Server(self)
+        """The game server itself."""
 
         # Pyrlang has node name and registered name backwards >:(
         self.__sendMessage(
@@ -46,7 +54,7 @@ class ServerCommunicate(Process):
         event_loop.call_soon(self.__checkOSProcessAlive)
 
     def handle_one_inbox_message(self, msg: Any) -> None:
-        # print(f"DEBUG: ServerComms got message {msg}\n")
+        """Handle incoming messages."""
         match msg:
             case "close":
                 self.shutdown()
@@ -83,9 +91,17 @@ class ServerCommunicate(Process):
                     "ServerComms Received an unknown message: " + str(msg)
                 )
 
-    def __sendMessage(self, dest: DestType, msg: Any) -> None:
-        """wrapper for sending a message with correct formatting"""
-        # print(f"DEBUG: Sending Message from ServerComms to {dest}: {msg}")
+    def __sendMessage(
+        self, dest: Atom | tuple[Atom, Atom] | Pid, msg: Any
+    ) -> None:
+        """A wrapper for sending a message with correct formatting.
+
+        dest is either:
+        * an Atom(local registered name),
+        * a tuple (Atom(node name), Atom(registered name))
+            (note that this is backwards from Erlang!), or
+        * a Pid.
+        """
         node.send_nowait(sender=self.pid_, receiver=dest, message=msg)
 
     # State should have type halligame.utils.GameState
@@ -100,10 +116,7 @@ class ServerCommunicate(Process):
             self.sendClientMessage(clientPid, msg)
 
     def confirmJoin(self, clientPid: Pid, username: str, msg: Any) -> None:
-        """
-        Confirm to a client that their join was successful.
-        Tells the ServerBroker this.
-        """
+        """Tell a client that it joined successfully, then tell the broker."""
         self.__connectedClients.add((clientPid, username))
         self.__sendMessage(clientPid, ("confirmed_join", msg))
         self.__serverBroker.cast_nowait(
@@ -115,8 +128,7 @@ class ServerCommunicate(Process):
         self.__sendMessage(clientPid, ("message", msg))
 
     def shutdown(self) -> None:
-        """Shut down this Pyrlang node.
-        Informs clients and the serverbroker."""
+        """Shut down this Pyrlang node. Informs clients and the serverbroker."""
         self.broadcastMessage("close")
 
         self.__serverBroker.cast_nowait(
@@ -129,8 +141,7 @@ class ServerCommunicate(Process):
     def sendMsgViaServerBroker(
         self, fromName: str, toUser: str, message: str
     ) -> None:
-        """
-        Sends a message to a user via the server broker.
+        """Sends a message to a user via the server broker.
 
         fromName should be a username (all lowercase), or
         an arbitrary string containing at least one capital letter.
@@ -140,7 +151,8 @@ class ServerCommunicate(Process):
         )
 
     def __checkOSProcessAlive(self) -> None:
-        """
+        """A watchdog.
+
         Checks whether the OS process whose ID is stored in self.__shellPid
         is alive. If not, shutdown. If so, check again in WAIT_TIME_SEC seconds.
         """
@@ -154,11 +166,11 @@ class ServerCommunicate(Process):
 def start(game: str, node_name: str, shellPid: int) -> None:
     """Start the game server and its Pyrlang node.
 
-    Parameters:
-    game:      the name of the game to start
-    node_name: the name of the Pyrlang node to start.
-    shellPid:  the Linux PID of the launching shell.
-               We willquit when the shell dies.
+    Args:
+        game:      the name of the game to start
+        node_name: the name of the Pyrlang node to start.
+        shellPid:  the Linux PID of the launching shell.
+                We willquit when the shell dies.
     """
     global node
     node = Node(node_name, cookie="Sh4rKM3ld0n")

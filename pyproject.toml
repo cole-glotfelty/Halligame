@@ -1,6 +1,6 @@
 [project]
 name = "halligame"
-version = "0.0.1"
+version = "0.0.2"
 description = "A concurrent games system"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,7 +14,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "mypy>=1.15.0",
-    "pdoc3>=0.11.6",
+    "pdoc",
     "ruff>=0.11.6",
     "types-psutil>=7.0.0.20250401",
 ]
@@ -57,7 +57,7 @@ extend-select = [
     "SIM", # flake8-simplify
     "ANN0", "ANN2", # flake8-annotations
     "D",   #pydocstyle
-    #"DOC", #pydoclint, in preview
+    "DOC", #pydoclint, in preview
 ]
 
 [tool.ruff.lint.isort]

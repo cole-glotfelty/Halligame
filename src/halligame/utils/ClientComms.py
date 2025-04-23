@@ -1,9 +1,8 @@
-# ClientComms.py
+"""Communication Module for clients to communicate with the game server.
 
-# Communication Module for clients to communicate with the game/communication
-# server.
-# Writen by: Will Cordray & Michael Daniels
-# Last Edited by: Cole Glotfelty <2025-04-09>
+Authors: Will Cordray & Michael Daniels
+Last Edited: Michael Daniels 2025-04-21
+"""
 
 # Changelog:
 # Cole Glotfelty <2025-04-09> - Added documentation to functions
@@ -11,8 +10,8 @@
 import importlib  # allows us to import a module based on the name
 import socket
 import sys
-import threading
 from random import randint
+from threading import Semaphore
 from typing import Any
 
 from pyrlang import Node
@@ -27,27 +26,28 @@ name: str  # Placeholder for mypy
 
 
 class ClientCommunicate(Process):
+    """Used by one game client to communicate with its server."""
+
     def __init__(self, gameName: str, serverPid: Pid) -> None:
+        """Set up this instance."""
         super().__init__()
         node.register_name(self, "pyClient")
 
         gameModule = importlib.import_module("halligame.games." + gameName)
-        self.__clientGameInstance = gameModule.Client(self)
 
-        self.__serverPid = serverPid
-        self.__delayQuitUntilConfirmation = threading.Semaphore(0)
-        self.__thisUser = whoami()
+        self.__clientGameInstance = gameModule.Client(self)
+        """The game client itself."""
+        self.__serverPid: Pid = serverPid
+        """The pid of this game's server."""
+        self.__delayQuitUntilConfirmation: Semaphore = Semaphore(0)
+        """Used to make sure the server gets our quit message."""
+        self.__thisUser: str = whoami()
+        """The current user's username."""
+
         self.__backendSendMessage(("new_client", self.pid_, self.__thisUser))
 
     def handle_one_inbox_message(self, msg: tuple) -> None:
-        """
-        Await messages/check inbox of erlang/pyrlang node and call callback
-        function when it receives a known message, other wise, informs the user
-        there has been some sort of error and we've received an unknown message
-
-        msg: the message that wasreceived
-        """
-
+        """Handle incoming messages."""
         match msg:
             case "close":
                 exit(0)
@@ -66,8 +66,7 @@ class ClientCommunicate(Process):
                 )
 
     def sendMessage(self, msg: Any) -> None:
-        """Send a message to the game server"""
-
+        """Send a message to the game server."""
         self.__backendSendMessage((Atom("message"), (self.pid_, msg)))
 
     def __backendSendMessage(self, msg: Any) -> None:
@@ -77,11 +76,11 @@ class ClientCommunicate(Process):
         )
 
     def shutdown(self) -> None:
-        """
-        Shut down this Pyrlang node.
+        """Shut down this Pyrlang node.
 
         Waits for confirmation from the game server, to avoid the condition
-        where telling the server we quit doesn't go through."""
+        where telling the server we quit doesn't go through.
+        """
         self.__backendSendMessage(("remove_client", self.pid_, self.__thisUser))
 
         self.__delayQuitUntilConfirmation.acquire()

@@ -24,7 +24,7 @@ docs: pydocs erldocs
 erldocs: cli-erldocs serverbroker-erldocs
 
 pydocs: pyproject
-	uv run pdoc --html src/cli src/halligame
+	uv run pdoc -o html -t doc_template src/cli src/halligame
 
 cli-erldocs:
 	cd src/cli && rebar3 edoc

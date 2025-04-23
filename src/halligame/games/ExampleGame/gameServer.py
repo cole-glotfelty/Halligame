@@ -46,7 +46,7 @@ class Server(ServerSuper):
             clientPID - this is the PID of the client that's responsible for the
             event.
         """
-        valid = False # Set by your logic
+        valid = False  # Set by your logic
         if valid:
             self.__comms.broadcastState(self.__state)
         else:
