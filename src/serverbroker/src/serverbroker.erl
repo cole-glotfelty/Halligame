@@ -191,33 +191,33 @@ handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
                                                        ThisUser#user.playing)},
     {noreply, State#state{gameservers = [NewGS | Rest],
                           users = [UpdatedUser | OtherUsers]}};
-handle_cast({add_user, Login, LinuxPid, ErlangPid}, State) ->
-    {ThisUser, Rest} = lists:partition(fun (Usr) -> Usr#user.login == Login end,
-                                       State#state.users),
+handle_cast({add_user, Login, LinuxPid, ErlangPid}, State)
+            when is_pid(ErlangPid) ->
+    IsSameUser = fun (Usr) -> Usr#user.login == Login end,
+    {ThisUserList, Rest} = lists:partition(IsSameUser, State#state.users),
     NewSession = #session{erlangpid = ErlangPid, linuxpid = LinuxPid},
     monitor(process, ErlangPid),
-    case ThisUser of
+    case ThisUserList of
         [] ->
-            User = #user{login = Login, sessions = [NewSession]};
-        [#user{login = Login, sessions = OldSessions, playing = Playing}] ->
-            User = #user{login    = Login,
-                            sessions = [NewSession | OldSessions],
-                            playing  = Playing}
+            NewUser = #user{login = Login, sessions = [NewSession]};
+        [#user{sessions = OldSessions}] ->
+            [ThisUser] = ThisUserList,
+            NewUser = ThisUser#user{sessions = [NewSession | OldSessions]}
     end,
-    {noreply, State#state{users = [User | Rest]}};
+    {noreply, State#state{users = [NewUser | Rest]}};
 handle_cast({del_user, Login, LinuxPid}, State) ->
     Fun      = fun (Usr) -> Login == Usr#user.login end,
-    {ThisUser, Rest} = lists:partition(Fun, State#state.users),
-    case ThisUser of
+    {ThisUserList, Rest} = lists:partition(Fun, State#state.users),
+    case ThisUserList of
         [] ->
             % User not found.
             Users = Rest;
-        [#user{login = Login, sessions = Sessions}] ->
+        [#user{sessions = Sessions}] ->
             % Remove this session.
             Filter = fun (X) -> X#session.linuxpid =/= LinuxPid end,
             FilteredSessions = lists:filter(Filter, Sessions),
-            [SingleUser] = ThisUser,
-            Users = [SingleUser#user{sessions = FilteredSessions} | Rest]
+            [ThisUser] = ThisUserList,
+            Users = [ThisUser#user{sessions = FilteredSessions} | Rest]
     end,
     {noreply, State#state{users = Users}};
 handle_cast({message_user, FromUser, ToUser, Message}, State) ->
@@ -256,15 +256,14 @@ handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
 
     FilterGameServer = fun (GS) -> GS#gameserver.pid =/= ErlangPid end,
     FilteredGSs = lists:filter(FilterGameServer, State#state.gameservers),
-    % io:fwrite("~p: Filtered GSs: ~p~n", [FilteredGSs]),
     FilterPlayers = fun (P) -> P#gameclient.pid =/= ErlangPid end,
     PlayerMapFun = fun (GS) ->
         GS#gameserver{players =
                         lists:filter(FilterPlayers, GS#gameserver.players)} end,
     FinalGSs = lists:map(PlayerMapFun, FilteredGSs),
-    % io:fwrite("~p: Final GSs: ~p~n", [FinalGSs]),
     FinalState = State#state{users = NewUsers, gameservers = FinalGSs},
-    io:fwrite("~p: Final state ~p~n", [Time, State]),
+
+    io:fwrite("~p: Final state ~p~n", [Time, FinalState]),
     {noreply, FinalState};
 handle_info({getBrokerPid, FromPid}, State) ->
     % io:fwrite("Got info: ~p~n", [{getBrokerPid, FromPid}]),
