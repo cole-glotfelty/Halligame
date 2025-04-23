@@ -120,7 +120,7 @@ handle_call({lookupGameServerID, ID}, _From, State) ->
             {reply, notfound, State}
     end;
 handle_call(Catchall, From, State) ->
-    io:fwrite("Unrecognized call ~p from ~p~n", [Catchall, From]),
+    io:fwrite("~p: Unrecognized call ~p from ~p~n", [erlang:localtime(), Catchall, From]),
     {reply, error, State}.
 
 
@@ -228,7 +228,7 @@ handle_cast({invite_user, FromUser, ToUser, GameName, JoinCommand}, State) ->
                  State#state.users),
     {noreply, State};
 handle_cast(Catchall, State) ->
-    io:fwrite("Unrecognized cast: ~p~n", [Catchall]),
+    io:fwrite("~p: Unrecognized cast: ~p~n", [erlang:localtime(), Catchall]),
     {noreply, State}.
 
 
@@ -244,8 +244,9 @@ handle_cast(Catchall, State) ->
       {noreply, NewState :: term(), hibernate} |
       {stop, Reason :: normal | term(), NewState :: term()}.
 handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
-    io:fwrite("Current state ~p~n", [State]),
-    io:fwrite("Got down message for process ~p~n", [ErlangPid]),
+    Time = erlang:localtime(),
+    io:fwrite("~p: Current state ~p~n", [Time, State]),
+    io:fwrite("~p: Got down message for process ~p~n", [Time, ErlangPid]),
     FilterSession = fun (Ses) -> Ses#session.erlangpid =/= ErlangPid end,
     FilterPlaying = fun ({_GameName, Pid}) -> (Pid =/= ErlangPid) end,
     UsrMapFun = fun (Usr) ->
@@ -255,20 +256,22 @@ handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
 
     FilterGameServer = fun (GS) -> GS#gameserver.pid =/= ErlangPid end,
     FilteredGSs = lists:filter(FilterGameServer, State#state.gameservers),
-    io:fwrite("Filtered GSs: ~p~n", [FilteredGSs]),
+    % io:fwrite("~p: Filtered GSs: ~p~n", [FilteredGSs]),
     FilterPlayers = fun (P) -> P#gameclient.pid =/= ErlangPid end,
     PlayerMapFun = fun (GS) ->
         GS#gameserver{players =
                         lists:filter(FilterPlayers, GS#gameserver.players)} end,
     FinalGSs = lists:map(PlayerMapFun, FilteredGSs),
-    io:fwrite("Final GSs: ~p~n", [FinalGSs]),
-    {noreply, State#state{users = NewUsers, gameservers = FinalGSs}};
+    % io:fwrite("~p: Final GSs: ~p~n", [FinalGSs]),
+    FinalState = State#state{users = NewUsers, gameservers = FinalGSs},
+    io:fwrite("~p: Final state ~p~n", [Time, State]),
+    {noreply, FinalState};
 handle_info({getBrokerPid, FromPid}, State) ->
-    io:fwrite("Got info: ~p~n", [{getBrokerPid, FromPid}]),
+    % io:fwrite("Got info: ~p~n", [{getBrokerPid, FromPid}]),
     FromPid ! {brokerPid, self()},
     {noreply, State};
 handle_info(Info, State) ->
-    io:fwrite("Unrecognized info: ~p~n", [Info]),
+    io:fwrite("~p: Unrecognized info: ~p~n", [erlang:localtime(), Info]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
