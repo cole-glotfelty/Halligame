@@ -57,7 +57,11 @@ extend-select = [
     "SIM", # flake8-simplify
     "ANN0", "ANN2", # flake8-annotations
     "D",   #pydocstyle
-    "DOC", #pydoclint, in preview
+    # "DOC", #pydoclint, in preview
+]
+
+extend-ignore = [
+    "SIM105", # Pushes contextlib.suppress, which I don't care about. --MD
 ]
 
 [tool.ruff.lint.isort]

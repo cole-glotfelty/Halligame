@@ -1,7 +1,7 @@
-# screen.py
+"""Wraw to the screen using ncurses.
 
-# draw to the screen using ncurses
-# Written by: Will Cordray
+Written by: Will Cordray
+"""
 # TODO: Will pls do todos/add docstrings to functions :)
 
 import curses
@@ -9,6 +9,8 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
+from typing import Any
 
 import pyfiglet
 
@@ -40,25 +42,44 @@ import pyfiglet
 
 
 class Screen:
-    # gotInputFunc = the function to call when receiving input
-    def __init__(
-        self, gotInputFunc: callable, gotMouseClickFunc: callable
-    ) -> None:
-        self.__gotInput = gotInputFunc
-        self.__gotMouse = gotMouseClickFunc
+    """Represents -- you guessed it -- a screen."""
 
+    def __init__(
+        self,
+        gotInputFunc: Callable[[str], None],
+        gotMouseClickFunc: Callable[[int, int, Any, None], None],
+    ) -> None:
+        """Initializes the class.
+
+        gotInputFunc is called when receiving input
+        gotMouseClickFunc is called when a mouse click is recieved.
+        TODO: Will, are these types right? (above and below.)
+        """
+        self.__gotInput: Callable[[str], None] = gotInputFunc
+        """Called when receiving input. The input is one character."""
+        self.__gotMouse: Callable[[int, int, Any, None], None] = (
+            gotMouseClickFunc
+        )
+        """Called when the mouse has been clicked.
+
+        TODO: explain parameters for the called function.
+        """
         self.__lock = threading.Lock()
+        """Protects internal state."""
 
         self.__initCurses()
+
         self.__colorSupport = curses.COLORS >= 8
+        """Whether color is supported on the current terminal."""
         self.__extendedColorSupport = curses.COLORS >= 128
+        """Whether extended color support is availible on this terminal."""
 
         self.__stdscr.clear()
 
-        # starting monitoring for user input
         self.__monitorInputThread = threading.Thread(
             target=self.__monitorInput, args=[]
         )
+        """The thread that monitors user input."""
         self.__monitorInputThread.daemon = True  # kill thread when main done
         self.__monitorInputThread.start()
 
@@ -68,6 +89,8 @@ class Screen:
             )  # set starting printing loc
         except:  # terminal window is being weird
             pass
+        # TODO: Will, can "except" be replaced with "except Exception"?
+        # The linter is complaining.
 
         self.__colors = {
             "black": curses.COLOR_BLACK,
@@ -79,17 +102,22 @@ class Screen:
             "white": curses.COLOR_WHITE,
             "yellow": curses.COLOR_YELLOW,
         }
-        self.__colorPairs = {}
-        self.__nextColorID = 10
-        self.__nextColorPairID = 10
+        """The list of colors."""
 
+        self.__colorPairs = {}
+        """TODO"""
+        self.__nextColorID = 10
+        """TODO"""
+        self.__nextColorPairID = 10
+        """TODO"""
         self.__clickableRegions = []
+        """TODO"""
 
         # give screen time to set up (instantaneous printing causes weird bugs)
-        # idk why
         time.sleep(0.1)
 
     def __initCurses(self) -> None:
+        """Initialize curses."""
         self.__stdscr = (
             curses.initscr()
         )  # turn the terminal into a curses window
@@ -105,9 +133,8 @@ class Screen:
             True
         )  # enable support for special keys like up-arrow.
 
-    # does the opposite of initCurses
-    # DON'T FORGET TO CALL!!!!!
     def shutdown(self) -> None:
+        """Shut down curses. DON'T FORGET TO CALL!!!!!"""
         curses.nocbreak()
         self.__stdscr.keypad(False)
         curses.echo()
@@ -122,6 +149,7 @@ class Screen:
 
     # Note that .getch() also refreshes the screen
     def __monitorInput(self) -> None:
+        """TODO: doc."""
         window = curses.newwin(self.terminalHeight(), self.terminalWidth())
         window.keypad(True)  # enable support for special keys like up-arrow.
         while True:
@@ -134,7 +162,7 @@ class Screen:
                 mouseEventType = self.__getMouseEventType(bstate)
                 self.__gotMouse(mrow, mcol, regionId, mouseEventType)
             else:
-                if type(c) == int:  # if int, try to convert to char
+                if type(c) is int:  # if int, try to convert to char
                     try:
                         c = chr(c)
                     except ValueError:  # other code, so ignore
@@ -142,6 +170,7 @@ class Screen:
                 self.__gotInput(c)
 
     def __findRegion(self, mrow, mcol):
+        """TODO: doc, annotate."""
         with self.__lock:
             # reverse the list to check more recently defined regions first
             for row, col, height, width, id in reversed(
@@ -157,6 +186,7 @@ class Screen:
         return None
 
     def __getMouseEventType(self, bstate) -> str:
+        """TODO: doc, annotate."""
         # if left click
         if (
             bstate & curses.BUTTON1_PRESSED != 0
@@ -177,31 +207,39 @@ class Screen:
             return "other"
 
     def terminalHeight(self) -> int:
+        """Return the height of this terminal."""
         with self.__lock:
             return self.__terminalHeight()
 
     def terminalWidth(self) -> int:
+        """Return the width of this terminal."""
         with self.__lock:
             return self.__terminalWidth()
 
     def __terminalHeight(self) -> int:
-        rows, cols = self.__stdscr.getmaxyx()
+        """Return the height of this terminal."""
+        rows, _cols = self.__stdscr.getmaxyx()
         return rows
 
     def __terminalWidth(self) -> int:
-        rows, cols = self.__stdscr.getmaxyx()
+        """Return the width of this terminal."""
+        _rows, cols = self.__stdscr.getmaxyx()
         return cols
 
-    # clears the screen (removes all text)
     def clearScreen(self) -> None:
+        """Clears the screen (removes all text)."""
         with self.__lock:
             self.__stdscr.clear()
             self.__stdscr.move(
                 self.__terminalHeight() - 1, 0
             )  # move cursor to bottom left
 
-    # prints a string to the screen, starting at (row, col)
+    #
     def write(self, row: int, col: int, toPrint, colorPairId=None) -> None:
+        """Prints a string to the screen, starting at (row, col).
+
+        TODO: doc and annotate other parameters.
+        """
         with self.__lock:
             if not self.__colorSupport or colorPairId not in self.__colorPairs:
                 colorPairId = None
@@ -220,8 +258,9 @@ class Screen:
     def __write(
         self, row: int, col: int, printing: str, colorPairId=None
     ) -> None:
+        """TODO: doc. Also annotate colorPairId."""
         try:
-            if colorPairId == None:
+            if colorPairId is None:
                 self.__stdscr.addstr(row, col, printing)
             else:
                 colorPairCode = self.__colorPairs[colorPairId]
@@ -232,6 +271,7 @@ class Screen:
             pass  # ignore out of bounds characters # TODO
 
     def print(self, toPrint, end="\n") -> None:
+        """TODO: doc and annotate parameters."""
         with self.__lock:
             printing = str(toPrint)
 
@@ -251,6 +291,7 @@ class Screen:
 
     # private helper
     def __print(self, printing: str, newline: bool) -> None:
+        """TODO: doc and annotate parameters."""
         try:
             self.__stdscr.addstr(printing)
 
@@ -271,6 +312,7 @@ class Screen:
 
     # rgb between 0 and 1000
     def addColor(self, r: int, g: int, b: int, colorId) -> None:
+        """TODO: doc. And annotate colorId."""
         if not self.__extendedColorSupport:
             return
         with self.__lock:
@@ -283,11 +325,12 @@ class Screen:
 
             self.__nextColorID += 1
 
-    # scales a color from between 0 and 256 to between 0 and 1000
     def __scaleColor(self, color) -> int:
+        """Scales a color from between 0 and 256 to between 0 and 1000."""
         return min(max(int(color * (1000.0 / 256.0)), 0), 1000)
 
     def addColorPair(self, foreground, background, pairId) -> None:
+        """TODO: doc and annotate parameters."""
         if not self.__extendedColorSupport:
             return
         with self.__lock:
@@ -301,6 +344,7 @@ class Screen:
             self.__nextColorPairID += 1
 
     def setStyle(self, colorPairId) -> None:
+        """TODO: doc and annotate parameters."""
         with self.__lock:
             if not self.__colorSupport or colorPairId not in self.__colorPairs:
                 return
@@ -311,14 +355,17 @@ class Screen:
     def addClickableRegion(
         self, row: int, col: int, height: int, width: int, id
     ) -> None:
+        """TODO: doc and annotate id."""
         with self.__lock:
             self.__clickableRegions.append((row, col, height, width, id))
 
     def clearClickableRegions(self) -> None:
+        """TODO: doc."""
         with self.__lock:
             self.__clickableRegions = []
 
     def getCenteredRow(self, toPrint) -> int:
+        """TODO: doc and annotate."""
         with self.__lock:
             row = (self.__terminalHeight() // 2) - (
                 len(str(toPrint).split("\n")) // 2
@@ -326,6 +373,7 @@ class Screen:
             return max(0, row)
 
     def getCenteredCol(self, toPrint) -> int:
+        """TODO: doc and annotate."""
         with self.__lock:
             toPrintSplit = str(toPrint).split("\n")
 
@@ -339,9 +387,10 @@ class Screen:
             return max(0, col)
 
     def displayFullScreenMessage(self, message, font=None) -> None:
+        """TODO: doc and annotate."""
         self.clearScreen()
 
-        if font != None:
+        if font is not None:
             message = pyfiglet.figlet_format(
                 message, font=font, width=self.terminalWidth() - 10
             )

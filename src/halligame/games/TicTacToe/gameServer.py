@@ -1,8 +1,8 @@
-# GameServer.py
+"""Game logic and turn validation for Tic Tic Toe.
 
-# Game logic and turn validation for Tic Tic Toe
-# Written by Cole Glotfelty and Will Cordray <2025-03-29>
-# Last edited by: Cole Glotfelty 2025-03-29
+Written by Cole Glotfelty and Will Cordray <2025-03-29>
+Last edited by: Michael Daniels 2025-04-22
+"""
 
 from typing import Any
 
@@ -14,33 +14,30 @@ from halligame.utils.ServerComms import ServerCommunicate
 
 
 class Server(ServerSuper):
-    def __init__(self, comms: ServerCommunicate) -> None:
-        self.__comms = comms
-        self.__numConnected = 0
+    """Represents our game's server."""
 
-        # "Public/Client Facing Members - For GameClient.py"
+    def __init__(self, comms: ServerCommunicate) -> None:
+        """Initialize this instance."""
+        self.__comms: ServerCommunicate = comms
+        """Our ServerCommunicate instance."""
+        self.__numConnected: int = 0
+        """The number of players currently connected."""
         self.__state: GameState = GameState()
+        """Our current game state."""
+        self.__playersSymbol: list[str] = ["X", "O"]
+        """Store player symbols for easier indexing."""
+        self.__boardFull: int = 0
+        """The number of spaces on the board that are taken."""
+
         self.__state.setValue(
             "board", [[" " for _ in range(3)] for _ in range(3)]
         )
         self.__state.setValue("currentPlayer", 0)
         self.__state.setValue("gameOver", "")
-
-        self.__playersSymbol = ["X", "O"]
         self.__state.setValue("playerNames", ["nobody", "nobody"])
 
-        # print(f"GameState objects: {self.__state.objects}")
-        # "Private" Members for internal use only
-        self.__boardFull = 0
-
-    # This is the function that is called when the server receives a message
-    # from one of the clients, most likely an event/move. Note that I haven't
-    # quite figured out the erlang side of things to determine which player
-    # sent the message, but that is obviously coming.
-    # TODO: still right?
     def gotClientMessage(self, clientPID: Pid, event: Any) -> None:
-        """
-        Determine if an event (tuple[int, Any]) is valid
+        """Determine if an event (tuple[int, Any]) is valid.
 
         If valid: broadcast new state to clients
         otherwise: tell client who requested change it's not valid
@@ -59,7 +56,8 @@ class Server(ServerSuper):
             )
 
     def __updateState(self, event: tuple[int, Any] | Any) -> None:
-        """
+        """Update the game's state.
+
         event should be of tuple[int, Any], but the superclass allows Any
         """
         (currentPlayer, move) = event
@@ -112,6 +110,7 @@ class Server(ServerSuper):
         self.__state.setValue("currentPlayer", (currentPlayer + 1) % 2)
 
     def addClient(self, clientPid: Pid, username: str) -> None:
+        """Add a client to this game."""
         for i in range(2):
             if self.__state.getValue("playerNames")[i] == "nobody":
                 self.__numConnected += 1
@@ -127,6 +126,7 @@ class Server(ServerSuper):
             )
 
     def removeClient(self, clientPID: Pid, username: str) -> None:
+        """Remove a client from this game."""
         # print(f"removing client {clientPID} ({username}); "
         #   f"numConnected = {self.__numConnected}")
         # Stop when room is empty

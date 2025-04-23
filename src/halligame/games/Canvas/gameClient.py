@@ -1,4 +1,8 @@
-# gameClient.py
+"""Our Canvas client.
+
+Created:     Will Cordray,    2025-04-15
+Last edited: Michael Daniels, 2025-04-22
+"""
 
 import threading
 from typing import Any
@@ -9,23 +13,40 @@ from halligame.utils.screen import Screen
 
 
 class Client(ClientSuper):
-    # comms is an instance of halligame.utils.ClientCommunicate
+    """Represents our game's client."""
+
     def __init__(self, comms) -> None:  # noqa: ANN001
+        """Initialize this client.
+
+        Args:
+            comms: is an instance of halligame.utils.ClientCommunicate
+                   (It can't be type-annotated due to circular imports.)
+        """
         self.__screen = Screen(self.userInput, self.mouseInput)
+        """The screen we'll use."""
         self.__stateLock = threading.Lock()
-        self.__comms = comms
+        """Protects self.__state.
+        
+        TODO: GameState already uses a lock... Needed?
+        """
         self.__state: GameState = GameState()
+        """Our game state."""
+        self.__comms = comms
+        """Our ClientCommunicate instance."""
 
         self.__boardHeight = 30
         self.__boardWidth = 40
 
+        # TODO: doc these two
         self.__boardVOffset = 5
         self.__boardHOffset = 5
 
+        # TODO: doc
         self.__colorBoxHeight = 3
         self.__colorBoxWidth = 5
         self.__colorBoxVSeparator = 1
 
+        # TODO: any restrictions on this?
         self.__currColor: str = "blue"
 
         self.__screen.clearScreen()
@@ -37,6 +58,7 @@ class Client(ClientSuper):
         self.__screen.refresh()
 
     def __initializeColors(self) -> None:
+        """Initialize the screen's colors."""
         self.__colors = [
             "black",
             "blue",
@@ -63,6 +85,7 @@ class Client(ClientSuper):
         self.__screen.setStyle("black")  # set background to black
 
     def __defineMouseRegions(self) -> None:
+        """TODO: doc."""
         self.__screen.addClickableRegion(
             self.__boardVOffset,
             self.__boardHOffset,
@@ -121,6 +144,7 @@ class Client(ClientSuper):
         )
 
     def __drawBlankBoard(self) -> None:
+        """TODO: doc."""
         boardDraw = ((" " * self.__boardWidth) + "\n") * self.__boardHeight
         self.__screen.write(
             self.__boardVOffset, self.__boardHOffset, boardDraw, "white"
@@ -137,6 +161,10 @@ class Client(ClientSuper):
         )
 
     def userInput(self, input: str | int) -> None:
+        """Process user input.
+
+        The only input we care about is "q", which quits the game.
+        """
         if input == "q":
             self.__screen.shutdown()
             self.__comms.shutdown()
@@ -144,6 +172,7 @@ class Client(ClientSuper):
     def mouseInput(
         self, row: int, col: int, region: str, mouseEventType: str
     ) -> None:
+        """TODO: doc."""
         with self.__stateLock:
             if mouseEventType == "left_click":
                 if region == "board":
@@ -167,6 +196,7 @@ class Client(ClientSuper):
                 self.__comms.sendMessage(pixelToDraw)
 
     def __updateCurrColor(self, color: str) -> None:
+        """TODO: doc."""
         colorBoxDraw = (
             (" " * self.__colorBoxWidth) + "\n"
         ) * self.__colorBoxHeight
@@ -178,11 +208,17 @@ class Client(ClientSuper):
         self.__currColor = color
 
     def joinConfirmed(self, newState: bytes) -> None:
+        """Set our game state."""
         with self.__stateLock:
             self.__state.deserialize(newState)
             self.__drawBoard()
 
     def gotServerMessage(self, msg: Any) -> None:
+        """Process messages from the server.
+
+        If the online players change, we update the screen.
+        If the state changes, we update the screen as well.
+        """
         if msg[0] == "state_diff":
             with self.__stateLock:
                 self.__drawPixel(msg[1])
@@ -192,6 +228,7 @@ class Client(ClientSuper):
                 self.__screen.refresh()
 
     def __drawBoard(self) -> None:
+        """Draw the board."""
         board = self.__state.getValue("board")
         for row in range(len(board)):
             for col in range(len(board[row])):
@@ -204,14 +241,20 @@ class Client(ClientSuper):
         self.__screen.refresh()
 
     def __drawPixel(self, pixelToDraw: tuple[int, int, str]) -> None:
+        """Draw a pixel.
+
+        Args:
+            pixelToDraw: tuple (row, col, color)
+        """
         (row, col, color) = pixelToDraw
         self.__screen.write(
             row + self.__boardVOffset, col + self.__boardHOffset, " ", color
         )
         self.__screen.refresh()
 
-    # TODO: need type annotation for players
+    # TODO: type annotation for players
     def __drawPlayers(self, players) -> None:
+        """Draw the currently active players' names."""
         col = self.__boardHOffset + self.__boardWidth + 20
         players.sort()
 
