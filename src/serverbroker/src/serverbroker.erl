@@ -106,7 +106,10 @@ init([]) ->
 handle_call({list_users}, _From, State) ->
     {reply, State#state.users, State};
 handle_call({list_logins}, _From, State) ->
-    {reply, lists:map(fun (X) -> X#user.login end, State#state.users), State};
+    UserIsActive = fun (Usr) -> Usr#user.sessions =/= [] end,
+    ActiveUsers = lists:filter(UserIsActive, State#state.users),
+    GetLogin = fun (Usr) -> Usr#user.login end,
+    {reply, lists:map(GetLogin, ActiveUsers), State};
 handle_call({list_gameservers}, _From, State) ->
     {reply, State#state.gameservers, State};
 handle_call({lookupGameServerID, ID}, _From, State) ->
