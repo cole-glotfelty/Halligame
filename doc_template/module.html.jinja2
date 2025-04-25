@@ -1,9 +1,0 @@
-{% extends "default/module.html.jinja2" %}
-
-{% macro is_public(doc) %}
-    {% if doc.name.startswith("__") and doc.name.endswith("__") %}
-        {{ default_is_public(doc) }}
-    {% else %}
-        true
-    {% endif %}
-{% endmacro %}
