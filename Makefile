@@ -1,7 +1,7 @@
 # Build all the things!
 # Michael Daniels, 2025-04-21
 
-SPHINXUV      ?= uv run --with=furo,sphinx,myst-parser
+SPHINXUV      ?= uv run --with=furo,sphinx,myst-parser,sphinx-argparse
 SPHINXAPI     ?= $(SPHINXUV) sphinx-apidoc
 SPHINXBUILD   ?= $(SPHINXUV) sphinx-build
 SOURCEDIR     = docs/source
@@ -31,7 +31,7 @@ erldocs: cli-erldocs serverbroker-erldocs
 
 pydocs: pyproject
 	# uv run pdoc -o html -t doc_template src/cli src/halligame
-	$(SPHINXAPI) -f -o "docs/source" "src"
+	# $(SPHINXAPI) -o "docs/source" "src"
 	$(SPHINXBUILD) "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 cli-erldocs:
