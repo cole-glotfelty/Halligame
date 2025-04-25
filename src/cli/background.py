@@ -6,6 +6,7 @@ Created by:  Michael Daniels, 2025-04-19
 """
 
 import asyncio
+import os
 import socket
 import subprocess
 from argparse import ArgumentParser
@@ -101,7 +102,7 @@ class UserBackground(Process):
         """
         if not pid_exists(int(self.__shellPid)):
             self.shutdown()
-            exit(0)
+            os._exit(0)
         event_loop = asyncio.get_event_loop()
         event_loop.call_later(WAIT_TIME_SEC, self.__checkOSProcessAlive)
 
@@ -144,4 +145,4 @@ if __name__ == "__main__":
     try:
         start(args.ParentShellPid)
     except KeyboardInterrupt:
-        exit(0)
+        os._exit(0)
