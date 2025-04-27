@@ -30,19 +30,18 @@ class ServerCommunicate(Process):
         super().__init__()
         node.register_name(self, Atom("pyServer"))
         gameModule = importlib.import_module("halligame.games." + gameName)
-
+        #: The name of the game to join.
         self.__gameName: str = gameName
-        """The name of the game to join."""
+        #: The name of this node.
         self.__nodeName: str = nodeName
-        """The name of this node."""
+        #: Used to communicate with the server broker.
         self.__serverBroker: GenServerInterface
-        """Used to communicate with the server broker."""
+        #: __connectedClients contains tuples (clientPid, username)
         self.__connectedClients: set[tuple[Pid, str]] = set()
-        """__connectedClients is the tuple (clientPid, username)"""
+        #: The linux PID of the parent shell.
         self.__shellPid: int = shellPid
-        """The linux PID of the parent shell."""
+        #: The game server itself.
         self.__serverGameInstance = gameModule.Server(self)
-        """The game server itself."""
 
         # Pyrlang has node name and registered name backwards >:(
         self.__sendMessage(

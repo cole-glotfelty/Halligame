@@ -72,6 +72,8 @@ autodoc_member_order = "groupwise"
 # }
 
 autodoc_typehints = "both"
+
+autodoc_default_options = {"private-members": True}
 # autodoc_typehints = 'description'
 
 napoleon_include_private_with_doc = True

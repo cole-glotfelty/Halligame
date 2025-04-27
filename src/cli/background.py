@@ -21,8 +21,8 @@ from term import Atom, Pid
 
 from halligame.utils.common import ensure_epmd, whoami
 
+#: How long we should wait between checks that the parent hasn't died.
 WAIT_TIME_SEC = 30
-"""How long we should wait between checks that the parent hasn't died."""
 
 
 class UserBackground(Process):
@@ -33,12 +33,12 @@ class UserBackground(Process):
         super().__init__()
         node.register_name(self, Atom("backgroundProc"))
 
+        #: A string containing the linux PID of the parent shell.
         self.__shellPid: Pid = shellPid
-        """A string containing the linux PID of the parent shell."""
+        #: The current user's username.
         self.__username: str = username
-        """The current user's username."""
+        #: Used to communicate with the server broker.
         self.__serverBroker: GenServerInterface
-        """Used to communicate with the server broker."""
 
         # print("DEBUG: Sending getBroker message")
 

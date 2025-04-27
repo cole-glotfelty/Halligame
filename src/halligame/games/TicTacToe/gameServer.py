@@ -18,16 +18,16 @@ class Server(ServerSuper):
 
     def __init__(self, comms: ServerCommunicate) -> None:
         """Initialize this instance."""
+        #: Our ServerCommunicate instance.
         self.__comms: ServerCommunicate = comms
-        """Our ServerCommunicate instance."""
+        #: The number of players currently connected.
         self.__numConnected: int = 0
-        """The number of players currently connected."""
+        #: Our current game state.
         self.__state: GameState = GameState()
-        """Our current game state."""
+        #: Store player symbols for easier indexing.
         self.__playersSymbol: list[str] = ["X", "O"]
-        """Store player symbols for easier indexing."""
+        #: The number of spaces on the board that are taken.
         self.__boardFull: int = 0
-        """The number of spaces on the board that are taken."""
 
         self.__state.setValue(
             "board", [[" " for _ in range(3)] for _ in range(3)]

@@ -2,7 +2,7 @@ cli package
 ===========
 
 The command-line interface
---------------
+--------------------------
 .. argparse::
    :module: cli.cli
    :func: make_parser
@@ -12,7 +12,7 @@ Submodules
 ----------
 
 cli.cli module
-^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 
 .. automodule:: cli.cli
    :members:
@@ -20,7 +20,7 @@ cli.cli module
    :undoc-members:
 
 cli.background module
-^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: cli.background
    :members:

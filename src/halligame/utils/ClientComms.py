@@ -34,15 +34,14 @@ class ClientCommunicate(Process):
         node.register_name(self, "pyClient")
 
         gameModule = importlib.import_module("halligame.games." + gameName)
-
+        #: The game client itself.
         self.__clientGameInstance = gameModule.Client(self)
-        """The game client itself."""
+        #: The pid of this game's server.
         self.__serverPid: Pid = serverPid
-        """The pid of this game's server."""
+        #: Used to make sure the server gets our quit message.
         self.__delayQuitUntilConfirmation: Semaphore = Semaphore(0)
-        """Used to make sure the server gets our quit message."""
+        #: The current user's username.
         self.__thisUser: str = whoami()
-        """The current user's username."""
 
         self.__backendSendMessage(("new_client", self.pid_, self.__thisUser))
 

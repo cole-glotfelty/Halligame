@@ -22,17 +22,15 @@ class Client(ClientSuper):
             comms: is an instance of halligame.utils.ClientCommunicate
                    (It can't be type-annotated due to circular imports.)
         """
+        #: The screen we'll use.
         self.__screen = Screen(self.userInput, self.mouseInput)
-        """The screen we'll use."""
+        #: Protects self.__state.
+        # TODO: GameState already uses a lock... Needed?
         self.__stateLock = threading.Lock()
-        """Protects self.__state.
-        
-        TODO: GameState already uses a lock... Needed?
-        """
+        #: Our game state.
         self.__state: GameState = GameState()
-        """Our game state."""
+        #: Our ClientCommunicate instance.
         self.__comms = comms
-        """Our ClientCommunicate instance."""
 
         self.__boardHeight = 30
         self.__boardWidth = 40

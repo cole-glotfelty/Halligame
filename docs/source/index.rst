@@ -4,10 +4,10 @@
    contain the root `toctree` directive.
 
 Welcome to Halligame's Python documentation!
-=====================================
+============================================
 
 For Erlang documentation, see `here <../html_erl_cli>`_ for the CLI and
-`here <../html_erl_serverbroker>`_ for the server broker.
+`this link <../html_erl_serverbroker>`_ for the server broker.
 
 .. toctree::
    :maxdepth: 4

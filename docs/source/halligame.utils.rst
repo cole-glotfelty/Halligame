@@ -29,7 +29,7 @@ halligame.utils.common module
    :undoc-members:
 
 halligame.utils.gameClientTemplate module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: halligame.utils.gameClientTemplate
    :members:
@@ -37,7 +37,7 @@ halligame.utils.gameClientTemplate module
    :undoc-members:
 
 halligame.utils.gameServerTemplate module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: halligame.utils.gameServerTemplate
    :members:

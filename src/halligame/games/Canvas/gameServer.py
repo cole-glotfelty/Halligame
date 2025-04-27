@@ -19,14 +19,17 @@ class Server(ServerSuper):
 
     def __init__(self, comms: ServerCommunicate) -> None:
         """Initialize this instance."""
+        #: Our ServerCommunicate instance.
         self.__comms: ServerCommunicate = comms
-        """Our ServerCommunicate instance."""
+        #: A set of usernames who are currently connected.
         self.__players: set[str] = set()
-        """A set of usernames who are currently connected."""
+        #: Protects self.__state.
         self.__stateLock: Lock = Lock()
-        """Protects self.__state."""
+        #: The game state
         self.__state: GameState = GameState()
+        #: The height of the canvas, in pixels.
         self.__boardHeight: int = 30
+        #: The width of the canvas, in pixels.
         self.__boardWidth: int = 40
 
         board = [

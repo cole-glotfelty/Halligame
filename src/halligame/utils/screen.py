@@ -55,31 +55,31 @@ class Screen:
         gotMouseClickFunc is called when a mouse click is recieved.
         TODO: Will, are these types right? (above and below.)
         """
+        #: Called when receiving input. The input is one character.
         self.__gotInput: Callable[[str], None] = gotInputFunc
-        """Called when receiving input. The input is one character."""
+        #: Called when the mouse has been clicked.
+        #: TODO: explain parameters for the called function.
         self.__gotMouse: Callable[[int, int, Any, None], None] = (
             gotMouseClickFunc
         )
-        """Called when the mouse has been clicked.
-
-        TODO: explain parameters for the called function.
-        """
+        #: Protects internal state.
         self.__lock = threading.Lock()
-        """Protects internal state."""
+        #: The curses window.
+        self.__stdscr : curses.window
 
         self.__initCurses()
 
+        #: Whether color is supported on the current terminal.
         self.__colorSupport = curses.COLORS >= 8
-        """Whether color is supported on the current terminal."""
+        #: Whether extended color support is availible on this terminal.
         self.__extendedColorSupport = curses.COLORS >= 128
-        """Whether extended color support is availible on this terminal."""
 
         self.__stdscr.clear()
 
+        #: The thread that monitors user input.
         self.__monitorInputThread = threading.Thread(
             target=self.__monitorInput, args=[]
         )
-        """The thread that monitors user input."""
         self.__monitorInputThread.daemon = True  # kill thread when main done
         self.__monitorInputThread.start()
 
@@ -92,6 +92,7 @@ class Screen:
         # TODO: Will, can "except" be replaced with "except Exception"?
         # The linter is complaining.
 
+        #: The list of colors.
         self.__colors = {
             "black": curses.COLOR_BLACK,
             "blue": curses.COLOR_BLUE,
@@ -102,25 +103,23 @@ class Screen:
             "white": curses.COLOR_WHITE,
             "yellow": curses.COLOR_YELLOW,
         }
-        """The list of colors."""
 
+        #: TODO: doc
         self.__colorPairs = {}
-        """TODO"""
+        #: TODO: doc
         self.__nextColorID = 10
-        """TODO"""
+        #: TODO: doc
         self.__nextColorPairID = 10
-        """TODO"""
+        #: TODO: doc
         self.__clickableRegions = []
-        """TODO"""
 
         # give screen time to set up (instantaneous printing causes weird bugs)
         time.sleep(0.1)
 
     def __initCurses(self) -> None:
         """Initialize curses."""
-        self.__stdscr = (
-            curses.initscr()
-        )  # turn the terminal into a curses window
+        # turn the terminal into a curses window
+        self.__stdscr = curses.initscr() 
         curses.start_color()  # enable color support
         curses.use_default_colors()  # keep the curr colors of the terminal
         curses.mousemask(curses.ALL_MOUSE_EVENTS)  # enable mouse support

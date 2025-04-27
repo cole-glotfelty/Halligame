@@ -22,10 +22,11 @@ class GameState:
 
     def __init__(self, args: dict | None = None) -> None:
         """Initialize this instance."""
+        #: Protects internal state.
         self.__lock: Lock = Lock()
-        """Protects internal state."""
+        #: The object store.
         self.__objects: dict[Any, Any]
-        """The object store."""
+
         if args is None:
             self.__objects = {}
         else:

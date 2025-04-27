@@ -25,22 +25,22 @@ class Client(ClientSuper):
             comms: is an instance of halligame.utils.ClientCommunicate
                    (It can't be type-annotated due to circular imports.)
         """
+        #: The screen we'll use.
         self.__screen: Screen = Screen(self.userInput, self.mouseInput)
-        """The screen we'll use."""
+        #: Protects internal state.
         self.__stateLock: Lock = Lock()
-        """Protects internal state."""
+        #: Our ClientCommunicate instance.
         self.__comms = comms
-        """Our ClientCommunicate instance."""
+        #: Our game state.
         self.__state: GameState = GameState()
-        """Our game state."""
+        #: Which player are we? 0 for X, 1 for O.
         self.__playerID: int = -1
-        """Which player are we? 0 for X, 1 for O."""
+        #: Is it my turn?
         self.__myTurn: bool = True
-        """Is it my turn?"""
+        #: TODO: doc
         self.__formatter: Figlet = Figlet(font="georgia11")
-        """TODO"""
+        #: TODO: doc
         self.__topRow: int = 5
-        """TODO"""
 
         self.initializeScreenColors()
 
