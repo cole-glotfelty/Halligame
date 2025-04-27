@@ -179,6 +179,7 @@ def sendInvite(toUser: str, gameName: str, gameID: str) -> None:
     cmd.append(f"hg join {gameID[:3]}-{gameID[3:]}")
     subprocess.run(cmd)
 
+
 def make_parser() -> ArgumentParser:
     parser = ArgumentParser(prog="hg")
     subparsers = parser.add_subparsers(dest="subcommand")
@@ -219,9 +220,10 @@ def make_parser() -> ArgumentParser:
 
     return parser
 
+
 if __name__ == "__main__":
     mp.set_start_method("forkserver")
-    
+
     parser = make_parser()
 
     parsed = parser.parse_args()

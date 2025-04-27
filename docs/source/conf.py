@@ -12,14 +12,15 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('src'))
+
+sys.path.insert(0, os.path.abspath("src"))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'Halligame'
+project = "Halligame"
 # copyright = '2025, Cole Glotfelty, Michael Daniels, Will Cordray'
-author = 'Cole Glotfelty, Michael Daniels, Will Cordray'
+author = "Cole Glotfelty, Michael Daniels, Will Cordray"
 
 html_show_copyright = False
 
@@ -30,10 +31,10 @@ html_show_copyright = False
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    'myst_parser',
-    'sphinxarg.ext',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "myst_parser",
+    "sphinxarg.ext",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -43,13 +44,14 @@ extensions = [
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = [
-    '../../_build',
-    '../../src/*/_build',
-    '../../src/*/_build/*',
-    'Thumbs.db',
-    '.DS_Store',
-    '../../.venv',
-    '../../vendor']
+    "../../_build",
+    "../../src/*/_build",
+    "../../src/*/_build/*",
+    "Thumbs.db",
+    ".DS_Store",
+    "../../.venv",
+    "../../vendor",
+]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -64,12 +66,12 @@ html_theme = "furo"
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ['../../_static']
 
-autodoc_member_order = 'groupwise'
+autodoc_member_order = "groupwise"
 
 # autodoc_type_aliases = {
 # }
 
-autodoc_typehints = 'both'
+autodoc_typehints = "both"
 # autodoc_typehints = 'description'
 
 napoleon_include_private_with_doc = True

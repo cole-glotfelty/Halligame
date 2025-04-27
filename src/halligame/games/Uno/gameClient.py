@@ -6,7 +6,6 @@ import time
 import pyfiglet
 
 from halligame.utils.gameClientTemplate import ClientSuper
-from halligame.utils.gameState import GameState
 from halligame.utils.screen import Screen
 
 from .Uno import Uno
@@ -146,12 +145,12 @@ class Client(ClientSuper):
 
         # purposefully designed to be length 4
         menuTexts = [
-            pyfiglet.figlet_format(f"PICK", font="finalass"),
+            pyfiglet.figlet_format("PICK", font="finalass"),
             pyfiglet.figlet_format(
                 self.__game.type(self.__waitingCard).upper(), font="finalass"
             ),
-            pyfiglet.figlet_format(f"CARD", font="finalass"),
-            pyfiglet.figlet_format(f"COLOR", font="finalass"),
+            pyfiglet.figlet_format("CARD", font="finalass"),
+            pyfiglet.figlet_format("COLOR", font="finalass"),
         ]
 
         colors = ["RED", "YELLOW", "GREEN", "BLUE"]
@@ -209,7 +208,7 @@ class Client(ClientSuper):
                 self.__drawScreen()
             elif msg[0] == "uno_loss":  # you lost the uno race
                 self.__screen.displayFullScreenMessage(
-                    f"YOU DIDN'T\nSAY UNO!", font="roman"
+                    "YOU DIDN'T\nSAY UNO!", font="roman"
                 )
                 time.sleep(1.5)
                 self.__drawScreen()
@@ -307,7 +306,7 @@ class Client(ClientSuper):
                 f"Current Player: {self.__playerUTLNs[self.__currUsersTurn]}"
             )
             if self.__myTurn:
-                gameInfo.append(f"It's Your Turn")
+                gameInfo.append("It's Your Turn")
 
         printableInfo = "\n\n".join(gameInfo)
         centeredRow = self.__screen.getCenteredRow(printableInfo)
@@ -356,7 +355,7 @@ class Client(ClientSuper):
 
         buttons = []
         buttons.append(
-            (pyfiglet.figlet_format(f"DRAW", font="finalass"), "dealCard")
+            (pyfiglet.figlet_format("DRAW", font="finalass"), "dealCard")
         )
         # if (self.__unoPossibility):
         # buttons.append((pyfiglet.figlet_format(f"UNO", font="finalass"), "uno"))

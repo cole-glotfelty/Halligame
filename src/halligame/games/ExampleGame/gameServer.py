@@ -16,8 +16,7 @@ from halligame.utils.ServerComms import ServerCommunicate
 
 class Server(ServerSuper):
     def __init__(self, comms: ServerCommunicate) -> None:
-        """
-        Constructor for the Server (you should initalize stuff here)
+        """Constructor for the Server (you should initalize stuff here)
 
         One thing to note: `comms` needs to be assigned like so:
 
@@ -33,8 +32,7 @@ class Server(ServerSuper):
         pass
 
     def gotClientMessage(self, event: Any, clientPID: Pid) -> None:
-        """
-        The is where your game logic should go. You'll receive an events from
+        """The is where your game logic should go. You'll receive an events from
         the client and should validate them here. (You'll probably want to use
         a case statement and pattern match the events).
 
@@ -56,8 +54,7 @@ class Server(ServerSuper):
         pass
 
     def addClient(self, clientPID: Pid, username: str) -> None:
-        """
-        Callback function for when a client joins the game. This should also
+        """Callback function for when a client joins the game. This should also
         call `confirmJoin` to send a message to the client about a new player
         joining.
 
@@ -71,8 +68,7 @@ class Server(ServerSuper):
         pass
 
     def removeClient(self, clientPID: Pid, username: str) -> None:
-        """
-        Callback function for when a client leaves the game.
+        """Callback function for when a client leaves the game.
 
         Arguemnts;
             clientPID - PID of the client that left the game

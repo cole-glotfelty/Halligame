@@ -1,5 +1,7 @@
 import random
+
 import pyfiglet
+
 from halligame.utils.screen import Screen
 
 BLANK_CARD = [
@@ -56,13 +58,12 @@ class Uno:
         return deck
 
     def cardPlacable(self, onPile, toPlace) -> bool:
-        if onPile == "blank":
-            return True
-        elif self.type(toPlace) in ["wild", "+4"]:  # always placeable
-            return True
-        elif self.type(toPlace) == self.type(onPile):
-            return True
-        elif self.color(toPlace) == self.color(onPile):
+        if (
+            onPile == "blank"
+            or self.type(toPlace) in ["wild", "+4"]
+            or self.type(toPlace) == self.type(onPile)
+            or self.color(toPlace) == self.color(onPile)
+        ):
             return True
         else:
             return False

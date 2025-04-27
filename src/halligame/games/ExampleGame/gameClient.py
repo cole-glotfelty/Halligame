@@ -13,8 +13,7 @@ from halligame.utils.gameState import GameState
 
 class Client(ClientSuper):
     def __init__(self, comms: callable) -> None:
-        """
-        Constructor for the Client (you should initalize stuff here)
+        """Constructor for the Client (you should initalize stuff here)
 
         One thing to note: `comms` needs to be assigned like so:
 
@@ -29,8 +28,7 @@ class Client(ClientSuper):
         pass
 
     def updateState(self, state: bytes) -> None:
-        """
-        Callback function triggered by `broadcastState`. This is where you
+        """Callback function triggered by `broadcastState`. This is where you
         should modify the TUI screen for the user. The state should then be
         copied to the local state from the message sent by the server.
         """
@@ -38,8 +36,7 @@ class Client(ClientSuper):
         pass
 
     def gotServerMessage(self, msg: Any) -> None:
-        """
-        Callback function for when a message is received from the server. One
+        """Callback function for when a message is received from the server. One
         could deconstruct the msg like below and then discriminate based on
         the status or message text.
         """
@@ -49,8 +46,7 @@ class Client(ClientSuper):
         pass
 
     def joinConfirmed(self, msg: Any) -> None:
-        """
-        Callback function for when the player joins the server. This message
+        """Callback function for when the player joins the server. This message
         can be set in GameServer::addClient().
         """
         pass

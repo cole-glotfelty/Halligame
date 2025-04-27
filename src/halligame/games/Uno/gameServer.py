@@ -5,7 +5,6 @@ import threading
 from term import Pid
 
 from halligame.utils.gameServerTemplate import ServerSuper
-from halligame.utils.gameState import GameState
 from halligame.utils.ServerComms import ServerCommunicate
 
 from .Uno import Uno
