@@ -4,4 +4,4 @@
 from halligame.games.ExampleGame.gameClient import Client
 from halligame.games.ExampleGame.gameServer import Server
 
-__all__ = ['Client', 'Server']
+__all__ = ["Client", "Server"]

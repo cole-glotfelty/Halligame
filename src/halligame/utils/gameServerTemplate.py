@@ -15,7 +15,9 @@ class ServerSuper:
     def __init__(self, comms: ServerCommunicate) -> None:
         self.__comms = comms
 
-    def gotClientMessage(self, clientPID: Pid, message: Any) -> None:
+    def gotClientMessage(
+        self, clientPID: Pid, username: str, message: Any
+    ) -> None:
         pass
 
     def addClient(self, clientPID: Pid, username: str) -> None:

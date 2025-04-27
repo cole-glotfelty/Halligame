@@ -1,6 +1,6 @@
 [project]
 name = "halligame"
-version = "0.0.1"
+version = "0.0.2"
 description = "A concurrent games system"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,7 +14,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "mypy>=1.15.0",
-    "pdoc3>=0.11.6",
     "ruff>=0.11.6",
     "types-psutil>=7.0.0.20250401",
 ]
@@ -56,6 +55,12 @@ extend-select = [
     "B",   # flake8-bugbear
     "SIM", # flake8-simplify
     "ANN0", "ANN2", # flake8-annotations
+    "D",   #pydocstyle
+    # "DOC", #pydoclint, in preview
+]
+
+extend-ignore = [
+    "SIM105", # Pushes contextlib.suppress, which I don't care about. --MD
 ]
 
 [tool.ruff.lint.isort]
@@ -64,6 +69,9 @@ split-on-trailing-comma = false
 
 [tool.ruff.lint.flake8-annotations]
 suppress-dummy-args = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.format]
 indent-style = "space"

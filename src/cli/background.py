@@ -1,7 +1,8 @@
-"""
-background.py allows for erlang messages to be sent and recieved from the
-server broker, in the background.
-Michael Daniels, 2025-04-19
+"""Send and recieve messages from the server broker in the background.
+
+This supports our "write", "invite", and "online" functionality.
+
+Created by:  Michael Daniels, 2025-04-19
 """
 
 import asyncio
@@ -10,7 +11,7 @@ import socket
 import subprocess
 from argparse import ArgumentParser
 from random import randint
-from typing import Any, TypeAlias
+from typing import Any
 
 from psutil import pid_exists
 from pyrlang import Node
@@ -20,18 +21,24 @@ from term import Atom, Pid
 
 from halligame.utils.common import ensure_epmd, whoami
 
+#: How long we should wait between checks that the parent hasn't died.
 WAIT_TIME_SEC = 30
-
-DestType: TypeAlias = Atom | tuple[Atom, Atom] | Pid
 
 
 class UserBackground(Process):
+    """Represents a background process."""
+
     def __init__(self, shellPid: str, username: str) -> None:
+        """Set up this background process."""
         super().__init__()
         node.register_name(self, Atom("backgroundProc"))
-        self.__shellPid = shellPid
-        self.__serverBroker = None
-        self.__username = username
+
+        #: A string containing the linux PID of the parent shell.
+        self.__shellPid: Pid = shellPid
+        #: The current user's username.
+        self.__username: str = username
+        #: Used to communicate with the server broker.
+        self.__serverBroker: GenServerInterface
 
         # print("DEBUG: Sending getBroker message")
 
@@ -40,7 +47,6 @@ class UserBackground(Process):
             (Atom("serverbroker@vm-projectweb3"), Atom("serverbroker")),
             (Atom("getBrokerPid"), self.pid_),
         )
-        self.__serverBroker = GenServerInterface(self, None)
 
         # print("DEBUG: Sent getBroker message")
 
@@ -48,6 +54,7 @@ class UserBackground(Process):
         event_loop.call_soon(self.__checkOSProcessAlive)
 
     def handle_one_inbox_message(self, msg: Any) -> None:
+        """Handle incoming messages."""
         # print(f"DEBUG: Got message {msg}")
         match msg:
             case "brokerPid", brokerPid:
@@ -88,7 +95,8 @@ class UserBackground(Process):
                 subprocess.run(["echo", f"Unrecognized message {msg}"])
 
     def __checkOSProcessAlive(self) -> None:
-        """
+        """A watchdog.
+
         Checks whether the OS process whose ID is stored in self.__shellPid
         is alive. If not, shutdown. If so, check again in WAIT_TIME_SEC seconds.
         """
@@ -99,23 +107,27 @@ class UserBackground(Process):
         event_loop.call_later(WAIT_TIME_SEC, self.__checkOSProcessAlive)
 
     #
-    def __sendMessage(self, dest: DestType, msg: Any) -> None:
-        """
-        wrapper for sending a message with correct formatting
+    def __sendMessage(
+        self, dest: Atom | tuple[Atom, Atom] | Pid, msg: Any
+    ) -> None:
+        """A wrapper for sending a message with correct formatting.
+
         dest is either:
-            * an Atom(local registered name),
-            * a tuple (Atom(node name), Atom(registered name))
-              (note that this backwards from Erlang), or
-            * a Pid.
+        * an Atom(local registered name),
+        * a tuple (Atom(node name), Atom(registered name))
+            (note that this is backwards from Erlang!), or
+        * a Pid.
         """
         # print(f"DEBUG: Sending Message from Background to {dest}: {msg}")
         node.send_nowait(sender=self.pid_, receiver=dest, message=msg)
 
     def shutdown(self) -> None:
+        """Shut down this Pyrlang node."""
         node.destroy()
 
 
 def start(shellPid: str) -> None:
+    """Start our Pyrlang node."""
     ensure_epmd()
 
     UserBackground(shellPid, whoami())

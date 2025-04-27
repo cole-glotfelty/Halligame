@@ -11,7 +11,7 @@
 
 -define(SERVERBROKER, {serverbroker, 'serverbroker@vm-projectweb3'}).
 
-%% List the active rooms on stdout.
+% @doc List the active rooms on stdout.
 -spec listActiveGames() -> no_return().
 listActiveGames() ->
     Reply = gen_server:call(?SERVERBROKER, {list_gameservers}),
@@ -33,27 +33,28 @@ listActiveGames() ->
     end,
     init:stop().
 
-% List all users who are online on stdout.
+% @doc List all users who are online on stdout.
 -spec listOnline() -> no_return().
 listOnline() ->
     Reply = gen_server:call(?SERVERBROKER, {list_logins}),
     lists:foreach(fun (X) -> io:fwrite("~s~n", [X]) end, Reply),
     init:stop().
 
-% Send a user a message.
+% @doc Send a user a message.
 -spec sendMessage([string() | [string() | [string() | []]]]) -> no_return().
 sendMessage([FromUser, ToUser, Message]) ->
     gen_server:cast(?SERVERBROKER, {message_user, FromUser, ToUser, Message}),
     init:stop().
 
-% Invite a user to a game.
--spec sendInvite([string() | [string() | [string() | []]]]) -> no_return().
+% @doc Invite a user to a game.
+-spec sendInvite([string() | [string() | [string() | [string() | []]]]]) ->
+    no_return().
 sendInvite([FromUser, ToUser, GameName, JoinCommand]) ->
     gen_server:cast(?SERVERBROKER,
                     {invite_user, FromUser, ToUser, GameName, JoinCommand}),
     init:stop().
 
-% Looks up the game server with the given ID.
+% @doc Looks up the game server with the given ID.
 % Prints to stdout the game name, node name, and pid, all seperated by newlines.
 -spec lookupGameServerID([string() | []]) -> no_return().
 lookupGameServerID([GameServerID]) ->
