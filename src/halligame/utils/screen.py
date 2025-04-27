@@ -65,7 +65,7 @@ class Screen:
         #: Protects internal state.
         self.__lock = threading.Lock()
         #: The curses window.
-        self.__stdscr : curses.window
+        self.__stdscr: curses.window
 
         self.__initCurses()
 
@@ -119,7 +119,7 @@ class Screen:
     def __initCurses(self) -> None:
         """Initialize curses."""
         # turn the terminal into a curses window
-        self.__stdscr = curses.initscr() 
+        self.__stdscr = curses.initscr()
         curses.start_color()  # enable color support
         curses.use_default_colors()  # keep the curr colors of the terminal
         curses.mousemask(curses.ALL_MOUSE_EVENTS)  # enable mouse support
