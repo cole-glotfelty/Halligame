@@ -147,7 +147,7 @@ white, yellow
     to its normal state
 
 # Development
-Dependencies: rebar3, uv
+Dependencies: python 3.10+, rebar3, uv
 
 After pulling, you will first have to run the following in order to install 
 the submodules.
@@ -163,7 +163,24 @@ dependencies and  build the python and erlang modules.
 $ make
 ```
 
-Now that everything is complied, you're ready to begin.
+The last step is enabling the development CLI. To do this first export `HG_ROOT`
+
+```bash
+$ export HG_ROOT=$(pwd) # when in the top level of Halligame
+```
+
+Then activate the CLI:
+
+```bash
+$ . src/cli/activate_dev.sh # for Bash/ZSH
+```
+
+```csh
+$ . src/cli/activate_dev.csh # for csh/tcsh
+```
+
+Now that everything is complied, you're ready to begin. You can run `hg` for
+usage.
 
 ## For Nix/Devenv Users
 There is a provided `devenv.nix` file which should enforce that all dependencies
