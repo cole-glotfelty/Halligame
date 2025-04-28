@@ -174,11 +174,11 @@ $ export HG_ROOT=$(pwd) # when in the top level of Halligame
 Then activate the CLI:
 
 ```bash
-$ . src/cli/activate_dev.sh # for Bash/ZSH
+$ source src/cli/activate_dev.sh # for Bash/ZSH
 ```
 
 ```csh
-$ . src/cli/activate_dev.csh # for csh/tcsh
+$ source src/cli/activate_dev.csh # for csh/tcsh
 ```
 
 Now that everything is complied, you're ready to begin. You can run `hg` for
