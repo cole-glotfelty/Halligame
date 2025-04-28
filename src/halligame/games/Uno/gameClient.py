@@ -33,11 +33,11 @@ class Client(ClientSuper):
         self.__currUsersTurn = 0  # the current users turn
         self.__myTurn = False  # whether it's my turn or not
         self.__gameOver = False
-        self.__waitingCard : Card = "blank"
+        self.__waitingCard: Card = "blank"
 
         self.__unoPossibility = False
-        self.__topCard : Card
-        self.__deck : Deck
+        self.__topCard: Card
+        self.__deck: Deck
 
         self.__screen.clearScreen()
 
@@ -401,7 +401,7 @@ class Client(ClientSuper):
         if self.__playerNum == -1:  # viewer
             return
 
-        buttons: list[tuple] = []
+        buttons: list[tuple[pyfiglet.FigletString, str]] = []
         buttons.append(
             (pyfiglet.figlet_format("DRAW", font="finalass"), "dealCard")
         )
@@ -409,7 +409,9 @@ class Client(ClientSuper):
         self.__defineAndDrawButtons(buttons)
 
     # format of buttons is [(messageToDisplay, regionId), ...]
-    def __defineAndDrawButtons(self, buttons: list[tuple[str,]]) -> None:
+    def __defineAndDrawButtons(
+        self, buttons: list[tuple[pyfiglet.FigletString, str]]
+    ) -> None:
         """Helper for actually drawing and defining the button stack."""
         startingDrawRow = (
             self.__screen.terminalHeight() - self.__game.cardHeight() - 1

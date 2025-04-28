@@ -27,9 +27,7 @@ class ServerSuper:
         """
         self.__comms = comms
 
-    def gotClientMessage(
-        self, clientPID: Pid, message: Any
-    ) -> None:
+    def gotClientMessage(self, clientPID: Pid, message: Any) -> None:
         """This is where your game logic should go.
 
         You'll receive a message from the client and should validate it here.
@@ -44,7 +42,7 @@ class ServerSuper:
         This should also call `confirmJoin` to send a message to the client
         about a new player joining.
         """
-        self.__comms.confirmJoin(clientPID, "")
+        self.__comms.confirmJoin(clientPID, username, "")
         pass
 
     def removeClient(self, clientPID: Pid, username: str) -> None:

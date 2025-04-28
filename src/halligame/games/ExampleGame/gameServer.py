@@ -60,7 +60,7 @@ class Server(ServerSuper):
         """
         self.__usersConnected += 1
         msg = "You've joined!"
-        self.__comms.confirmJoin(clientPID, msg)
+        self.__comms.confirmJoin(clientPID, username, msg)
         pass
 
     def removeClient(self, clientPID: Pid, username: str) -> None:

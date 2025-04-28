@@ -13,6 +13,7 @@ from typing import Any
 
 import pyfiglet
 
+
 class Screen:
     """Represents -- you guessed it -- a screen."""
 
@@ -29,7 +30,7 @@ class Screen:
         #: Called when receiving input. The input is one character.
         self.__gotInput: Callable[[str], None] = gotInputFunc
         #: Called when the mouse has been clicked.
-        #: The input is the row, the column, the region (as defined by the 
+        #: The input is the row, the column, the region (as defined by the
         # user), and the type of the event (eg. left_click, etc.)
         self.__gotMouse: Callable[[int, int, Any, str], None] = (
             gotMouseClickFunc
@@ -74,15 +75,15 @@ class Screen:
             "yellow": curses.COLOR_YELLOW,
         }
 
-        #: The dictionary of defined foreground background color pairs. 
+        #: The dictionary of defined foreground background color pairs.
         # Maps IDs to the user defined pair
-        self.__colorPairs = {}
+        self.__colorPairs: dict[int, Any] = {}
         #: The next colorID to use when the user defines a new color
-        self.__nextColorID = 10
+        self.__nextColorID: int = 10
         #: The next colorPairID to use when the user defines a new color
-        self.__nextColorPairID = 10
+        self.__nextColorPairID: int = 10
         #: All of the clickable regions defined by the user
-        self.__clickableRegions = []
+        self.__clickableRegions: list[tuple[int, int, int, int, Any]] = []
 
         # give screen time to set up (instantaneous printing causes weird bugs)
         time.sleep(0.1)
@@ -132,12 +133,7 @@ class Screen:
                 mouseEventType = self.__getMouseEventType(bstate)
                 self.__gotMouse(mrow, mcol, regionId, mouseEventType)
             else:
-                if type(c) is int:  # if int, try to convert to char
-                    try:
-                        c = chr(c)
-                    except ValueError:  # other code, so ignore
-                        pass
-                self.__gotInput(c)
+                self.__gotInput(chr(c))
 
     def __findRegion(self, mrow: int, mcol: int) -> Any:
         """Return the region of the row and column (or None)."""
@@ -155,7 +151,7 @@ class Screen:
                     return id
         return None
 
-    def __getMouseEventType(self, bstate: bytes) -> str:
+    def __getMouseEventType(self, bstate: int) -> str:
         """Determines what the type of the mouse click was."""
         # if left click
         if (
@@ -205,11 +201,13 @@ class Screen:
             )  # move cursor to bottom left
 
     #
-    def write(self, row: int, col: int, toPrint: Any, colorPairId: Any = None) -> None:
+    def write(
+        self, row: int, col: int, toPrint: Any, colorPairId: Any = None
+    ) -> None:
         """Prints a string to the screen, starting at (row, col).
 
         The row and column is the starting position of where to print toPrint
-        (which must be convertible to a string). The colorPairID is the 
+        (which must be convertible to a string). The colorPairID is the
         user defined ID for what color pair to use (optional).
         """
         with self.__lock:
@@ -228,7 +226,7 @@ class Screen:
             self.__stdscr.move(prevRow, prevCol)  # reset cursor position
 
     def __write(
-        self, row: int, col: int, printing: str, colorPairId: Any=None
+        self, row: int, col: int, printing: str, colorPairId: Any = None
     ) -> None:
         """Helper function that writes a single line to the screen."""
         try:
@@ -243,7 +241,7 @@ class Screen:
             pass  # ignore out of bounds characters # TODO
 
     # Note that this is a debug function and should not be used in production
-    def print(self, toPrint: Any, end:str="\n") -> None:
+    def print(self, toPrint: Any, end: str = "\n") -> None:
         """Tries to emulate terminal printing."""
         with self.__lock:
             printing = str(toPrint)
@@ -287,7 +285,7 @@ class Screen:
     def addColor(self, r: int, g: int, b: int, colorId: Any) -> None:
         """Defines a new color.
 
-        Adds a new color to the screen with the given rgb values (0-255), 
+        Adds a new color to the screen with the given rgb values (0-255),
         and assigns that color the user supplied colorId to use it later.
         """
         if not self.__extendedColorSupport:
@@ -302,14 +300,16 @@ class Screen:
 
             self.__nextColorID += 1
 
-    def __scaleColor(self, color:int|float) -> int:
+    def __scaleColor(self, color: int | float) -> int:
         """Scales a color from between 0 and 255 to between 0 and 1000."""
         return min(max(int(color * (1000.0 / 255.0)), 0), 1000)
 
-    def addColorPair(self, foreground: Any, background: Any, pairId: Any) -> None:
+    def addColorPair(
+        self, foreground: Any, background: Any, pairId: Any
+    ) -> None:
         """Defines a new color pair.
-        
-        Takes two colorIds for the foreground color and background color and 
+
+        Takes two colorIds for the foreground color and background color and
         creates a new color pair, assigning it the id pairId.
         """
         if not self.__extendedColorSupport:
@@ -337,11 +337,11 @@ class Screen:
         self, row: int, col: int, height: int, width: int, id: Any
     ) -> None:
         """Defines a new clickable region.
-        
-        Takes the row and column of the top left point of the region box, as 
-        well as the height and width of the box, and creates a new region with 
-        id id. If the user clicks within that box, the gotMouseClickFunc will 
-        be supplied the id of the region that it is contained within (or None 
+
+        Takes the row and column of the top left point of the region box, as
+        well as the height and width of the box, and creates a new region with
+        id id. If the user clicks within that box, the gotMouseClickFunc will
+        be supplied the id of the region that it is contained within (or None
         if it is not in a region).
         """
         with self.__lock:
@@ -374,10 +374,12 @@ class Screen:
 
             return max(0, col)
 
-    def displayFullScreenMessage(self, message: Any, font: str=None) -> None:
+    def displayFullScreenMessage(
+        self, message: Any, font: str | None = None
+    ) -> None:
         """Writes a full screen message.
-        
-        Clears and refreshes the screen, printing the message so that it is 
+
+        Clears and refreshes the screen, printing the message so that it is
         centered in the screen.
         """
         self.clearScreen()

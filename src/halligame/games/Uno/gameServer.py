@@ -12,7 +12,7 @@ from term import Pid
 from halligame.utils.gameServerTemplate import ServerSuper
 from halligame.utils.ServerComms import ServerCommunicate
 
-from .Uno import Card, Uno
+from .Uno import Card, Deck, Uno
 
 
 class Server(ServerSuper):
@@ -28,16 +28,16 @@ class Server(ServerSuper):
         self.__numJoined = 0
         self.__numOnline = 0
         self.__playerClientPids = [-1] * 10
-        self.__playerUTLNs = [-1] * 10
+        self.__playerUTLNs = [""] * 10
         self.__userCardCounts = [-1] * 10
-        self.__clientDecks = [-1] * 10
+        self.__clientDecks: list[Deck] = [[]] * 10
 
         self.__currUsersTurn = 0
         self.__gameStarted = False
         self.__gameOver = False
 
         # used when there is an uno race
-        self.__unoPlayerNum = None
+        self.__unoPlayerNum: int | None = None
 
         self.__turnChangeDelta = 1  # deal with reverse
 
@@ -48,7 +48,10 @@ class Server(ServerSuper):
             playerNum = message[1]
             if messageType == "uno":
                 # one of the users clicked the uno button
-                if playerNum != self.__unoPlayerNum and self.__unoPlayerNum is not None:  # someone else won ;)
+                if (
+                    playerNum != self.__unoPlayerNum
+                    and self.__unoPlayerNum is not None
+                ):  # someone else won ;)
                     self.__comms.sendClientMessage(
                         self.__playerClientPids[self.__unoPlayerNum],
                         ("uno_loss",),
@@ -186,7 +189,9 @@ class Server(ServerSuper):
         if self.__gameOver and self.__numOnline == 0:
             self.__comms.shutdown()  # the game is over, so shut down
 
-    def serializeState(self) -> tuple[str,]:
+    def serializeState(
+        self,
+    ) -> tuple[str, tuple[Card, list[int], list[str], int, int | None]]:
         """Serialize our game state to send to clients."""
         return (
             "state",
