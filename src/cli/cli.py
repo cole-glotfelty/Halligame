@@ -1,7 +1,10 @@
 #!/usr/bin/env python
-# cli.py is the command-line interface for Halligame.
-# Created by:  Michael Daniels, 2025-04-14
-# Last edited: Michael Daniels, 2025-04-19
+"""cli.py contains the command-line interface for Halligame.
+
+Created by:  Michael Daniels, 2025-04-14
+Last edited: Michael Daniels, 2025-04-22
+"""
+
 import multiprocessing as mp
 import os
 import subprocess
@@ -14,28 +17,25 @@ from term import codec
 
 import halligame.utils.ClientComms as ClientComms
 import halligame.utils.ServerComms as ServerComms
-from halligame.utils.common import ensure_epmd, whoami
+from halligame.utils.misc import ensure_epmd, whoami
 
-#: The directory in which all games are contained.
 GAMES_DIR: str = os.path.join(
     os.environ["HG_ROOT"], "src", "halligame", "games"
 )
+"""The directory in which all games are contained."""
 
-#: A list of all playable games.
 GAMES: list[str] = list(
     filter(
         lambda elem: (
             os.path.isdir(os.path.join(GAMES_DIR, elem))
             and elem != "__pycache__"
             and elem != "ExampleGame"
-            and elem != "Battleship"
         ),
         os.listdir(GAMES_DIR),
     )
 )
+"""A list of all playable games."""
 
-#: The command to use for Erlang calls. The module handleCLIRequest is
-#: pre-specified, but the function and any arguments need to be appended.
 BASESCRIPT: list[str] = [
     "env",
     f"ERL_LIBS={os.environ['HG_ROOT']}/src/cli/_build/default/lib",
@@ -48,6 +48,9 @@ BASESCRIPT: list[str] = [
     "-run",
     "handleCLIRequest",
 ]
+"""The command to use for Erlang calls.
+The module handleCLIRequest is pre-specified, but the function and any
+arguments need to be appended."""
 
 
 def join(args: Namespace) -> None:
@@ -75,8 +78,8 @@ def join(args: Namespace) -> None:
 
 
 def new(args: Namespace) -> None:
-    """
-    Create a new game of the game whose name is stored in args.game.
+    """Create a new game, the name of which is stored in args.game.
+
     Outputs the game ID to stdout.
     """
     ensure_epmd()
@@ -117,9 +120,10 @@ def listOnline(_) -> None:
 
 
 def write(args: Namespace) -> None:
-    """
-    Send a message to the user whose username is stored in args.username.
-    Prints a prompt to stdout and gets input from stdin.
+    """Send a message to a user.
+
+    The user to send the message to is stored in args.username.
+    Prints a prompt for the message to stdout and gets input from stdin.
     """
     cmd = BASESCRIPT.copy()
     cmd.append("sendMessage")
@@ -137,7 +141,11 @@ def write(args: Namespace) -> None:
 
 
 def invite(args: Namespace) -> None:
-    """Invite a user to a game."""
+    """Invite a user to a game.
+
+    args.username should be a string containing the user to invite.
+    args.gameID should be a string containing 6 digits, optionally with a dash.
+    """
     ensure_epmd()
     inputGameID = str(args.gameID).replace("-", "")
 
@@ -158,8 +166,10 @@ def invite(args: Namespace) -> None:
 
 
 def sendInvite(toUser: str, gameName: str, gameID: str) -> None:
-    """Helper function for invite(), actually sends the message.
-    gameID is a string of six numbers."""
+    """Helper function for invite(); actually sends the message.
+
+    gameID is string containing 6 digits, optionally with a dash.
+    """
     cmd = BASESCRIPT.copy()
     cmd.append("sendInvite")
     cmd.append(whoami())
@@ -169,8 +179,8 @@ def sendInvite(toUser: str, gameName: str, gameID: str) -> None:
     subprocess.run(cmd)
 
 
-if __name__ == "__main__":
-    mp.set_start_method("forkserver")
+def make_parser() -> ArgumentParser:
+    """Create a parser with all needed subparsers."""
     parser = ArgumentParser(prog="hg")
     subparsers = parser.add_subparsers(dest="subcommand")
 
@@ -207,6 +217,14 @@ if __name__ == "__main__":
         "gameID", help="6 digits, optionally with a dash."
     )
     invite_parser.set_defaults(func=invite)
+
+    return parser
+
+
+if __name__ == "__main__":
+    mp.set_start_method("forkserver")
+
+    parser = make_parser()
 
     parsed = parser.parse_args()
     if not parsed.subcommand:

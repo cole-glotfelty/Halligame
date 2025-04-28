@@ -1,19 +1,28 @@
-# Example Game Server 
-# Written by Cole Glotfelty <2025-04-14>
+"""Example Game Server.
 
-# A barebones game client explaining what needs to be implemented and what's
-# available for use when creating halligame games. This also includes some 
-# typical patterns 
+A barebones game server explaining what needs to be implemented and what's
+available for use when creating halligame games. This also includes some
+typical patterns.
+
+Created:     Cole Glotfelty,  2025-04-14
+Last edited: Michael Daniels, 2025-04-28
+"""
+
+from typing import Any
+
+from term import Pid
 
 from halligame.utils.gameServerTemplate import ServerSuper
-from halligame.utils.ServerComms import ServerCommunicate
 from halligame.utils.gameState import GameState
+from halligame.utils.ServerComms import ServerCommunicate
+
 
 class Server(ServerSuper):
+    """Represents the game's server."""
+
     def __init__(self, comms: ServerCommunicate) -> None:
-        """
-        Constructor for the Server (you should initalize stuff here)
-        
+        """Constructor for the Server (you should initalize stuff here).
+
         One thing to note: `comms` needs to be assigned like so:
 
             self.__comms = comms
@@ -27,47 +36,33 @@ class Server(ServerSuper):
         self.__state = GameState()
         pass
 
-    def gotClientMessage(self, event, clientPID) -> None:
-        """
-        The is where your game logic should go. You'll receive an events from 
-        the client and should validate them here. (You'll probably want to use
-        a case statement and pattern match the events).
-        
-        Arguments:
-            event - an event to process if it's valid it should broadcast it's 
-            new state to all players, otherwise it should tell the client that
-            it's not valid and the state hasn't been updated.
+    def gotClientMessage(self, clientPID: Pid, message: Any) -> None:
+        """This is where your game logic should go.
 
-            clientPID - this is the PID of the client that's responsible for the
-            event.
+        You'll receive a message from the client and should validate it here.
+        (You'll probably want to use a case statement and pattern match the
+        events).
         """
+        valid = False  # Set by your logic
         if valid:
             self.__comms.broadcastState(self.__state)
         else:
-            self.__comms.sendClientMessage(clientPID, ("error", "Error: Invalid Move"))
+            self.__comms.sendClientMessage(
+                clientPID, ("error", "Error: Invalid Move")
+            )
         pass
 
-    def addClient(self, clientPID, username) -> None:
-        """
-        Callback function for when a client joins the game. This should also
-        call `confirmJoin` to send a message to the client about a new player
-        joining.
+    def addClient(self, clientPID: Pid, username: str) -> None:
+        """Callback function for when a client joins the game.
 
-        Arguemnts;
-            clientPID - PID of the client that joined the game
-            username - exposes username/UTLN to game
+        This should also call `confirmJoin` to send a message to the client
+        about a new player joining.
         """
         self.__usersConnected += 1
         msg = "You've joined!"
-        self.__comms.confirmJoin(clientPID, msg)
+        self.__comms.confirmJoin(clientPID, username, msg)
         pass
 
-    def removeClient(self, clientPID, username) -> None:
-        """
-        Callback function for when a client leaves the game. 
-
-        Arguemnts;
-            clientPID - PID of the client that left the game
-            username - exposes username/UTLN to game
-        """
+    def removeClient(self, clientPID: Pid, username: str) -> None:
+        """Callback function for when a client leaves the game."""
         pass

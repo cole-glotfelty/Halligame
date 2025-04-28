@@ -1,6 +1,6 @@
 %%%-------------------------------------------------------------------
 %%% @doc
-%%% TODO
+%%% Keeps track of who's online and who's playing what.
 %%% @end
 %%% Created : 22 Mar 2025
 %%% Last edited: Michael Daniels, 19 April 2025
@@ -16,8 +16,6 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
      terminate/2, code_change/3, format_status/1]).
-
--export([add_list_del_list/1]).
 
 -define(SERVER, ?MODULE).
 
@@ -40,7 +38,7 @@
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Starts the server (will die when paraent proceess dies)
+%% Starts the server, linking it with the caller.
 %% @end
 %%--------------------------------------------------------------------
 -spec start_link() -> {ok, Pid :: pid()} |
@@ -52,7 +50,7 @@ start_link() ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Starts the server (entirely independant of the parent)
+%% Starts the server.
 %% @end
 %%--------------------------------------------------------------------
 -spec start() -> {ok, Pid :: pid()} |
@@ -62,7 +60,12 @@ start_link() ->
 start() ->
     gen_server:start({local, ?SERVER}, ?MODULE, [], []).
 
-% TODO doc
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Stops the server.
+%% @end
+%%--------------------------------------------------------------------
 stop() ->
     gen_server:stop({local, ?SERVER}).
 
@@ -123,7 +126,8 @@ handle_call({lookupGameServerID, ID}, _From, State) ->
             {reply, notfound, State}
     end;
 handle_call(Catchall, From, State) ->
-    io:fwrite("~p: Unrecognized call ~p from ~p~n", [erlang:localtime(), Catchall, From]),
+    io:fwrite("~p: Unrecognized call ~p from ~p~n",
+              [erlang:localtime(), Catchall, From]),
     {reply, error, State}.
 
 
@@ -175,7 +179,6 @@ handle_cast({joined_gameserver, JoinedLogin, JoinedPid, ServerPid}, State) ->
                           users = NewUsers}};
 handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
     % Must be called by the game server, not a client.
-    % TODO: update user's currently playing games too.
     CurrGS         = State#state.gameservers,
     HasThisPid     = fun (X) -> ServerPid == X#gameserver.pid end,
     {[ThisGS], Rest} = lists:partition(HasThisPid, CurrGS),
@@ -187,9 +190,7 @@ handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
 
     FilterUser = fun (Usr) -> Usr#user.login == LeftLogin end,
     {[ThisUser], OtherUsers} = lists:partition(FilterUser, State#state.users),
-    FilterPlaying = fun ({GameName, Pid}) ->
-                            ((GameName =/= CurrGS#gameserver.game) and
-                            (Pid =/= LeftPid)) end,
+    FilterPlaying = fun ({_GameName, Pid}) -> (Pid =/= LeftPid) end,
     UpdatedUser = ThisUser#user{playing = lists:filter(FilterPlaying,
                                                        ThisUser#user.playing)},
     {noreply, State#state{gameservers = [NewGS | Rest],
@@ -250,6 +251,9 @@ handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
     Time = erlang:localtime(),
     io:fwrite("~p: Current state ~p~n", [Time, State]),
     io:fwrite("~p: Got down message for process ~p~n", [Time, ErlangPid]),
+
+    % Remove all user background processes and game clients with this PID
+    % from each player.
     FilterSession = fun (Ses) -> Ses#session.erlangpid =/= ErlangPid end,
     FilterPlaying = fun ({_GameName, Pid}) -> (Pid =/= ErlangPid) end,
     UsrMapFun = fun (Usr) ->
@@ -257,6 +261,8 @@ handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
                  playing = lists:filter(FilterPlaying, Usr#user.playing)} end,
     NewUsers = lists:map(UsrMapFun, State#state.users),
 
+    % Remove all game servers with this Pid. Also remove all records of
+    % clients with this pid from each game server.
     FilterGameServer = fun (GS) -> GS#gameserver.pid =/= ErlangPid end,
     FilteredGSs = lists:filter(FilterGameServer, State#state.gameservers),
     FilterPlayers = fun (P) -> P#gameclient.pid =/= ErlangPid end,
@@ -264,12 +270,12 @@ handle_info({'DOWN', _MonitorRef, process, ErlangPid, _Reason}, State) ->
         GS#gameserver{players =
                         lists:filter(FilterPlayers, GS#gameserver.players)} end,
     FinalGSs = lists:map(PlayerMapFun, FilteredGSs),
-    FinalState = State#state{users = NewUsers, gameservers = FinalGSs},
 
+    % Finally, update the state and return
+    FinalState = State#state{users = NewUsers, gameservers = FinalGSs},
     io:fwrite("~p: Final state ~p~n", [Time, FinalState]),
     {noreply, FinalState};
 handle_info({getBrokerPid, FromPid}, State) ->
-    % io:fwrite("Got info: ~p~n", [{getBrokerPid, FromPid}]),
     FromPid ! {brokerPid, self()},
     {noreply, State};
 handle_info(Info, State) ->
@@ -320,8 +326,13 @@ format_status(Status) ->
 %%% Internal functions
 %%%===================================================================
 
-% Takes a message, its sender, its recipient, and a list of all users.
-% Sends the message to all sessions the recipient has.
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Takes a message, its sender, its recipient, and a list of all users.
+%% Sends the message to all sessions the recipient has.
+%% @end
+%%--------------------------------------------------------------------
 message_user(_ToUser, _Message, [])      ->
     ok;
 message_user(ToUser, Message, [H | T]) ->
@@ -341,6 +352,7 @@ message_user(ToUser, Message, [H | T]) ->
 
 % Credit:
 % https://lookonmyworks.co.uk/2015/01/25/testing-a-gen_server-with-eunit/
+% @hidden
 server_broker_test_() ->
     {foreach, fun setup/0, fun cleanup/1, [
         fun server_is_alive/1,
@@ -349,18 +361,22 @@ server_broker_test_() ->
         fun add_list_del_list/1
     ]}.
 
+% @hidden
 setup() ->
     {ok, Pid} = serverbroker:start(),
     Pid.
 
+% @hidden
 cleanup(Pid) ->
     gen_server:stop(Pid).
 
+% @hidden
 server_is_alive(Pid) ->
     fun () ->
         ?assert(is_process_alive(Pid))
     end.
 
+% @hidden
 add_list_user_1(Pid) ->
     fun () ->
         ?assertEqual(ok, gen_server:cast(Pid, {add_user, "mdanie09",
@@ -369,6 +385,7 @@ add_list_user_1(Pid) ->
                      gen_server:call(Pid, {list_users}))
     end.
 
+% @hidden
 add_list_user_2(Pid) ->
     fun () ->
         ?assertEqual(ok, gen_server:cast(Pid, {add_user, "wcordr01",
@@ -382,6 +399,7 @@ add_list_user_2(Pid) ->
                      lists:sort(gen_server:call(Pid, {list_users})))
     end.
 
+% @hidden
 add_list_del_list(Pid) ->
     fun () ->
         Self = self(),

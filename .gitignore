@@ -18,8 +18,10 @@ __pycache__
 dist
 .mypy_cache
 
-# pdoc
-html
+# Docs
+docs/html*
+# docs/source/halligame.*.rst
+
 
 # Devenv
 .devenv*

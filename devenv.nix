@@ -23,14 +23,6 @@
 
   enterShell = ''
     git submodule update --init
-    # export HG_ROOT=$(pwd)
-    #
-    # HGSHELLPROC=$(ps -o ppid= -p $$)
-    # HGTTY=$(tty)
-    #
-    # alias hg="$HG_ROOT/.venv/bin/python $HG_ROOT/src/cli/cli.py"
-    # $HG_ROOT/.venv/bin/python $HG_ROOT/src/cli/background.py \
-    #     "$HGSHELLPROC" "$HGTTY" &
-    # disown
+    make
   '';
 }
