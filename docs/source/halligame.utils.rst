@@ -20,10 +20,10 @@ halligame.utils.ServerComms module
    :show-inheritance:
    :undoc-members:
 
-halligame.utils.common module
+halligame.utils.misc module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: halligame.utils.common
+.. automodule:: halligame.utils.misc
    :members:
    :show-inheritance:
    :undoc-members:

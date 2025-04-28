@@ -25,7 +25,6 @@ class Client(ClientSuper):
         #: The screen we'll use.
         self.__screen = Screen(self.userInput, self.mouseInput)
         #: Protects self.__state.
-        # TODO: GameState already uses a lock... Needed?
         self.__stateLock = threading.Lock()
         #: Our game state.
         self.__state: GameState = GameState()
@@ -39,12 +38,11 @@ class Client(ClientSuper):
         self.__boardVOffset = 5
         self.__boardHOffset = 5
 
-        # TODO: doc
-        self.__colorBoxHeight = 3
-        self.__colorBoxWidth = 5
-        self.__colorBoxVSeparator = 1
+        # TODO: doc these
+        self.__colorBoxHeight: int = 3
+        self.__colorBoxWidth: int = 5
+        self.__colorBoxVSeparator: int = 1
 
-        # TODO: any restrictions on this?
         self.__currColor: str = "blue"
 
         self.__screen.clearScreen()
@@ -70,20 +68,24 @@ class Client(ClientSuper):
         for color in self.__colors:
             self.__screen.addColorPair("white", color, color)
 
+        # the background color for the color palette (pink)
         self.__screen.addColor(209, 107, 177, "colorSwatchBackground")
         self.__screen.addColorPair(
             "white", "colorSwatchBackground", "colorSwatchBackground"
         )
 
+        # Adds the color for the box around the current color (gold)
         self.__screen.addColor(242, 182, 61, "currColorHighlight")
         self.__screen.addColorPair(
             "white", "currColorHighlight", "currColorHighlight"
         )
 
-        self.__screen.setStyle("black")  # set background to black
+        # set background to black
+        self.__screen.setStyle("black")
 
     def __defineMouseRegions(self) -> None:
-        """TODO: doc."""
+        """Define the mouse regions for when the player clicks on the screen."""
+        # create board mouse region (click on board)
         self.__screen.addClickableRegion(
             self.__boardVOffset,
             self.__boardHOffset,
@@ -95,9 +97,9 @@ class Client(ClientSuper):
         colorBoxHeight = self.__colorBoxHeight
         colorBoxWidth = self.__colorBoxWidth
         colorBoxVSeparator = self.__colorBoxVSeparator
-
         colorBoxCol = self.__boardHOffset + self.__boardWidth + 8
 
+        # create the dimensions of the background for color swatches with spaces
         colorBoxDraw = ((" " * colorBoxWidth) + "\n") * colorBoxHeight
         swatchBoxDraw = ((" " * (colorBoxWidth + 4)) + "\n") * (
             (colorBoxHeight * len(self.__colors))
@@ -105,6 +107,7 @@ class Client(ClientSuper):
             + 2
         )
 
+        # write the color swatch background to the screen
         self.__screen.write(
             self.__boardVOffset - 1,
             colorBoxCol - 2,
@@ -112,10 +115,13 @@ class Client(ClientSuper):
             "colorSwatchBackground",
         )
 
+        # color in all of the color swatches
         for i in range(len(self.__colors)):
             colorBoxRow = self.__boardVOffset + (
                 i * (colorBoxHeight + colorBoxVSeparator)
             )
+
+            # make the colors clickable so users can change color
             self.__screen.addClickableRegion(
                 colorBoxRow,
                 colorBoxCol,
@@ -123,16 +129,20 @@ class Client(ClientSuper):
                 colorBoxWidth,
                 self.__colors[i],
             )
+
             self.__screen.write(
                 colorBoxRow, colorBoxCol, colorBoxDraw, self.__colors[i]
             )
 
+        # dimensions of the current color color swatch
         currColorBox = (" " * (colorBoxWidth + 4) + "\n") * (colorBoxHeight + 2)
         self.__currColorTopRow = (
             self.__boardVOffset
             + (len(self.__colors) * (colorBoxHeight + colorBoxVSeparator))
             + 6
         )
+
+        # write the current color to the screen
         self.__currColorLeftCol = colorBoxCol
         self.__screen.write(
             self.__currColorTopRow - 1,
@@ -142,7 +152,7 @@ class Client(ClientSuper):
         )
 
     def __drawBlankBoard(self) -> None:
-        """TODO: doc."""
+        """Draws the shared board in the starting color of all white."""
         boardDraw = ((" " * self.__boardWidth) + "\n") * self.__boardHeight
         self.__screen.write(
             self.__boardVOffset, self.__boardHOffset, boardDraw, "white"
@@ -161,7 +171,7 @@ class Client(ClientSuper):
     def userInput(self, input: str | int) -> None:
         """Process user input.
 
-        The only input we care about is "q", which quits the game.
+        The only keyboard input we care about is "q", which quits the game.
         """
         if input == "q":
             self.__screen.shutdown()
@@ -170,10 +180,15 @@ class Client(ClientSuper):
     def mouseInput(
         self, row: int, col: int, region: str, mouseEventType: str
     ) -> None:
-        """TODO: doc."""
+        """Process mouse input.
+
+        Process users clicking on the screen. The region names are defined
+        in __defineMouseRegions.
+        """
         with self.__stateLock:
             if mouseEventType == "left_click":
                 if region == "board":
+                    # click on the board, so draw it and send to server
                     pixelToDraw = (
                         row - self.__boardVOffset,
                         col - self.__boardHOffset,
@@ -185,6 +200,7 @@ class Client(ClientSuper):
                     # the region is equal to the color name, so update it
                     self.__updateCurrColor(region)
             elif mouseEventType == "right_click" and region == "board":
+                # erase, so make white and send update to server
                 pixelToDraw = (
                     row - self.__boardVOffset,
                     col - self.__boardHOffset,
@@ -194,7 +210,11 @@ class Client(ClientSuper):
                 self.__comms.sendMessage(pixelToDraw)
 
     def __updateCurrColor(self, color: str) -> None:
-        """TODO: doc."""
+        """Updates the current color.
+
+        Takes in a new color to make the current color and updates it,
+        redrawing the color swatch.
+        """
         colorBoxDraw = (
             (" " * self.__colorBoxWidth) + "\n"
         ) * self.__colorBoxHeight
@@ -214,19 +234,17 @@ class Client(ClientSuper):
     def gotServerMessage(self, msg: Any) -> None:
         """Process messages from the server.
 
-        If the online players change, we update the screen.
-        If the state changes, we update the screen as well.
+        If the state changes, we update the screen.
         """
         if msg[0] == "state_diff":
             with self.__stateLock:
                 self.__drawPixel(msg[1])
-        elif msg[0] == "players":
-            with self.__stateLock:
-                self.__drawPlayers(msg[1])
-                self.__screen.refresh()
 
     def __drawBoard(self) -> None:
-        """Draw the board."""
+        """Draw the board.
+
+        Used when the player joins to draw the entire current state.
+        """
         board = self.__state.getValue("board")
         for row in range(len(board)):
             for col in range(len(board[row])):
@@ -249,15 +267,3 @@ class Client(ClientSuper):
             row + self.__boardVOffset, col + self.__boardHOffset, " ", color
         )
         self.__screen.refresh()
-
-    # TODO: type annotation for players
-    def __drawPlayers(self, players) -> None:
-        """Draw the currently active players' names."""
-        col = self.__boardHOffset + self.__boardWidth + 20
-        players.sort()
-
-        self.__screen.write(self.__boardVOffset + 2, col, "Active Players:")
-        for i, player in enumerate(players):
-            self.__screen.write(
-                self.__boardVOffset + 3 + (i * 2), col + 2, player
-            )

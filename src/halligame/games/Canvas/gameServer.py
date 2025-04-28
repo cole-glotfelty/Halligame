@@ -58,12 +58,3 @@ class Server(ServerSuper):
             self.__comms.confirmJoin(
                 clientPid, username, self.__state.serialize()
             )
-
-            self.__players.add(username)
-            self.__comms.broadcastMessage(("players", list(self.__players)))
-
-    def removeClient(self, clientPID: Pid, username: str) -> None:
-        """Remove a client from this game."""
-        self.__players.discard(username)
-
-        self.__comms.broadcastMessage(("players", list(self.__players)))

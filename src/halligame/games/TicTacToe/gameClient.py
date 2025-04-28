@@ -22,7 +22,7 @@ class Client(ClientSuper):
         """Initialize this client.
 
         Args:
-            comms: is an instance of halligame.utils.ClientCommunicate
+            comms: halligame.utils.ClientCommunicate
                    (It can't be type-annotated due to circular imports.)
         """
         #: The screen we'll use.

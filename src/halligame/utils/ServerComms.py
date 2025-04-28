@@ -96,6 +96,7 @@ class ServerCommunicate(Process):
         """A wrapper for sending a message with correct formatting.
 
         dest is either:
+
         * an Atom(local registered name),
         * a tuple (Atom(node name), Atom(registered name))
             (note that this is backwards from Erlang!), or

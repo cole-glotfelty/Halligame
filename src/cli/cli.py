@@ -17,7 +17,7 @@ from term import codec
 
 import halligame.utils.ClientComms as ClientComms
 import halligame.utils.ServerComms as ServerComms
-from halligame.utils.common import ensure_epmd, whoami
+from halligame.utils.misc import ensure_epmd, whoami
 
 GAMES_DIR: str = os.path.join(
     os.environ["HG_ROOT"], "src", "halligame", "games"
@@ -30,7 +30,6 @@ GAMES: list[str] = list(
             os.path.isdir(os.path.join(GAMES_DIR, elem))
             and elem != "__pycache__"
             and elem != "ExampleGame"
-            and elem != "Battleship"
         ),
         os.listdir(GAMES_DIR),
     )
@@ -181,6 +180,7 @@ def sendInvite(toUser: str, gameName: str, gameID: str) -> None:
 
 
 def make_parser() -> ArgumentParser:
+    """Create a parser with all needed subparsers."""
     parser = ArgumentParser(prog="hg")
     subparsers = parser.add_subparsers(dest="subcommand")
 

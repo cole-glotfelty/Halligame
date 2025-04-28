@@ -5,6 +5,8 @@ A framework for running multiplayer games concurrently.
 If you are a Tufts student with access to Halligan, you can run the following to
 add `hg` to your path.
 
+(We recommend adding this to your .bashrc, .cshrc, or .zshrc!)
+
 ```bash
 $ source /h/mdanie09/Public/hg.sh # For Bash/ZSH
 ```
@@ -13,7 +15,7 @@ $ source /h/mdanie09/Public/hg.sh # For Bash/ZSH
 $ source /h/mdanie09/Public/hg.csh # For CSH
 ```
 
-Now run `hg` for usage.
+Then, run `hg` for usage.
 
 # System Architecture
 ![](./topology/HalligameTopology.drawio.svg)

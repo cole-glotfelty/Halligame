@@ -65,11 +65,3 @@ lookupGameServerID([GameServerID]) ->
             io:fwrite("notfound~n")
     end,
     init:stop().
-
-% TODO: implement?
-% addFriend(FriendID) ->
-%     init:stop().
-
-% TODO: implement?
-% removeFriend(FriendID) ->
-%     init:stop().

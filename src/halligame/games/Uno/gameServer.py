@@ -1,17 +1,25 @@
-# GameServer.py
+"""Our Uno game server.
+
+Written by:  Will Cordray, 2024-04-19
+Last edited: Will Cordray, 2025-04-28
+"""
 
 import threading
+from typing import Any
 
 from term import Pid
 
 from halligame.utils.gameServerTemplate import ServerSuper
 from halligame.utils.ServerComms import ServerCommunicate
 
-from .Uno import Uno
+from .Uno import Card, Uno
 
 
 class Server(ServerSuper):
+    """Represents our game's server."""
+
     def __init__(self, comms: ServerCommunicate) -> None:
+        """Initialize this instance."""
         self.__comms = comms
         self.__stateLock = threading.Lock()
 
@@ -33,17 +41,19 @@ class Server(ServerSuper):
 
         self.__turnChangeDelta = 1  # deal with reverse
 
-    def gotClientMessage(self, clientPid: Pid, message) -> None:
+    def gotClientMessage(self, clientPid: Pid, message: Any) -> None:
+        """Process messages from clients."""
         with self.__stateLock:
             messageType = message[0]
             playerNum = message[1]
             if messageType == "uno":
-                if playerNum != self.__unoPlayerNum:  # someone else won ;)
+                # one of the users clicked the uno button
+                if playerNum != self.__unoPlayerNum and self.__unoPlayerNum is not None:  # someone else won ;)
                     self.__comms.sendClientMessage(
                         self.__playerClientPids[self.__unoPlayerNum],
                         ("uno_loss",),
                     )
-                    for i in range(2):
+                    for _ in range(2):
                         self.__dealPlayerCard(self.__unoPlayerNum)
 
                 self.__unoPlayerNum = None
@@ -54,8 +64,10 @@ class Server(ServerSuper):
                 self.__gameStarted = True
 
                 if messageType == "dealCard":
+                    # player requested a card
                     self.__dealPlayerCard(playerNum)
                 elif messageType == "placeCard":
+                    # player placed a card
                     card = message[2]
                     newDeck = message[3]
 
@@ -64,7 +76,12 @@ class Server(ServerSuper):
                     self.__clientDecks[playerNum] = newDeck
                     self.__evaluatePlaceCard(playerNum, card)
 
-    def __evaluatePlaceCard(self, playerNum: int, card) -> None:
+    def __evaluatePlaceCard(self, playerNum: int, card: Card) -> None:
+        """Evaluate placing a card.
+
+        Includes advancing the current player, as well as handling skips and
+        +2/+4s among others.
+        """
         self.__game.placeCard(card)
         self.__userCardCounts[playerNum] -= 1  # take away a card
 
@@ -74,11 +91,11 @@ class Server(ServerSuper):
         elif self.__game.type(card) == "reverse":
             self.__turnChangeDelta *= -1
         elif self.__game.type(card) == "+2":
-            for i in range(2):
+            for _ in range(2):
                 self.__dealPlayerCard(self.__nextPlayer())
             self.__currUsersTurn = self.__nextPlayer()
         elif self.__game.type(card) == "+4":
-            for i in range(4):
+            for _ in range(4):
                 self.__dealPlayerCard(self.__nextPlayer())
             self.__currUsersTurn = self.__nextPlayer()
 
@@ -100,11 +117,13 @@ class Server(ServerSuper):
             self.__comms.broadcastMessage(self.serializeState())
 
     def __nextPlayer(self) -> int:
+        """Returns the ID of the player who should go next."""
         return (
             self.__currUsersTurn + self.__turnChangeDelta
         ) % self.__numJoined
 
     def __dealPlayerCard(self, playerNum: int) -> None:
+        """Deal the given player a card."""
         newCard = self.__game.dealCard()
         self.__comms.sendClientMessage(
             self.__playerClientPids[playerNum], ("newCard", newCard)
@@ -116,15 +135,13 @@ class Server(ServerSuper):
         self.__comms.broadcastMessage(self.serializeState())
 
     def addClient(self, clientPid: Pid, username: str) -> None:
+        """Add a new client to this game."""
         with self.__stateLock:
             self.__numOnline += 1
             if username not in self.__playerUTLNs and (
                 self.__numJoined >= 10 or self.__gameStarted
             ):
-                if self.__gameStarted:
-                    message = "GAME STARTED"
-                else:
-                    message = "GAME FULL"
+                message = "GAME STARTED" if self.__gameStarted else "GAME FULL"
 
                 self.__comms.confirmJoin(clientPid, username, message)
                 self.__comms.sendClientMessage(clientPid, self.serializeState())
@@ -164,11 +181,13 @@ class Server(ServerSuper):
                     # self.__comms.broadcastMessage(self.serializeState())
 
     def removeClient(self, clientPID: Pid, username: str) -> None:
+        """Remove a client from this game."""
         self.__numOnline -= 1
         if self.__gameOver and self.__numOnline == 0:
             self.__comms.shutdown()  # the game is over, so shut down
 
-    def serializeState(self):
+    def serializeState(self) -> tuple[str,]:
+        """Serialize our game state to send to clients."""
         return (
             "state",
             (

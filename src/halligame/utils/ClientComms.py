@@ -19,7 +19,7 @@ from pyrlang.process import Process
 from term import Atom, Pid
 
 from halligame.games import *  # noqa: F403
-from halligame.utils.common import whoami
+from halligame.utils.misc import whoami
 
 node: Node  # Placeholder for mypy
 name: str  # Placeholder for mypy

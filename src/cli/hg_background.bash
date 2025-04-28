@@ -1,4 +1,5 @@
 #!/bin/bash
+# Launches a process to monitor for messages in the background.
 # Michael Daniels 2025-04-16
 
 HGSHELLPROC=$(ps -o ppid= -p $$)

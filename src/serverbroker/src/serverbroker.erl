@@ -190,9 +190,7 @@ handle_cast({left_gameserver, LeftLogin, LeftPid, ServerPid}, State) ->
 
     FilterUser = fun (Usr) -> Usr#user.login == LeftLogin end,
     {[ThisUser], OtherUsers} = lists:partition(FilterUser, State#state.users),
-    FilterPlaying = fun ({GameName, Pid}) ->
-                            ((GameName =/= CurrGS#gameserver.game) and
-                            (Pid =/= LeftPid)) end,
+    FilterPlaying = fun ({_GameName, Pid}) -> (Pid =/= LeftPid) end,
     UpdatedUser = ThisUser#user{playing = lists:filter(FilterPlaying,
                                                        ThisUser#user.playing)},
     {noreply, State#state{gameservers = [NewGS | Rest],

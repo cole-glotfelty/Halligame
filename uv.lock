@@ -4,7 +4,7 @@ requires-python = ">=3.10"
 
 [[package]]
 name = "halligame"
-version = "0.0.2"
+version = "0.0.3"
 source = { editable = "." }
 dependencies = [
     { name = "psutil" },
@@ -22,8 +22,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "psutil" },
-    { name = "pyfiglet" },
+    { name = "psutil", specifier = ">=7.0.0" },
+    { name = "pyfiglet", specifier = ">=1.0.2" },
     { name = "pyrlang", directory = "vendor/Pyrlang" },
     { name = "pyrlang-term", directory = "vendor/Term" },
 ]

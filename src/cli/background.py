@@ -19,7 +19,7 @@ from pyrlang.gen.server import GenServerInterface
 from pyrlang.process import Process
 from term import Atom, Pid
 
-from halligame.utils.common import ensure_epmd, whoami
+from halligame.utils.misc import ensure_epmd, whoami
 
 #: How long we should wait between checks that the parent hasn't died.
 WAIT_TIME_SEC = 30
@@ -40,25 +40,19 @@ class UserBackground(Process):
         #: Used to communicate with the server broker.
         self.__serverBroker: GenServerInterface
 
-        # print("DEBUG: Sending getBroker message")
-
         # Pyrlang has node name and registered name backwards
         self.__sendMessage(
             (Atom("serverbroker@vm-projectweb3"), Atom("serverbroker")),
             (Atom("getBrokerPid"), self.pid_),
         )
 
-        # print("DEBUG: Sent getBroker message")
-
         event_loop = asyncio.get_event_loop()
         event_loop.call_soon(self.__checkOSProcessAlive)
 
     def handle_one_inbox_message(self, msg: Any) -> None:
         """Handle incoming messages."""
-        # print(f"DEBUG: Got message {msg}")
         match msg:
             case "brokerPid", brokerPid:
-                # print(f"DEBUG: pid is {msg[1]}")
                 self.__serverBroker = GenServerInterface(self, brokerPid)
                 toSend = (
                     Atom("add_user"),
@@ -113,12 +107,12 @@ class UserBackground(Process):
         """A wrapper for sending a message with correct formatting.
 
         dest is either:
+
         * an Atom(local registered name),
         * a tuple (Atom(node name), Atom(registered name))
-            (note that this is backwards from Erlang!), or
+          (note that this is backwards from Erlang!), or
         * a Pid.
         """
-        # print(f"DEBUG: Sending Message from Background to {dest}: {msg}")
         node.send_nowait(sender=self.pid_, receiver=dest, message=msg)
 
     def shutdown(self) -> None:

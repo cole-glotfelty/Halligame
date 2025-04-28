@@ -1,3 +1,10 @@
+"""Handles the cards of a game of Uno (including  deck and discard pile).
+
+Written by:  Will Cordray, 2024-04-19
+Last edited: Will Cordray, 2025-04-28
+"""
+# TODO: reset wilds when reshuffling
+
 import random
 
 import pyfiglet
@@ -19,25 +26,32 @@ BLANK_CARD = [
     " \\_____________/ ",
 ]
 
+type Card = str | tuple[str | int, str | None]
+type Deck = list[Card]
+
 
 class Uno:
-    def __init__(self):
-        self.__colors = ["red", "yellow", "green", "blue"]
-        self.__deck = self.__createDeck()
-        self.__discards = []
+    """Handles the cards of a game of Uno (including  deck and discard pile)."""
 
-        self.__topCard = self.dealCard()
+    def __init__(self) -> None:
+        """Initialize a deck of uno cards."""
+        self.__colors = ["red", "yellow", "green", "blue"]
+        self.__deck: Deck = self.__createDeck()
+        self.__discards: Deck = []
+        self.__topCard: Card = self.dealCard()
+
         # want a number to be the top card
-        while type(self.type(self.__topCard)) != int:
+        while type(self.type(self.__topCard)) is not int:
             self.placeCard(self.__topCard)
             self.__topCard = self.dealCard()
 
         self.__valueformatter = pyfiglet.Figlet(font="future_7")
 
-    def __createDeck(self):
-        deck = []
-        normalCards = [(i, color) for i in range(10) for color in self.__colors]
+    def __createDeck(self) -> list[Card]:
+        """Creates a new uno deck with the appropiate card ratios."""
+        deck: list[Card] = []
 
+        normalCards = [(i, color) for i in range(10) for color in self.__colors]
         skips = [("skip", color) for color in self.__colors]
         reverses = [("reverse", color) for color in self.__colors]
         plusTwos = [("+2", color) for color in self.__colors]
@@ -57,18 +71,17 @@ class Uno:
 
         return deck
 
-    def cardPlacable(self, onPile, toPlace) -> bool:
-        if (
+    def cardPlacable(self, onPile: Card, toPlace: Card) -> bool:
+        """Returns whether toPlace is placable on onPile."""
+        return bool(
             onPile == "blank"
             or self.type(toPlace) in ["wild", "+4"]
             or self.type(toPlace) == self.type(onPile)
             or self.color(toPlace) == self.color(onPile)
-        ):
-            return True
-        else:
-            return False
+        )
 
-    def dealCard(self):
+    def dealCard(self) -> Card:
+        """Draw a card from the deck, shuffling discards if needed."""
         if len(self.__deck) == 0:
             if len(self.__discards) > 0:
                 random.shuffle(self.__discards)
@@ -81,44 +94,52 @@ class Uno:
         self.__deck = self.__deck[1:]
         return card
 
-    def placeCard(self, card):
+    def placeCard(self, card: Card) -> None:
+        """Places a card on the discard pile, updating the top card."""
         self.__discards.append(self.__topCard)
 
         self.__topCard = card
 
-    def getTopCard(self):
+    def getTopCard(self) -> Card:
+        """Returns the top card of the discard pile."""
         return self.__topCard
 
-    def type(self, card):
+    def type(self, card: Card) -> str:
+        """Returns the type of the card."""
         if card == "blank":
             return "blank"
         else:
-            return card[0]
+            return str(card[0])
 
-    def color(self, card):
+    def color(self, card: Card) -> str | None:
+        """Returns the color of the card."""
         if card == "blank":
             return None
         else:
             return card[1]
 
-    def setColor(self, card, newColor):
+    def setColor(self, card: Card, newColor: str) -> Card:
+        """Sets the color of the card to the new color (must be wild or +4)."""
         if self.type(card) not in ["wild", "+4"]:
-            return
+            return card
 
         return (self.type(card), newColor)
 
-    def drawCard(self, topLeftRow, topLeftCol, card, Screen: Screen):
+    def drawCard(
+        self, topLeftRow: int, topLeftCol: int, card: Card, Screen: Screen
+    ) -> None:
+        """Draws the top card from the deck."""
         Screen.write(
             topLeftRow, topLeftCol, "\n".join(BLANK_CARD), self.color(card)
         )
-
-        if self.color(card) != None:
-            colorMarker = "\n" + self.color(card)[0].upper()
+        cardColor = self.color(card)
+        if cardColor is not None:
+            colorMarker = "\n" + cardColor[0].upper()
         elif self.type(card) != "blank":
             self.drawEmptyRainbowCard(topLeftRow, topLeftCol, Screen)
             colorMarker = ""
 
-        if type(self.type(card)) == int:
+        if type(self.type(card)) is int:
             cardValue = self.__valueformatter.renderText(str(self.type(card)))
             Screen.write(
                 topLeftRow + 3, topLeftCol + 5, cardValue, self.color(card)
@@ -184,8 +205,14 @@ class Uno:
             )
 
     def cornerCardDraw(
-        self, cardTopLeftRow, cardTopLeftCol, toWrite, Screen, color
-    ):
+        self,
+        cardTopLeftRow: int,
+        cardTopLeftCol: int,
+        toWrite: str,
+        Screen: Screen,
+        color: str | None,
+    ) -> None:
+        """Write the extra info found in the corners of the cards (e.g. +2G)."""
         textHeight = len(toWrite.split("\n"))
         textWidth = max(map(lambda x: len(x), toWrite.split("\n")))
         Screen.write(cardTopLeftRow + 2, cardTopLeftCol + 2, toWrite, color)
@@ -196,15 +223,20 @@ class Uno:
             color,
         )
 
-    def drawEmptyRainbowCard(self, cardTopLeftRow, cardTopLeftCol, Screen):
+    def drawEmptyRainbowCard(
+        self, cardTopLeftRow: int, cardTopLeftCol: int, Screen: Screen
+    ) -> None:
+        """Draws a blank card with a rainbow border."""
         for i in range(len(BLANK_CARD)):
             color = self.__colors[(i // 3) % 4]
             Screen.write(
                 cardTopLeftRow + i, cardTopLeftCol, BLANK_CARD[i], color
             )
 
-    def cardHeight(self):
+    def cardHeight(self) -> int:
+        """Returns the height of the ascii representation of a card."""
         return len(BLANK_CARD)
 
-    def cardWidth(self):
+    def cardWidth(self) -> int:
+        """Returns the width of the ascii representation of a card."""
         return len(BLANK_CARD[0])
