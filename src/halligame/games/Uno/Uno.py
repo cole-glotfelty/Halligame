@@ -41,7 +41,7 @@ class Uno:
         self.__topCard: Card = self.dealCard()
 
         # want a number to be the top card
-        while type(self.type(self.__topCard)) is not int:
+        while type(self.type(self.__topCard)) != int:
             self.placeCard(self.__topCard)
             self.__topCard = self.dealCard()
 
@@ -104,12 +104,12 @@ class Uno:
         """Returns the top card of the discard pile."""
         return self.__topCard
 
-    def type(self, card: Card) -> str:
+    def type(self, card: Card) -> str | int:
         """Returns the type of the card."""
         if card == "blank":
             return "blank"
         else:
-            return str(card[0])
+            return card[0]
 
     def color(self, card: Card) -> str | None:
         """Returns the color of the card."""
@@ -139,7 +139,7 @@ class Uno:
             self.drawEmptyRainbowCard(topLeftRow, topLeftCol, Screen)
             colorMarker = ""
 
-        if type(self.type(card)) is int:
+        if type(self.type(card)) == int:
             cardValue = self.__valueformatter.renderText(str(self.type(card)))
             Screen.write(
                 topLeftRow + 3, topLeftCol + 5, cardValue, self.color(card)
