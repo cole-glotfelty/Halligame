@@ -129,11 +129,6 @@ class Client(ClientSuper):
                         self.__comms.sendMessage(
                             ("placeCard", self.__playerNum, card, self.__deck)
                         )
-
-                        # prevent screen refreshes to give them a chance to
-                        # click uno
-                        if self.__unoPossibility:
-                            time.sleep(3)
                 elif region == "dealCard":
                     # they clicked the deal card button, so request a card
                     # from the server
@@ -405,6 +400,10 @@ class Client(ClientSuper):
         buttons.append(
             (pyfiglet.figlet_format("DRAW", font="finalass"), "dealCard")
         )
+        if (self.__unoPossibility):
+            buttons.append(
+                (pyfiglet.figlet_format("UNO", font="finalass"), "uno")
+            )
 
         self.__defineAndDrawButtons(buttons)
 

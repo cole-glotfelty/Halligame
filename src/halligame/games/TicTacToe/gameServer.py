@@ -11,6 +11,7 @@ from term import Pid
 from halligame.utils.gameServerTemplate import ServerSuper
 from halligame.utils.gameState import GameState
 from halligame.utils.ServerComms import ServerCommunicate
+from threading import Lock
 
 
 class Server(ServerSuper):
@@ -24,6 +25,8 @@ class Server(ServerSuper):
         self.__numConnected: int = 0
         #: Our current game state.
         self.__state: GameState = GameState()
+        #: Protects internal state.
+        self.__stateLock: Lock = Lock()
         #: Store player symbols for easier indexing.
         self.__playersSymbol: list[str] = ["X", "O"]
         #: The number of spaces on the board that are taken.
@@ -42,18 +45,19 @@ class Server(ServerSuper):
         If valid: broadcast new state to clients
         otherwise: tell client who requested change it's not valid
         """
-        (_, move) = event
+        with self.__stateLock:
+            (_, move) = event
 
-        if self.__state.getValue("board")[move // 3][move % 3] not in [
-            "X",
-            "O",
-        ]:
-            self.__updateState(event)
-            self.__comms.broadcastState(self.__state)
-        else:
-            self.__comms.sendClientMessage(
-                clientPID, ("Error: Invalid Move", self.__state.serialize())
-            )
+            if self.__state.getValue("board")[move // 3][move % 3] not in [
+                "X",
+                "O",
+            ]:
+                self.__updateState(event)
+                self.__comms.broadcastState(self.__state)
+            else:
+                self.__comms.sendClientMessage(
+                    clientPID, ("Error: Invalid Move", self.__state.serialize())
+                )
 
     def __updateState(self, event: tuple[int, Any] | Any) -> None:
         """Update the game's state.
@@ -111,25 +115,28 @@ class Server(ServerSuper):
 
     def addClient(self, clientPid: Pid, username: str) -> None:
         """Add a client to this game."""
-        for i in range(2):
-            if self.__state.getValue("playerNames")[i] == "nobody":
-                self.__numConnected += 1
-                self.__state.getValue("playerNames")[i] = username
-                self.__comms.confirmJoin(
-                    clientPid, username, (i, self.__state.serialize())
+        with self.__stateLock:
+            for i in range(2):
+                if self.__state.getValue("playerNames")[i] == "nobody":
+                    self.__numConnected += 1
+                    self.__state.getValue("playerNames")[i] = username
+                    self.__comms.confirmJoin(
+                        clientPid, username, (i, self.__state.serialize())
+                    )
+                    self.__comms.broadcastState(self.__state)
+                    break
+            else:
+                self.__comms.sendClientMessage(
+                    clientPid, ("Error: Too Many Players", 
+                                self.__state.serialize())
                 )
-                self.__comms.broadcastState(self.__state)
-                break
-        else:
-            self.__comms.sendClientMessage(
-                clientPid, ("Error: Too Many Players", self.__state.serialize())
-            )
 
     def removeClient(self, clientPID: Pid, username: str) -> None:
         """Remove a client from this game."""
         # print(f"removing client {clientPID} ({username}); "
         #   f"numConnected = {self.__numConnected}")
         # Stop when room is empty
-        self.__numConnected -= 1
-        if self.__numConnected == 0:
-            self.__comms.shutdown()
+        with self.__stateLock:
+            self.__numConnected -= 1
+            if self.__numConnected == 0:
+                self.__comms.shutdown()

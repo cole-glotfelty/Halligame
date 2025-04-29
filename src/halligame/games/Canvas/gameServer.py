@@ -42,8 +42,8 @@ class Server(ServerSuper):
         """Process messages from clients.
 
         The message should be of the form (row, col, color), where row and col
-        are ints and color is a...
-        TODO: complete the above sentence :)
+        are ints and color is a string containing one of the 8 primary screen 
+        colors
         """
         (row, col, color) = message
 

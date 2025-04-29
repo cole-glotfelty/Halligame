@@ -238,7 +238,7 @@ class Screen:
                     row, col, printing, curses.color_pair(colorPairCode)
                 )
         except curses.error:
-            pass  # ignore out of bounds characters # TODO
+            pass  # ignore out of bounds characters
 
     # Note that this is a debug function and should not be used in production
     def print(self, toPrint: Any, end: str = "\n") -> None:

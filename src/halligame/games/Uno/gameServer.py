@@ -185,9 +185,10 @@ class Server(ServerSuper):
 
     def removeClient(self, clientPID: Pid, username: str) -> None:
         """Remove a client from this game."""
-        self.__numOnline -= 1
-        if self.__gameOver and self.__numOnline == 0:
-            self.__comms.shutdown()  # the game is over, so shut down
+        with self.__stateLock:
+            self.__numOnline -= 1
+            if self.__gameOver and self.__numOnline == 0:
+                self.__comms.shutdown()  # the game is over, so shut down
 
     def serializeState(
         self,

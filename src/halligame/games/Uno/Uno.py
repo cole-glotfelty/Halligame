@@ -1,9 +1,10 @@
 """Handles the cards of a game of Uno (including  deck and discard pile).
 
+Note: not designed to be thread safe
+
 Written by:  Will Cordray, 2024-04-19
 Last edited: Will Cordray, 2025-04-28
 """
-# TODO: reset wilds when reshuffling
 
 import random
 
@@ -83,16 +84,22 @@ class Uno:
     def dealCard(self) -> Card:
         """Draw a card from the deck, shuffling discards if needed."""
         if len(self.__deck) == 0:
-            if len(self.__discards) > 0:
-                random.shuffle(self.__discards)
-                self.__deck = self.__discards
-                self.__discards = []
-            else:
-                self.__deck = self.__createDeck()
+            self.__reshuffleDeck()
 
         card = self.__deck[0]
         self.__deck = self.__deck[1:]
         return card
+
+    def __reshuffleDeck(self):
+        if len(self.__discards) > 0: # available discard
+            random.shuffle(self.__discards)
+            self.__deck = self.__discards
+            for i in range(len(self.__deck)):
+                if self.type(self.__deck[i]) in ["wild", "+4"]:
+                    self.__deck[i] = self.setColor(self.__deck[i], None)
+            self.__discards = []
+        else:
+            self.__deck = self.__createDeck()
 
     def placeCard(self, card: Card) -> None:
         """Places a card on the discard pile, updating the top card."""

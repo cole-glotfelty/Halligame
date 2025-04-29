@@ -34,11 +34,12 @@ class Client(ClientSuper):
         self.__boardHeight = 30
         self.__boardWidth = 40
 
-        # TODO: doc these two
+        # The number of pixels from the top left of the screen to start 
+        # drawing the board
         self.__boardVOffset = 5
         self.__boardHOffset = 5
 
-        # TODO: doc these
+        # The dimensions of the color swatch boxes and how far apart they are
         self.__colorBoxHeight: int = 3
         self.__colorBoxWidth: int = 5
         self.__colorBoxVSeparator: int = 1

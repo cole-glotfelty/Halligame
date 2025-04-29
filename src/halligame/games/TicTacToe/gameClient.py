@@ -37,9 +37,9 @@ class Client(ClientSuper):
         self.__playerID: int = -1
         #: Is it my turn?
         self.__myTurn: bool = True
-        #: TODO: doc
+        #: Default font and formatter to use for full screen messages
         self.__formatter: Figlet = Figlet(font="georgia11")
-        #: TODO: doc
+        #: Vertical space from the top of the screen to start drawing the board
         self.__topRow: int = 5
 
         self.initializeScreenColors()
@@ -59,10 +59,11 @@ class Client(ClientSuper):
 
     def joinConfirmed(self, msg: Any) -> None:
         """Set our player ID and game state."""
-        (playerID, state) = msg
-        self.__playerID = playerID
-        self.updateState(state)
-        self.defineClickableRegions()
+        with self.__stateLock:
+            (playerID, state) = msg
+            self.__playerID = playerID
+            self.__updateState(state)
+            self.defineClickableRegions()
 
     def initializeScreenColors(self) -> None:
         """Initialize the screen's colors."""
@@ -80,7 +81,7 @@ class Client(ClientSuper):
         # self.__screen.setStyle("white_random")
 
     def defineClickableRegions(self) -> None:
-        """TODO: doc."""
+        """Define each square as a clickable region"""
         # Getting the dimensions of the rendered 'X'
         letter = self.__formatter.renderText("X")
         letterHeight = len(letter.split("\n"))
@@ -122,7 +123,11 @@ class Client(ClientSuper):
     def mouseInput(
         self, row: int, col: int, region: int | None, mouseEventType: str
     ) -> None:
-        """TODO: doc."""
+        """Called when received a click from the user.
+        
+        Utilizes the region supplied to determine where the click was and 
+        therefore what the user wanted to do
+        """
         with self.__stateLock:  # draw it so it appears instantaneously
             if self.__state.getValue("gameOver") != "":
                 message = self.__formatter.renderText("Game Over")
